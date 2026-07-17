@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtualenv / secrets
+env/
+.env
+
+# Build output (PyInstaller)
+build/
+dist/
+
+# App data & logs
+data/
+*.log
+
+# Notes / tooling
+_notes/
+.claude
+CLAUDE.md
+TODO.md

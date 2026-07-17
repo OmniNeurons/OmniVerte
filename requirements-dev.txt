@@ -1,0 +1,6 @@
+# Development / test dependencies. Install with:
+#   pip install -r requirements.txt -r requirements-dev.txt
+pytest==9.0.3
+
+# Secret-scanning pre-commit hook. After install, run once: `pre-commit install`.
+pre-commit==4.6.0

@@ -1,0 +1,25 @@
+# gitleaks configuration for OmniVerte.
+# Used by both the local pre-commit hook (.pre-commit-config.yaml) and the CI
+# workflow (.github/workflows/secret-scan.yml). gitleaks auto-loads this file
+# when it sits at the repo root.
+
+title = "OmniVerte gitleaks config"
+
+[extend]
+# Inherit the full built-in gitleaks ruleset; we only add allowlist entries.
+useDefault = true
+
+[allowlist]
+description = "Known-safe placeholders and test fixtures (not real secrets)"
+
+# Test fixtures use short fake keys (sk-test, sk-x, ...) and Ed25519 keypairs
+# generated at runtime, never committed. Exclude the tests tree from scanning.
+paths = [
+    '''tests/.*''',
+]
+
+# The embedded license PUBLIC key in licensing/verify.py is a placeholder and,
+# even once real, is public by design. Allow the placeholder marker explicitly.
+regexes = [
+    '''REPLACE_WITH_YOUR_ED25519_PUBLIC_KEY''',
+]

@@ -1,0 +1,29 @@
+# Pinned to the tested versions. This is an application (not a library), so
+# exact pins keep installs reproducible. Refresh with `pip freeze`.
+
+python-dotenv==1.1.0
+openai==1.77.0
+keyboard==0.13.5
+mouse==0.7.1
+pyperclip==1.9.0
+sounddevice==0.5.1
+scipy==1.15.2
+numpy==2.1.2
+faster-whisper==1.1.1
+rapidfuzz==3.14.5
+pystray==0.19.5
+Pillow==11.0.0
+keyring==25.7.0
+# Offline license-token verification (Ed25519/JWT). cryptography provides the
+# EdDSA backend PyJWT needs; only the PUBLIC key ships in the client.
+PyJWT==2.10.1
+cryptography==44.0.0
+PySide6==6.11.0
+PySide6-Fluent-Widgets==1.11.2
+PySideSix-Frameless-Window==0.8.1
+
+# Optional — only used to proactively release GPU memory when switching the
+# local Whisper device. faster-whisper transcribes via CTranslate2, NOT torch,
+# so the app runs fine without it. If you want it, install the build matching
+# your CUDA toolkit from https://pytorch.org (e.g. `torch==2.0.0+cu118`).
+# torch>=2.0.0

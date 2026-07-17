@@ -1,0 +1,13 @@
+# Local pre-commit hooks. Enable once per clone:
+#   pip install -r requirements-dev.txt
+#   pre-commit install
+#
+# The gitleaks hook scans staged changes and blocks the commit if it finds a
+# secret. It auto-loads the repo-root .gitleaks.toml (allowlist for placeholders
+# and test fixtures). Keep `rev` in sync with the pinned version in
+# .github/workflows/secret-scan.yml.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks

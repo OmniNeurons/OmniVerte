@@ -1,0 +1,7 @@
+# gitleaks: fingerprints of reviewed, confirmed-safe findings to ignore.
+# Format: <commit>:<file>:<rule>:<startline>  (gitleaks auto-loads this file).
+
+# False positive in old README config example: `OPEN_AI_API_KEY=""` (an empty
+# placeholder) sits next to `ACTIVATION_KEY='f9'`, and the generic-api-key rule
+# grabbed the literal `f9` as a "secret". No real key — documentation only.
+12f4252d3430c0b3541537b5f594efafbfb187f9:README.md:generic-api-key:74
