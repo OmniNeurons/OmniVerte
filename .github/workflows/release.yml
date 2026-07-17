@@ -1,0 +1,78 @@
+name: Build & Release
+
+# Build the Windows installer on a clean runner and attach it to a GitHub Release.
+#
+# Triggers on pushing a version tag, e.g.:
+#   git tag v1.1.26
+#   git push origin v1.1.26
+#
+# Building on a fresh runner (not a polluted local Python) keeps the bundle small:
+# only requirements.txt gets installed, so PyInstaller cannot drag in unrelated
+# heavyweight packages (tensorflow, torch, transformers, ...).
+#
+# You can also run it by hand from the Actions tab (workflow_dispatch) to test the
+# build without publishing — a manual run produces the .exe as an artifact only.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to create/update the Release and upload assets
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies (clean env)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller==6.11.1
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Verify tag matches VERSION file
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          if ($version -ne $tag) {
+            throw "Tag ($tag) does not match VERSION file ($version). Bump VERSION or fix the tag."
+          }
+          Write-Host "Version OK: $version"
+
+      - name: Build installer
+        shell: pwsh
+        run: .\scripts\build.ps1
+
+      - name: Upload installer as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmniVerte-installer
+          path: dist/installer/*.exe
+          if-no-files-found: error
+
+      - name: Publish to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/installer/*.exe
+          name: Omni Verte ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
