@@ -15,6 +15,26 @@ re-processing what you dictated.
 ---
 
 <p align="center">
+  <a href="https://github.com/OmniNeurons/OmniVerte/releases/latest">
+    <img src="https://img.shields.io/github/v/release/OmniNeurons/OmniVerte?style=for-the-badge&logo=windows&label=Download%20for%20Windows&color=2ea043" alt="Download the latest release">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://github.com/OmniNeurons/OmniVerte/releases/latest">⬇️ Download the latest installer</a></b>
+  &nbsp;·&nbsp;
+  <a href="#download--install">install notes</a>
+  &nbsp;·&nbsp;
+  <a href="#usage">how to use</a>
+</p>
+
+<p align="center">
+  <sub>Windows 10/11 · per-user install, no admin rights · no Python needed</sub>
+</p>
+
+---
+
+<p align="center">
   <img src="docs/assets/demo.gif" alt="OmniVerte — speak, press F9, get formatted text" width="900">
 </p>
 
@@ -328,6 +348,15 @@ what actually governs your use:
 Bundled third-party components keep their own licenses (PySide6 is LGPL-3.0,
 faster-whisper is MIT, etc.) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## Contact
+## Stay updated & contact
 
-Questions or suggestions: open a [GitHub issue](https://github.com/OmniNeurons/OmniVerte/issues).
+- **New versions** — every release is published on the
+  [Releases](https://github.com/OmniNeurons/OmniVerte/releases) page. To be
+  notified automatically, click **Watch → Custom → Releases** at the top of the
+  repository (or just **Star** it to bookmark the project).
+- **Check your version** — open the app's **Settings → About** page; it shows the
+  installed version. Compare it against
+  [the latest release](https://github.com/OmniNeurons/OmniVerte/releases/latest).
+- **Questions, bugs, or suggestions** — open a
+  [GitHub issue](https://github.com/OmniNeurons/OmniVerte/issues). This is the
+  best way to reach the author.
