@@ -105,7 +105,7 @@ re-processing what you dictated.
 
 The easiest way — no Python, no building:
 
-1. Go to the [**Releases**](https://github.com/Arseny2035/VibeAssistance/releases/latest) page.
+1. Go to the [**Releases**](https://github.com/OmniNeurons/OmniVerte/releases/latest) page.
 2. Download `OmniVerte-Setup-<version>.exe`.
 3. Run it. It installs per-user (no admin rights needed) and offers to start
    Omni Verte on sign-in.
@@ -120,8 +120,8 @@ anywhere and run `OmniVerte.exe`.
 ## Install from source
 
 ```bash
-git clone https://github.com/Arseny2035/VibeAssistance.git
-cd VibeAssistance
+git clone https://github.com/OmniNeurons/OmniVerte.git
+cd OmniVerte
 
 python -m venv env
 env\Scripts\activate        # Windows
@@ -268,7 +268,7 @@ create a shortcut to `OmniVerte.exe` and drop it into the Startup folder
 
 ## Releasing (maintainers)
 
-Builds are published to [GitHub Releases](https://github.com/Arseny2035/VibeAssistance/releases)
+Builds are published to [GitHub Releases](https://github.com/OmniNeurons/OmniVerte/releases)
 by CI — binaries are never committed to git.
 
 1. Bump the version in the `VERSION` file (and `CHANGELOG.md`).
@@ -330,4 +330,4 @@ faster-whisper is MIT, etc.) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICE
 
 ## Contact
 
-Questions or suggestions: open a [GitHub issue](https://github.com/Arseny2035/VibeAssistance/issues).
+Questions or suggestions: open a [GitHub issue](https://github.com/OmniNeurons/OmniVerte/issues).

@@ -18,7 +18,7 @@
 #define AppName "Omni Verte"
 #define AppPublisher "Arsenii Bandurin"
 #define AppExeName "OmniVerte.exe"
-#define AppUrl "https://github.com/Arseny2035/VibeAssistance"
+#define AppUrl "https://github.com/OmniNeurons/OmniVerte"
 
 [Setup]
 ; Stable AppId — DO NOT change between releases (drives upgrade-in-place and

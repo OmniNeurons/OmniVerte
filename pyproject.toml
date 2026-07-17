@@ -21,8 +21,8 @@ classifiers = [
 dynamic = ["version", "dependencies"]
 
 [project.urls]
-Homepage = "https://github.com/Arseny2035/VibeAssistance"
-Issues = "https://github.com/Arseny2035/VibeAssistance/issues"
+Homepage = "https://github.com/OmniNeurons/OmniVerte"
+Issues = "https://github.com/OmniNeurons/OmniVerte/issues"
 
 # Single source of truth for the version (read at runtime by the About page)
 # and for the dependency list.
