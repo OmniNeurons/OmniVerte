@@ -220,6 +220,27 @@ STRINGS: dict[str, str] = {
     "transcription.device.cpu": "CPU",
     "transcription.device.cuda": "CUDA (GPU)",
 
+    # Microphone capture (input device + speech enhance before ASR). Distinct
+    # from transcription.device.* which is the local Whisper CPU/CUDA picker.
+    "transcription.mic.title": "Microphone",
+    "transcription.mic.hint": (
+        "Which input is recorded, and light prep before transcription "
+        "(high-pass filter and level normalization). Does not change the ASR model."
+    ),
+    "transcription.mic.device.label": "Input device",
+    "transcription.mic.device.hint": (
+        "System default follows Windows. Pick a specific mic if the wrong "
+        "device is capturing, or if you use a desk USB microphone."
+    ),
+    "transcription.mic.device.default": "System default",
+    "transcription.enhance.label": "Audio enhance",
+    "transcription.enhance.hint": (
+        "Light: gently boost quiet speech and cut low rumble before the model "
+        "hears it. Off: send raw capture (previous behavior)."
+    ),
+    "transcription.enhance.off": "Off",
+    "transcription.enhance.light": "Light (recommended)",
+
     "transcription.error.priority_empty": "Backend priority list is empty.",
 
     # ---------- settings: About page ----------

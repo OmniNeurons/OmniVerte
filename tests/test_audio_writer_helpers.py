@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from services import audio_writer as aw
@@ -664,6 +665,53 @@ def test_reload_transcription_settings_repicks_by_priority(monkeypatch):
     assert w.config.sets["TRANSCRIPTION_BACKEND"] == "groq"
     assert w.config.sets["WHISPER_MODEL"] == "whisper-large-v3-turbo"
     assert reinit == [True]  # background reload kicked exactly once
+
+
+def test_reload_reads_audio_capture_settings(monkeypatch):
+    _patch_openai(monkeypatch)
+    w = _bare_writer()
+    monkeypatch.setattr(w, "_reinit_backend_async", lambda: None)
+    w.config = _FakeConfig(
+        secrets={},
+        priority=["local"],
+        values={
+            "MODEL_LOCAL": "small",
+            "USE_DEVICE": "cpu",
+            "AUDIO_ENHANCE": "off",
+            "INPUT_DEVICE": "name::Desk Mic",
+        },
+    )
+    w.reload_transcription_settings()
+    assert w._audio_enhance_profile == "off"
+    assert w._input_device_config == "name::Desk Mic"
+
+
+def test_write_transcription_wav_calls_prepare(monkeypatch, tmp_path):
+    _patch_openai(monkeypatch)
+    w = _bare_writer()
+    w.fs = 16000
+    w._audio_enhance_profile = "light"
+    calls = []
+
+    def fake_prepare(samples, sample_rate, profile="light"):
+        calls.append((sample_rate, profile, np.asarray(samples).shape))
+        return np.asarray(samples, dtype=np.int16).reshape(-1)
+
+    written = []
+
+    def fake_wav_write(path, rate, data):
+        written.append((path, rate, np.asarray(data).dtype, np.asarray(data).shape))
+
+    monkeypatch.setattr(aw, "prepare_for_transcription", fake_prepare)
+    monkeypatch.setattr(aw.wav, "write", fake_wav_write)
+
+    pcm = np.zeros((1600, 1), dtype=np.int16)
+    path = str(tmp_path / "seg.wav")
+    w._write_transcription_wav(path, pcm)
+    assert calls == [(16000, "light", (1600, 1))]
+    assert written[0][0] == path
+    assert written[0][1] == 16000
+    assert written[0][2] == np.int16
 
 
 def test_reload_picks_local_without_cloud_creds(monkeypatch):

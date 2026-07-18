@@ -49,6 +49,11 @@ from services.transcription_models import (
     OPENAI_TRANSCRIPTION_MODELS,
 )
 from services.glossary import Glossary
+from services.audio_prep import (
+    normalize_enhance_profile,
+    prepare_for_transcription,
+    resolve_input_device,
+)
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 # Backends in canonical order. UI / priority lists use these names.
@@ -331,6 +336,13 @@ class AudioWriter:
     self._load_lock = threading.Lock()
 
     self.fs = 16000  # Sample rate
+    # Capture / prep settings — re-read on settings save and at each start.
+    # INPUT_DEVICE: "" → system default; else "name::<PortAudio name>".
+    # AUDIO_ENHANCE: off|light (default light). Applied only at WAV write time.
+    self._input_device_config = config.get("INPUT_DEVICE", "") or ""
+    self._audio_enhance_profile = normalize_enhance_profile(
+        config.get("AUDIO_ENHANCE", "light")
+    )
     self.is_recording = False
     self.audio_queue = queue.Queue()
     self.stream = None
@@ -727,13 +739,19 @@ class AudioWriter:
     self.transcription_backend = self._pick_initial_backend()  # re-pick by priority
     self.whisper_model_name = config.get(_model_key_for_backend(self.transcription_backend))
     self.use_device = config.get("USE_DEVICE", "cpu")
+    self._input_device_config = config.get("INPUT_DEVICE", "") or ""
+    self._audio_enhance_profile = normalize_enhance_profile(
+        config.get("AUDIO_ENHANCE", "light")
+    )
     # Mirror the resolved choice so the tray menu / next launch agree (the page
     # writes MODEL_* + BACKEND_PRIORITY but not TRANSCRIPTION_BACKEND/WHISPER_MODEL).
     config.set("TRANSCRIPTION_BACKEND", self.transcription_backend)
     config.set("WHISPER_MODEL", self.whisper_model_name)
     logger.info(
         f"Transcription settings reloaded: backend={self.transcription_backend}, "
-        f"model={self.whisper_model_name}, device={self.use_device}"
+        f"model={self.whisper_model_name}, device={self.use_device}, "
+        f"enhance={self._audio_enhance_profile}, "
+        f"input_device={self._input_device_config!r}"
     )
     self._reinit_backend_async()
 
@@ -894,13 +912,15 @@ class AudioWriter:
 
       self.ui_bridge.safe_emit_status("recording")
       self.ui_bridge.audio_level = 0.0  # start the equalizer flat until first frame
-      # Set up the audio input stream
-      self.stream = sd.InputStream(
-          samplerate=self.fs,
-          channels=1,
-          dtype='int16',
-          callback=self.audio_callback
+      # Re-read capture settings so a settings save mid-session applies on the
+      # next press without requiring a full backend reinit.
+      self._input_device_config = self.config.get("INPUT_DEVICE", "") or ""
+      self._audio_enhance_profile = normalize_enhance_profile(
+          self.config.get("AUDIO_ENHANCE", "light")
       )
+      # Set up the audio input stream. device=None → PortAudio system default.
+      device_index = resolve_input_device(self._input_device_config)
+      self.stream = self._open_input_stream(device_index)
       self.stream.start()
       self.is_recording = True
 
@@ -1014,9 +1034,60 @@ class AudioWriter:
     # Process recorded audio data
     audio_data = np.concatenate(audio_frames, axis=0)
     temp_audio_file = os.path.join(_TEMP_DIR, "temp_audio.wav")
-    wav.write(temp_audio_file, self.fs, audio_data)
+    self._write_transcription_wav(temp_audio_file, audio_data)
     logger.info("Audio saved to temporary file.")
     self.process_audio_file(temp_audio_file, session_gen=session_gen)
+
+  def _open_input_stream(self, device_index):
+    """Open a mono int16 InputStream; fall back to default if device is gone."""
+    kwargs = dict(
+        samplerate=self.fs,
+        channels=1,
+        dtype="int16",
+        callback=self.audio_callback,
+    )
+    if device_index is not None:
+      kwargs["device"] = device_index
+      try:
+        logger.info(f"Opening input stream on device index {device_index}")
+        return sd.InputStream(**kwargs)
+      except Exception as e:
+        logger.warning(
+            f"Failed to open input device index {device_index} ({e}); "
+            f"falling back to system default"
+        )
+        kwargs.pop("device", None)
+    return sd.InputStream(**kwargs)
+
+  def _write_transcription_wav(self, path, pcm):
+    """Apply AUDIO_ENHANCE profile and write int16 mono WAV for the ASR backends.
+
+    Overlap / queue buffers stay raw; only the array about to be transcribed is
+    enhanced, so streaming seam logic is unchanged and off is byte-stable.
+    """
+    prepared = prepare_for_transcription(
+        pcm, self.fs, profile=self._audio_enhance_profile
+    )
+    if logger.isEnabledFor(logging.DEBUG):
+      # Cheap diagnostics when users report "garbage ASR" after capture changes.
+      def _rms(a):
+        x = np.asarray(a, dtype=np.float64).reshape(-1)
+        if x.size == 0:
+          return 0.0
+        return float(np.sqrt(np.mean((x / 32768.0) ** 2)))
+
+      logger.debug(
+          "WAV prep profile=%s shape_in=%s dtype_in=%s rms_in=%.4f "
+          "shape_out=%s rms_out=%.4f peak_out=%s",
+          self._audio_enhance_profile,
+          getattr(pcm, "shape", None),
+          getattr(pcm, "dtype", None),
+          _rms(pcm),
+          prepared.shape,
+          _rms(prepared),
+          int(np.max(np.abs(prepared))) if prepared.size else 0,
+      )
+    wav.write(path, self.fs, prepared)
 
   def audio_callback(self, indata, frames, time_info, status):
     """Callback function for the audio stream — pushes incoming data to the queue."""
@@ -1033,6 +1104,7 @@ class AudioWriter:
     # LowLevelHooks timeout and dropped hotkeys. A bare store is GIL-atomic and
     # allocation-free. A sustained near-zero level is how the indicator surfaces
     # a dead/switched mic (flat bars → "no signal").
+    # Level is RAW capture (pre-enhance) — enhance runs only at WAV write time.
     x = indata.astype(np.float32) / 32768.0
     self.ui_bridge.audio_level = float(np.sqrt(np.mean(x * x)))
 
@@ -1092,7 +1164,7 @@ class AudioWriter:
           overlap_seconds = overlap_frames_used / self.fs
 
           temp_segment_file = os.path.join(_TEMP_DIR, "temp_segment.wav")
-          wav.write(temp_segment_file, self.fs, segment_data)
+          self._write_transcription_wav(temp_segment_file, segment_data)
           logger.info(
               f"Transcribing segment #{segment_index} "
               f"(audio {seg_seconds:.1f}s, overlap {overlap_seconds:.1f}s, "

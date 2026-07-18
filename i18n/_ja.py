@@ -203,6 +203,25 @@ STRINGS: dict[str, str] = {
     "transcription.device.cpu": "CPU",
     "transcription.device.cuda": "CUDA(GPU)",
 
+    "transcription.mic.title": "マイク",
+    "transcription.mic.hint": (
+        "どの入力から録音するかと、文字起こし前の軽い音声処理"
+        "（ハイパスとレベル正規化）です。ASRモデルは変わりません。"
+    ),
+    "transcription.mic.device.label": "入力デバイス",
+    "transcription.mic.device.hint": (
+        "システム既定はWindowsに従います。別のデバイスが録音している場合や、"
+        "USBデスクマイクを使う場合は具体的なマイクを選んでください。"
+    ),
+    "transcription.mic.device.default": "システム既定",
+    "transcription.enhance.label": "音声の改善",
+    "transcription.enhance.hint": (
+        "ライト: 小さい声を少し上げ、低域のノイズを抑えてからモデルへ送ります。"
+        "オフ: 生の録音（従来の動作）です。"
+    ),
+    "transcription.enhance.off": "オフ",
+    "transcription.enhance.light": "ライト（推奨）",
+
     "transcription.error.priority_empty": "エンジンの優先順位リストが空です。",
 
     # ---------- settings: About page ----------

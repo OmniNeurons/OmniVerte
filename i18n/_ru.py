@@ -205,6 +205,25 @@ STRINGS: dict[str, str] = {
     "transcription.device.cpu": "CPU",
     "transcription.device.cuda": "CUDA (GPU)",
 
+    "transcription.mic.title": "Микрофон",
+    "transcription.mic.hint": (
+        "С какого входа идёт запись и лёгкая подготовка звука перед распознаванием "
+        "(фильтр гула и выравнивание громкости). Модель ASR не меняет."
+    ),
+    "transcription.mic.device.label": "Устройство ввода",
+    "transcription.mic.device.hint": (
+        "«По умолчанию» — как в Windows. Выберите конкретный микрофон, если "
+        "пишет не тот вход, или если на столе USB-микрофон."
+    ),
+    "transcription.mic.device.default": "Системный по умолчанию",
+    "transcription.enhance.label": "Улучшение звука",
+    "transcription.enhance.hint": (
+        "Лёгкое: чуть усиливает тихую речь и убирает низкий гул до передачи в модель. "
+        "Выкл.: сырая запись (как раньше)."
+    ),
+    "transcription.enhance.off": "Выкл.",
+    "transcription.enhance.light": "Лёгкое (рекомендуется)",
+
     "transcription.error.priority_empty": "Список приоритета движков пуст.",
 
     # ---------- settings: About page ----------

@@ -66,6 +66,11 @@ DEFAULTS: dict[str, str] = {
     "MODEL_LOCAL": "small",
     "MODEL_OPENAI": "gpt-4o-mini-transcribe",
     "MODEL_GROQ": "whisper-large-v3-turbo",
+    # Mic capture: empty INPUT_DEVICE = PortAudio system default. Non-empty
+    # values are "name::<device name>" (see services.audio_prep). AUDIO_ENHANCE
+    # is off|light (default light): high-pass + capped AGC before WAV write.
+    "INPUT_DEVICE": "",
+    "AUDIO_ENHANCE": "light",
     "ONBOARDING_DONE": "false",
     # Two languages the user works between. Used by the smart-translate flow
     # in the main window: direction is auto-detected from the source text.

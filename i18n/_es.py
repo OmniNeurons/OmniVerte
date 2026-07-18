@@ -206,6 +206,25 @@ STRINGS: dict[str, str] = {
     "transcription.device.cpu": "CPU",
     "transcription.device.cuda": "CUDA (GPU)",
 
+    "transcription.mic.title": "Micrófono",
+    "transcription.mic.hint": (
+        "Qué entrada se graba y una preparación ligera del audio antes de la "
+        "transcripción (filtro paso alto y normalización de nivel). No cambia el modelo ASR."
+    ),
+    "transcription.mic.device.label": "Dispositivo de entrada",
+    "transcription.mic.device.hint": (
+        "El predeterminado del sistema sigue a Windows. Elija un micrófono "
+        "concreto si captura el dispositivo equivocado o usa un micrófono USB de escritorio."
+    ),
+    "transcription.mic.device.default": "Predeterminado del sistema",
+    "transcription.enhance.label": "Mejora de audio",
+    "transcription.enhance.hint": (
+        "Ligera: sube un poco el habla baja y reduce el zumbido grave antes de "
+        "enviarlo al modelo. Desactivada: captura en bruto (comportamiento anterior)."
+    ),
+    "transcription.enhance.off": "Desactivada",
+    "transcription.enhance.light": "Ligera (recomendada)",
+
     "transcription.error.priority_empty": "La lista de prioridad de motores está vacía.",
 
     # ---------- settings: About page ----------

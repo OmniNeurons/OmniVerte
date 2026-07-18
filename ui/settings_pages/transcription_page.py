@@ -27,6 +27,11 @@ from qfluentwidgets import (
 )
 
 from i18n import t
+from services.audio_prep import (
+    encode_device_name,
+    list_input_devices,
+    normalize_enhance_profile,
+)
 from services.transcription_models import (
     GROQ_TRANSCRIPTION_MODELS,
     LOCAL_WHISPER_MODELS,
@@ -81,6 +86,16 @@ DEVICE_CHOICES = [
 
 # Matches the model combos above, so both cards' controls share a right edge.
 COMBO_FIELD_WIDTH = 240
+# Mic names from PortAudio can be long ("Microphone (Realtek...) (Windows WASAPI)").
+MIC_COMBO_WIDTH = 320
+
+# Enhance profile: label key → config value. Lookup at build time (not module
+# scope) so locale switches rebuild correctly. Strong is intentionally absent
+# until a real strong profile ships.
+ENHANCE_CHOICES = [
+    ("transcription.enhance.off", "off"),
+    ("transcription.enhance.light", "light"),
+]
 
 # Where new users go to create a key for each cloud backend. Surfaced both as a
 # "?" help bubble next to the field and a small always-visible "Get a key" link.
@@ -250,6 +265,36 @@ class TranscriptionPage(BasePage):
             body.addWidget(make_form_row(label, combo, align_right=True))
         content_layout.addWidget(card)
 
+        # --- Microphone capture (input device + light enhance) ---
+        # Orthogonal to the CUDA/CPU card below: this is *where audio comes
+        # from* and how it is prepared before any backend sees it.
+        card, body = make_section_card(
+            t("transcription.mic.title"),
+            t("transcription.mic.hint"),
+        )
+        self.mic_combo = ComboBox()
+        self.mic_combo.setFixedWidth(MIC_COMBO_WIDTH)
+        # Populated in load_from (needs a live PortAudio query). Placeholder
+        # row so the layout is not empty before first load.
+        self.mic_combo.addItem(t("transcription.mic.device.default"), userData="")
+        body.addWidget(make_form_row(
+            t("transcription.mic.device.label"),
+            self.mic_combo,
+            hint=t("transcription.mic.device.hint"),
+            align_right=True,
+        ))
+        self.enhance_combo = ComboBox()
+        self.enhance_combo.setFixedWidth(COMBO_FIELD_WIDTH)
+        for key, value in ENHANCE_CHOICES:
+            self.enhance_combo.addItem(t(key), userData=value)
+        body.addWidget(make_form_row(
+            t("transcription.enhance.label"),
+            self.enhance_combo,
+            hint=t("transcription.enhance.hint"),
+            align_right=True,
+        ))
+        content_layout.addWidget(card)
+
         # --- Local transcription device ---
         # Last card: it only bites when `local` is the backend actually in use,
         # so it reads as a footnote to the priority/model choices above.
@@ -378,6 +423,54 @@ class TranscriptionPage(BasePage):
                 self.device_combo.setCurrentIndex(i)
                 break
 
+        self._populate_mic_combo(config.get("INPUT_DEVICE", "") or "")
+
+        enhance = normalize_enhance_profile(config.get("AUDIO_ENHANCE", "light"))
+        idx = self.enhance_combo.findData(enhance)
+        if idx < 0:
+            idx = self.enhance_combo.findData("light")
+        if idx >= 0:
+            self.enhance_combo.setCurrentIndex(idx)
+
+    def _populate_mic_combo(self, selected_config: str) -> None:
+        """Refresh the input-device list from PortAudio and restore selection."""
+        self.mic_combo.blockSignals(True)
+        self.mic_combo.clear()
+        self.mic_combo.addItem(t("transcription.mic.device.default"), userData="")
+        try:
+            devices = list_input_devices()
+        except Exception:
+            devices = []
+        for info in devices:
+            # userData is the config value ("name::<name>"); label may include hostapi.
+            self.mic_combo.addItem(info.display_label, userData=info.config_value)
+
+        # Restore selection. If the saved device is missing from the live list,
+        # keep a synthetic row so the user still sees what was stored and can
+        # re-pick; resolve_input_device will fall back to default at record time.
+        selected = (selected_config or "").strip()
+        idx = self.mic_combo.findData(selected) if selected else 0
+        if selected and idx < 0:
+            # Bare name without prefix — try matching encode form.
+            from services.audio_prep import decode_device_name
+
+            bare = decode_device_name(selected)
+            if bare:
+                for i in range(self.mic_combo.count()):
+                    data = self.mic_combo.itemData(i) or ""
+                    if data == encode_device_name(bare) or (
+                        isinstance(data, str) and data.endswith(bare)
+                    ):
+                        idx = i
+                        break
+            if idx < 0:
+                self.mic_combo.addItem(
+                    f"{bare or selected} (?)", userData=selected
+                )
+                idx = self.mic_combo.count() - 1
+        self.mic_combo.setCurrentIndex(max(0, idx))
+        self.mic_combo.blockSignals(False)
+
     def apply_to(self, config: Config) -> None:
         # Priority — fall back to ['local'] if everything got drag-deleted.
         priority = self._ordered_priority() or ["local"]
@@ -401,6 +494,14 @@ class TranscriptionPage(BasePage):
 
         _, dev_val = DEVICE_CHOICES[self.device_combo.currentIndex()]
         config.set("USE_DEVICE", dev_val)
+
+        mic_data = self.mic_combo.currentData()
+        config.set("INPUT_DEVICE", mic_data if isinstance(mic_data, str) else "")
+
+        enhance_data = self.enhance_combo.currentData()
+        if not isinstance(enhance_data, str) or not enhance_data:
+            enhance_data = "light"
+        config.set("AUDIO_ENHANCE", normalize_enhance_profile(enhance_data))
 
     def _apply_secret(
         self,

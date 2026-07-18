@@ -199,6 +199,25 @@ STRINGS: dict[str, str] = {
     "transcription.device.cpu": "CPU",
     "transcription.device.cuda": "CUDA（GPU）",
 
+    "transcription.mic.title": "麦克风",
+    "transcription.mic.hint": (
+        "从哪个输入录音，以及转写前的轻度音频处理（高通滤波与电平归一化）。"
+        "不会更改 ASR 模型。"
+    ),
+    "transcription.mic.device.label": "输入设备",
+    "transcription.mic.device.hint": (
+        "系统默认跟随 Windows。若录到错误设备，或使用桌面 USB 麦克风，"
+        "请选择具体麦克风。"
+    ),
+    "transcription.mic.device.default": "系统默认",
+    "transcription.enhance.label": "音频增强",
+    "transcription.enhance.hint": (
+        "轻度：在送入模型前略微提升轻声并抑制低频嗡声。"
+        "关闭：原始录音（先前行为）。"
+    ),
+    "transcription.enhance.off": "关闭",
+    "transcription.enhance.light": "轻度（推荐）",
+
     "transcription.error.priority_empty": "引擎优先级列表为空。",
 
     # ---------- settings: About page ----------

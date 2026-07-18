@@ -103,6 +103,11 @@ re-processing what you dictated.
   double-tap gesture to pop the main window, a 10-minute recording safety
   auto-stop, and single-instance enforcement via a Windows mutex.
 
+- **Microphone prep** — pick the input device in **Settings → Transcription**,
+  and optional **Light** audio enhance (on by default): a gentle high-pass and
+  level boost before the ASR model hears the clip. Turn enhance **Off** to send
+  raw capture.
+
 ![Omni Verte main window](docs/assets/main_screenshot.jpg)
 
 ---
