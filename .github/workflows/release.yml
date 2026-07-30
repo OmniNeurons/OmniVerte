@@ -67,6 +67,16 @@ jobs:
           path: dist/installer/*.exe
           if-no-files-found: error
 
+      # A copy with a stable name makes the permanent link
+      # releases/latest/download/OmniVerte-Setup.exe always point to the
+      # newest release (GitHub resolves it by exact asset name).
+      - name: Add stable-named installer copy
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $versioned = Get-ChildItem dist/installer/OmniVerte-Setup-*.exe | Select-Object -First 1
+          Copy-Item $versioned.FullName dist/installer/OmniVerte-Setup.exe
+
       - name: Publish to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2

@@ -21,7 +21,7 @@ re-processing what you dictated.
 </p>
 
 <p align="center">
-  <b><a href="https://github.com/OmniNeurons/OmniVerte/releases/latest">⬇️ Download the latest installer</a></b>
+  <b><a href="https://github.com/OmniNeurons/OmniVerte/releases/latest/download/OmniVerte-Setup.exe">⬇️ Download the latest installer</a></b>
   &nbsp;·&nbsp;
   <a href="#download--install">install notes</a>
   &nbsp;·&nbsp;
