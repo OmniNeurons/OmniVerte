@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.28] - 2026-08-02
+
+### Added
+- Every release now ships a second, stable-named installer asset
+  `OmniVerte-Setup.exe` alongside the versioned one, so
+  `releases/latest/download/OmniVerte-Setup.exe` is a permanent link that
+  always resolves to the newest installer.
+
+### Changed
+- README download button points at the permanent installer link and starts
+  the download in one click instead of opening the releases page.
+
 ## [1.1.27] - 2026-07-19
 
 ### Added
