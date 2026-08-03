@@ -181,6 +181,26 @@ class SettingsWindow(FluentWindow):
         self._pages = [general, transcription, languages, custom, glossary, license_page, about]
         self._page_by_id: dict[str, BasePage] = {p.PAGE_ID: p for p in self._pages}
 
+        # Re-gate every page the moment the entitlement changes, so activating
+        # Pro on the License page unlocks Custom Style / Glossary without
+        # closing and reopening this window. With a bridge, subscribe there —
+        # it also carries changes from the background license monitor (Qt
+        # queues the cross-thread emit onto our thread, and auto-disconnects
+        # when this window is destroyed). Without one (`--settings`
+        # subprocess), the license page's own echo is the only source; using
+        # exactly one of the two avoids a double refresh per activation.
+        if self._ui_bridge is not None:
+            self._ui_bridge.entitlement_changed.connect(self._refresh_entitlement_gates)
+        else:
+            license_page.entitlement_updated.connect(self._refresh_entitlement_gates)
+
+    def _refresh_entitlement_gates(self):
+        for page in self._pages:
+            try:
+                page.refresh_entitlement_gates()
+            except Exception as e:
+                logger.warning(f"entitlement re-gate failed for {page.PAGE_ID}: {e}")
+
     def _build_action_bar(self):
         """Persistent footer with Save / Cancel / Use Local Only buttons.
 
