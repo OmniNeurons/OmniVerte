@@ -127,6 +127,11 @@ class CustomStylePage(BasePage):
         self.pro_hint.setVisible(not can_edit)
         self.pro_tag.setVisible(not can_edit)
 
+    def refresh_entitlement_gates(self) -> None:
+        # Live re-gate: called by the settings window right after a license
+        # activation/clear, so the fields unlock without reopening the window.
+        self._apply_edit_gate()
+
     def apply_to(self, config: Config) -> None:
         config.set("CUSTOM_STYLE_NAME", self.name_edit.text().strip())
         config.set("CUSTOM_STYLE_PROMPT", self.prompt_edit.toPlainText().strip())

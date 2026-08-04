@@ -763,6 +763,13 @@ class GlossaryPage(BasePage):
             for btn in self.pack_buttons:
                 btn.setToolTip(t("glossary.packs.tooltip.locked"))
 
+    def refresh_entitlement_gates(self) -> None:
+        # Live re-gate after a license activation/clear: unlock the pack
+        # buttons and recompute the term counter + over-cap dimming against
+        # the new tier's cap, without reopening the window.
+        self._refresh_pack_status()
+        self._update_term_counter()
+
     def apply_to(self, config: Config) -> None:
         def store(key: str, switch: SwitchButton) -> None:
             config.set(key, "true" if switch.isChecked() else "false")

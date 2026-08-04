@@ -514,3 +514,9 @@ class BasePage(QWidget):
     def validate(self) -> Optional[str]:
         """Return error message string if invalid, otherwise None."""
         return None
+
+    def refresh_entitlement_gates(self) -> None:
+        """Re-apply Free/Pro gating after a live entitlement change (license
+        activated/cleared/revoked while the window is open). Pages whose
+        widgets are gated override this; the default is a no-op so pages with
+        no Pro surface don't have to care."""

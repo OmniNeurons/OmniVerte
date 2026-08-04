@@ -149,6 +149,11 @@ class LicensePage(BasePage):
     # Payload is the Entitlement on success or the Exception on failure.
     _activate_finished = Signal(object)
 
+    # Fired after an activation/clear changed the entitlement. The settings
+    # window listens on this when it has no ui_bridge (the `--settings`
+    # subprocess path), so sibling pages re-gate live there too.
+    entitlement_updated = Signal()
+
     def __init__(self, parent=None, ui_bridge=None):
         # Stash the bridge before BasePage.__init__ triggers build().
         self._ui_bridge = ui_bridge
@@ -431,6 +436,10 @@ class LicensePage(BasePage):
                 self._ui_bridge.entitlement_changed.emit()
             except Exception:
                 pass
+        # Page-level echo for the host settings window. With a bridge the
+        # window subscribes there instead (one signal, one refresh); without
+        # one this is the only way sibling pages hear about the change.
+        self.entitlement_updated.emit()
 
     # ---------- toasts ----------
 
@@ -460,6 +469,15 @@ class LicensePage(BasePage):
         self._refresh_status()
         # Re-open on the settled state, even if the page was left mid-edit.
         self._apply_state()
+
+    def refresh_entitlement_gates(self) -> None:
+        # An entitlement change that did NOT originate here (the background
+        # monitor caught a revoke/renew) still lands on this page via the
+        # settings window — keep the status line and card state truthful.
+        # Preserves an in-progress key edit; _apply_state drops the editing
+        # flag by itself if the machine is no longer activated.
+        self._refresh_status()
+        self._apply_state(editing=self._editing)
 
     def apply_to(self, config: Config) -> None:
         # Activation/clear happen immediately via the buttons, not on Save.

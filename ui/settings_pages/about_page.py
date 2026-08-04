@@ -83,10 +83,6 @@ class AboutPage(BasePage):
             t("about.email"),
             _link_label("mailto:arsenybandurin@gmail.com", "arsenybandurin@gmail.com"),
         ))
-        body.addWidget(make_form_row(
-            t("about.website"),
-            _link_label("https://www.omnineurons.com", "www.omnineurons.com"),
-        ))
 
         content_layout.addWidget(card)
 
