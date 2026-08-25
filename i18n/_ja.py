@@ -477,6 +477,16 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "モデルを読み込み中…",
     "main.status.failed": "モデルの読み込みに失敗 — ネットワークを確認し、設定で選び直してください",
 
+    # クラウド API 障害の通知 (services/api_errors.py)。Windows 通知として、
+    # 目立つ「!!! ⚠ … ⚠ !!!」枠付きで表示され、口述テキストと混同されない。
+    "error.transcribe.title": "音声を文字起こしできませんでした",
+    "error.postprocess.title": "テキストは補正なしで貼り付けられました",
+    "error.api.quota": "{provider}：APIクレジットを使い切りました — アカウント残高を確認してください",
+    "error.api.auth": "{provider}：APIキーが拒否されました — 設定で確認してください",
+    "error.api.rate": "{provider}：リクエスト上限に達しました — 1分後に再試行してください",
+    "error.api.network": "{provider}：接続できません — ネット接続を確認してください",
+    "error.api.unknown": "{provider}：予期しないエラー — ログを確認してください",
+
     # フローティング録音インジケーター (ui/rec_indicator.py) — 短いピル表示。
     "indicator.recording": "認識中",
     "indicator.processing": "文字起こし",

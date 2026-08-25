@@ -466,6 +466,16 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "正在加载模型…",
     "main.status.failed": "模型加载失败 — 检查网络，在设置中重新选择",
 
+    # 云端 API 故障提醒 (services/api_errors.py)。以 Windows 通知形式显示，
+    # 并带醒目的“!!! ⚠ … ⚠ !!!”边框，以免被误当作听写文本。
+    "error.transcribe.title": "语音未能转写",
+    "error.postprocess.title": "文本已粘贴，但未经校正",
+    "error.api.quota": "{provider}：API 额度已用完 — 请检查账户余额",
+    "error.api.auth": "{provider}：API 密钥被拒绝 — 请在设置中检查",
+    "error.api.rate": "{provider}：请求已达上限 — 请一分钟后重试",
+    "error.api.network": "{provider}：无法连接 — 请检查网络",
+    "error.api.unknown": "{provider}：发生意外错误 — 请查看日志",
+
     # 悬浮录音指示器 (ui/rec_indicator.py) — 简短的胶囊标签。
     "indicator.recording": "聆听中",
     "indicator.processing": "转录中",

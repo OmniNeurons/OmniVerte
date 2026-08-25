@@ -73,6 +73,18 @@ class UIBridge(QObject):
     # than retranslated. The long-lived main window is the one that listens.
     language_changed = Signal(str)
 
+    # A cloud API call failed in a way the user must act on (quota exhausted,
+    # key revoked, no network). Args: context ("transcribe" — no text was
+    # produced | "postprocess" — raw text was pasted without correction), kind
+    # (services.api_errors.classify_api_error result), provider display label
+    # ("OpenAI"/"Groq"). Carries codes, not text: sinks render via
+    # services.api_errors.user_message() at display time, so the message
+    # follows the CURRENT UI locale, and always framed so it can't be mistaken
+    # for dictated text. Emitted from worker threads; the tray toast sink is a
+    # plain callable (direct call on the emitting thread — pystray's notify is
+    # a bare shell call, thread-safe).
+    api_error = Signal(str, str, str)
+
     # Tray menu → "Exit" — app.quit() handler connects to this.
     quit_requested = Signal()
 

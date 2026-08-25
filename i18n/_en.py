@@ -548,6 +548,18 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "Loading model…",
     "main.status.failed": "Model failed — check network, re-pick in Settings",
 
+    # Cloud-API failure alerts (services/api_errors.py). Shown as a Windows
+    # toast, always inside a loud "!!! ⚠ … ⚠ !!!" frame so the message can
+    # never pass for dictated text and get pasted into a chat unnoticed.
+    # {provider} is the provider's display name ("OpenAI"/"Groq").
+    "error.transcribe.title": "Speech was not transcribed",
+    "error.postprocess.title": "Text pasted without correction",
+    "error.api.quota": "{provider}: API credits exhausted — check your account balance",
+    "error.api.auth": "{provider}: API key rejected — check it in Settings",
+    "error.api.rate": "{provider}: rate limit reached — try again in a minute",
+    "error.api.network": "{provider}: no connection — check your internet",
+    "error.api.unknown": "{provider}: unexpected error — see the log",
+
     # Floating recording indicator (ui/rec_indicator.py) — single-word pill
     # labels, uppercased by the widget's font. "nosignal" is the dead/switched-
     # mic cue that motivated the pill redesign; it must read as an alarm.

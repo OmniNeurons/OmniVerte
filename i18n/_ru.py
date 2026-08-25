@@ -493,6 +493,17 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "Загрузка модели…",
     "main.status.failed": "Модель не загрузилась — проверьте сеть, выберите заново в настройках",
 
+    # Уведомления об ошибках облачного API (services/api_errors.py). Показываются
+    # Windows-тостом в громкой рамке «!!! ⚠ … ⚠ !!!», чтобы сообщение нельзя было
+    # принять за надиктованный текст и случайно отправить в чат.
+    "error.transcribe.title": "Речь не расшифрована",
+    "error.postprocess.title": "Текст вставлен без коррекции",
+    "error.api.quota": "{provider}: закончились кредиты API — проверьте баланс аккаунта",
+    "error.api.auth": "{provider}: ключ API отклонён — проверьте его в настройках",
+    "error.api.rate": "{provider}: превышен лимит запросов — попробуйте через минуту",
+    "error.api.network": "{provider}: нет соединения — проверьте интернет",
+    "error.api.unknown": "{provider}: непредвиденная ошибка — см. журнал",
+
     # Плавающий индикатор записи (ui/rec_indicator.py) — короткие подписи пилюли.
     "indicator.recording": "Слушаю",
     "indicator.processing": "Расшифровка",

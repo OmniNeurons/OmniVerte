@@ -478,6 +478,17 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "Caricamento del modello…",
     "main.status.failed": "Modello non caricato — controlla la rete, riseleziona nelle impostazioni",
 
+    # Avvisi di errore dell'API cloud (services/api_errors.py). Mostrati come
+    # notifica di Windows dentro una cornice vistosa «!!! ⚠ … ⚠ !!!» perché non
+    # possano mai passare per testo dettato.
+    "error.transcribe.title": "Il parlato non è stato trascritto",
+    "error.postprocess.title": "Testo incollato senza correzione",
+    "error.api.quota": "{provider}: crediti API esauriti — controlla il saldo dell'account",
+    "error.api.auth": "{provider}: chiave API rifiutata — controllala nelle impostazioni",
+    "error.api.rate": "{provider}: limite di richieste raggiunto — riprova tra un minuto",
+    "error.api.network": "{provider}: nessuna connessione — controlla la rete",
+    "error.api.unknown": "{provider}: errore imprevisto — vedi il log",
+
     # Indicatore di registrazione fluttuante (ui/rec_indicator.py) — etichette brevi.
     "indicator.recording": "In ascolto",
     "indicator.processing": "Trascrizione",

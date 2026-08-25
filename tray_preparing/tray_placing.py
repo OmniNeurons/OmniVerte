@@ -26,6 +26,7 @@ _STATUS_DOT_COLORS = {
     "processing": (235, 200, 50, 255),
     "loading":    (139, 92, 246, 255),  # violet, matches STATUS_DOT_LOADING
     "failed":     (185, 28, 28, 255),   # red, matches STATUS_DOT_ERROR
+    "error":      (185, 28, 28, 255),   # session-axis API failure, same red
 }
 
 def get_resource_path(filename):
@@ -154,6 +155,24 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
 
     ui_bridge.status_changed.connect(_on_status)
     ui_bridge.model_state_changed.connect(_on_model_state)
+
+    def _on_api_error(context: str, kind: str, provider: str):
+        """Windows toast for a user-actionable API failure (quota/key/network).
+
+        The tray is the app's always-visible surface — the main window is
+        usually hidden — so this is the primary channel for "your quota ran
+        out". The body is rendered by user_message() in the CURRENT UI locale
+        and framed (!!! ⚠ … ⚠ !!!) so it cannot be mistaken for dictated text.
+        pystray's notify is a plain shell call — safe from the emitting worker
+        thread, and a platform without balloon support just logs.
+        """
+        try:
+            from services.api_errors import user_message
+            icon.notify(user_message(context, kind, provider), t("app.title"))
+        except Exception as e:
+            logger.warning(f"Tray API-error notification failed: {e}")
+
+    ui_bridge.api_error.connect(_on_api_error)
 
     def update_menu():
         """Updates the system tray menu with current settings.

@@ -480,6 +480,17 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "Cargando modelo…",
     "main.status.failed": "El modelo no se cargó — revise la red, vuelva a elegirlo en Ajustes",
 
+    # Alertas de fallo de la API en la nube (services/api_errors.py). Se muestran
+    # como aviso de Windows dentro de un marco llamativo «!!! ⚠ … ⚠ !!!» para que
+    # nunca se confundan con texto dictado.
+    "error.transcribe.title": "La voz no se transcribió",
+    "error.postprocess.title": "Texto pegado sin corrección",
+    "error.api.quota": "{provider}: créditos de la API agotados — revise el saldo de su cuenta",
+    "error.api.auth": "{provider}: clave de API rechazada — revísela en Ajustes",
+    "error.api.rate": "{provider}: límite de peticiones alcanzado — inténtelo en un minuto",
+    "error.api.network": "{provider}: sin conexión — revise su internet",
+    "error.api.unknown": "{provider}: error inesperado — consulte el registro",
+
     # Indicador flotante de grabación (ui/rec_indicator.py) — etiquetas breves.
     "indicator.recording": "Escuchando",
     "indicator.processing": "Transcribiendo",

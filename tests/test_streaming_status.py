@@ -36,6 +36,8 @@ def test_no_processing_status_while_still_recording(monkeypatch):
     w.is_recording = True
     w._session_gen = 0
     w.transcribed_segments = []
+    # Normally set by start_recording; "off" keeps the WAV path a pass-through.
+    w._audio_enhance_profile = "off"
 
     w.audio_queue = queue.Queue()
     w.audio_queue.put(np.zeros((100, 1), dtype=np.int16))

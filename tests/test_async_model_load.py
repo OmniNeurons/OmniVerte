@@ -167,6 +167,10 @@ def test_start_recording_not_blocked_for_cloud_backend(monkeypatch):
     w.streaming = False
     w.fs = 16000
     w.ui_bridge = MagicMock()
+    # start_recording re-reads capture settings (INPUT_DEVICE / AUDIO_ENHANCE)
+    # from config on every press — give it an empty-config stub.
+    w.config = MagicMock()
+    w.config.get.return_value = ""
     # Stub the OS/audio surfaces start_recording touches past the guard.
     monkeypatch.setattr(aw, "ctypes", SimpleNamespace(
         windll=SimpleNamespace(user32=SimpleNamespace(

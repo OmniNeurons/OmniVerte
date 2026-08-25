@@ -491,6 +491,17 @@ STRINGS: dict[str, str] = {
     "main.status.loading": "Modell wird geladen…",
     "main.status.failed": "Modell nicht geladen — Netzwerk prüfen, in den Einstellungen neu wählen",
 
+    # Cloud-API-Fehlermeldungen (services/api_errors.py). Erscheinen als
+    # Windows-Benachrichtigung in einem auffälligen Rahmen „!!! ⚠ … ⚠ !!!“,
+    # damit sie nie mit diktiertem Text verwechselt werden.
+    "error.transcribe.title": "Sprache wurde nicht transkribiert",
+    "error.postprocess.title": "Text ohne Korrektur eingefügt",
+    "error.api.quota": "{provider}: API-Guthaben aufgebraucht — Kontostand prüfen",
+    "error.api.auth": "{provider}: API-Schlüssel abgelehnt — in den Einstellungen prüfen",
+    "error.api.rate": "{provider}: Anfragelimit erreicht — in einer Minute erneut versuchen",
+    "error.api.network": "{provider}: keine Verbindung — Internet prüfen",
+    "error.api.unknown": "{provider}: unerwarteter Fehler — siehe Protokoll",
+
     # Schwebende Aufnahmeanzeige (ui/rec_indicator.py) — kurze Pill-Beschriftungen.
     "indicator.recording": "Höre zu",
     "indicator.processing": "Transkription",

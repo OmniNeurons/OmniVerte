@@ -48,6 +48,7 @@ from services.transcription_models import (
     LOCAL_WHISPER_MODELS,
     OPENAI_TRANSCRIPTION_MODELS,
 )
+from services.api_errors import CloudApiError, classify_api_error
 from services.glossary import Glossary
 from services.audio_prep import (
     normalize_enhance_profile,
@@ -368,6 +369,10 @@ class AudioWriter:
     # double-tap window, we cancel this timer and treat the pair as a
     # "double-tap stop + open window" gesture.
     self._pending_stop_timer: threading.Timer | None = None
+    # One user-facing API-error notification per recording session: a dead
+    # quota fails every 20s streaming segment AND the final pass AND the LLM
+    # correction — one toast carries the news, the rest would be spam.
+    self._api_error_notified = False
     # For streaming transcription
     self.streaming = False
     self.transcription_thread = None
@@ -849,6 +854,30 @@ class AudioWriter:
     from services.text_operations import LANGUAGE_TO_WHISPER_CODE
     return LANGUAGE_TO_WHISPER_CODE.get(self.config.get("PRIMARY_LANGUAGE") or "")
 
+  def _notify_api_error(self, context, exc, provider=None):
+    """Surface a user-actionable API failure via UIBridge.api_error.
+
+    At most once per recording session (see _api_error_notified) — the same
+    dead quota otherwise fires from every streaming segment, the final pass
+    and the LLM correction. ``context`` is "transcribe" (no text produced) or
+    "postprocess" (raw text pasted uncorrected). Provider comes from the
+    CloudApiError wrapper when present, else from ``provider``/the active
+    backend. Never raises — this runs on worker threads mid-failure.
+    """
+    if self._api_error_notified:
+      return
+    self._api_error_notified = True
+    try:
+      if isinstance(exc, CloudApiError):
+        provider = exc.provider
+      if provider is None:
+        provider = {"openai": "OpenAI", "groq": "Groq"}.get(
+            self.transcription_backend, "Local Whisper"
+        )
+      self.ui_bridge.api_error.emit(context, classify_api_error(exc), provider)
+    except Exception as e:  # pragma: no cover - defensive, notification is best-effort
+      logger.warning(f"Failed to emit api_error notification: {e}")
+
   def drop_all(self):
     """Reset all recording and transcription state variables."""
     logger.info("Resetting all recording and transcription states")
@@ -893,6 +922,8 @@ class AudioWriter:
     self.audio_queue = queue.Queue()  # Reset the queue
     # New session — clear any "skip paste" intent left over from a previous one.
     self._skip_next_paste = False
+    # New session — the once-per-session API-error notification re-arms.
+    self._api_error_notified = False
     # Defensive: cancel any stale deferred-stop timer (e.g. if it fired racey
     # with this start). The guard in _deferred_stop is the primary defence.
     if self._pending_stop_timer is not None:
@@ -1036,7 +1067,21 @@ class AudioWriter:
     temp_audio_file = os.path.join(_TEMP_DIR, "temp_audio.wav")
     self._write_transcription_wav(temp_audio_file, audio_data)
     logger.info("Audio saved to temporary file.")
-    self.process_audio_file(temp_audio_file, session_gen=session_gen)
+    try:
+      self.process_audio_file(temp_audio_file, session_gen=session_gen)
+    except Exception as e:
+      # Transcription failed outright (dead quota, revoked key, no network).
+      # Without this catch the exception kills the timer/hook thread that
+      # called us, the reset tail never runs, and the indicator hangs on
+      # "processing" forever — the user reads it as a freeze. Tell them what
+      # happened, flip the window status to "error", and restore the hooks so
+      # the next hotkey press works.
+      logger.error(f"Final transcription failed: {e}", exc_info=True)
+      if session_gen == self._session_gen:
+        self._notify_api_error("transcribe", e)
+        self.ui_bridge.safe_emit_status("error")
+        self.drop_all()
+        self.press_and_talk()
 
   def _open_input_stream(self, device_index):
     """Open a mono int16 InputStream; fall back to default if device is gone."""
@@ -1197,6 +1242,11 @@ class AudioWriter:
               self.transcribed_segments.append(segment_text)
           except Exception as e:
             logger.error(f"Error transcribing segment: {e}")
+            # Words were lost — tell the user why (quota/key/network), once
+            # per session. Only the live session may notify: a stale thread's
+            # failure is not news about the current recording.
+            if _current():
+              self._notify_api_error("transcribe", e)
 
           # Save the last frames for overlap (only while continuing to stream)
           if not finalizing:
@@ -1250,6 +1300,7 @@ class AudioWriter:
       return self._scrub_glossary_echo(text)
 
     last_err = None
+    last_label = None
     for backend in self._cloud_fallback_order():
       client = self.client if backend == "openai" else self.groq_client
       label = "OpenAI" if backend == "openai" else "Groq"
@@ -1269,13 +1320,16 @@ class AudioWriter:
         return self._scrub_glossary_echo(text)
       except Exception as e:
         last_err = e
+        last_label = label
         logger.error(f"Transcription via {label} failed: {e}")
         continue
 
     # Every cloud provider failed. Raise so the caller degrades as before
-    # (streaming: skip segment; final: surface the error) — never hang.
+    # (streaming: skip segment; final: surface the error) — never hang. The
+    # CloudApiError wrapper carries the provider label so _notify_api_error can
+    # name who is out of quota / rejecting the key.
     if last_err:
-      raise last_err
+      raise CloudApiError(last_label, last_err)
     raise RuntimeError("No cloud transcription backend available")
 
   def _transcribe_via_local_whisper(self, audio_file_path, streaming=False):
@@ -1577,8 +1631,11 @@ Text to process:
     except Exception as e:
       # Post-processing is a nice-to-have. On failure (network, timeout,
       # rate-limit) fall back to the raw transcript so the user still gets
-      # their words inserted instead of an error string.
+      # their words inserted instead of an error string. Still tell them WHY
+      # the text arrived uncorrected/untranslated — the LLM always runs on the
+      # OpenAI client, hence the fixed provider label.
       logger.warning(f"Post-processing (action='{action}') failed, pasting raw transcript: {e}")
+      self._notify_api_error("postprocess", e, provider="OpenAI")
       return raw
 
   def process_text(self, input_text, session_gen=None):
