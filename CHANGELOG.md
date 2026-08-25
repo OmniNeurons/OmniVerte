@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.30] - 2026-08-25
+
+### Added
+- Cloud API failures the user must act on (quota exhausted, key rejected, rate
+  limit, no network) now surface as a Windows tray toast naming the provider
+  and the fix, in the UI language. One toast per recording session; messages
+  are framed with warning marks so they can never be mistaken for dictated
+  text.
+
+### Fixed
+- A failed final transcription (dead quota, revoked key, offline) no longer
+  leaves the recording indicator stuck on "processing" — the app reports the
+  error, resets, and the next hotkey press works again.
+- When LLM post-processing fails and the raw transcript is pasted as a
+  fallback, the user is now told why the text arrived uncorrected.
+
+## [1.1.29] - 2026-08-03
+
+### Fixed
+- Pro settings pages now re-gate live when the license changes while the
+  Settings window is open.
+
 ## [1.1.28] - 2026-08-02
 
 ### Added
