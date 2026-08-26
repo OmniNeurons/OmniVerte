@@ -509,6 +509,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "Copiar",
     "main.button.clear": "Borrar",
+    "main.button.clear_styles": "Quitar estilos",
     # Botones segmentados de reescritura. Los nombres de estilo son las mismas
     # palabras que en el desplegable de la página «General» (general.style.*),
     # para que el botón y el ajuste se lean como lo mismo.

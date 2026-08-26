@@ -505,6 +505,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "コピー",
     "main.button.clear": "クリア",
+    "main.button.clear_styles": "書式をクリア",
     "main.button.fix_grammar": "文法を補正",
     "main.button.casual": "カジュアル",
     "main.button.professional": "ビジネス",

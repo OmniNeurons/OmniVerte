@@ -510,6 +510,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "Copier",
     "main.button.clear": "Effacer",
+    "main.button.clear_styles": "Retirer les styles",
     "main.button.fix_grammar": "Corriger la grammaire",
     "main.button.casual": "Décontracté",
     "main.button.professional": "Professionnel",

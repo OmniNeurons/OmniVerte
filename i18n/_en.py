@@ -585,6 +585,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "Copy",
     "main.button.clear": "Clear",
+    "main.button.clear_styles": "Clear styles",
     "main.button.fix_grammar": "Fix grammar",
     "main.button.casual": "Casual",
     "main.button.professional": "Professional",

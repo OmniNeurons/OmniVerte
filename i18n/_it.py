@@ -507,6 +507,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "Copia",
     "main.button.clear": "Cancella",
+    "main.button.clear_styles": "Rimuovi stili",
     # Pulsanti segmentati di riscrittura. I nomi degli stili sono le stesse
     # parole del menu a discesa nella pagina «Generale» (general.style.*),
     # così pulsante e impostazione si leggono come la stessa cosa.

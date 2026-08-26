@@ -494,6 +494,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "复制",
     "main.button.clear": "清除",
+    "main.button.clear_styles": "清除格式",
     "main.button.fix_grammar": "修正语法",
     "main.button.casual": "随意",
     "main.button.professional": "专业",

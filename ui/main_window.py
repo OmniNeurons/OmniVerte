@@ -45,6 +45,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
     QTextDocument,
+    QTextFormat,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -204,39 +205,71 @@ def _strip_text_colors(doc) -> None:
 
     Sweeping the live document after paste is what catches Slack/Word HTML
     that puts colour on a block style rather than a leaf span, and what makes
-    a theme switch instantly fix anything that was pasted earlier."""
+    a theme switch instantly fix anything that was pasted earlier.
+
+    Two phases: WALK the document collecting the edits, then APPLY them.
+    Applying a char format re-shapes the fragment list (neighbours whose
+    formats become equal — e.g. a red and a blue span both going plain —
+    merge into one), which invalidates live block/fragment iterators;
+    mutating mid-walk sent this loop chasing stale positions forever on such
+    pastes. Format-only edits never change the character count, so ranges
+    collected up front stay valid through the apply phase. Only formats that
+    actually carry a colour are touched — a colourless paste is a pure
+    read-only walk with zero document mutations."""
+
+    def _colored(fmt) -> bool:
+        return fmt.hasProperty(QTextFormat.ForegroundBrush) or fmt.hasProperty(
+            QTextFormat.BackgroundBrush
+        )
+
+    def _cleared(fmt) -> QTextCharFormat:
+        ncf = QTextCharFormat(fmt)
+        ncf.clearForeground()
+        ncf.clearBackground()
+        return ncf
+
+    block_backgrounds: list[int] = []
+    block_char_formats: list[tuple[int, QTextCharFormat]] = []
+    fragment_formats: list[tuple[int, int, QTextCharFormat]] = []
+
     block = doc.begin()
     while block.isValid():
-        c = QTextCursor(block)
-
         # Paragraph background (e.g. Slack's <p style="background-color:#f8f8f8">).
-        bf = QTextBlockFormat(block.blockFormat())
-        bf.clearBackground()
-        c.setBlockFormat(bf)
-
+        if block.blockFormat().hasProperty(QTextFormat.BackgroundBrush):
+            block_backgrounds.append(block.position())
         # Block char format — drives the caret at paragraph end.
-        bcf = QTextCharFormat(block.charFormat())
-        bcf.clearForeground()
-        bcf.clearBackground()
-        c.setBlockCharFormat(bcf)
-
+        if _colored(block.charFormat()):
+            block_char_formats.append((block.position(), _cleared(block.charFormat())))
         # Per-fragment formats.
         it = block.begin()
         while not it.atEnd():
             frag = it.fragment()
-            if frag.isValid():
-                ncf = QTextCharFormat(frag.charFormat())
-                ncf.clearForeground()
-                ncf.clearBackground()
-                fc = QTextCursor(doc)
-                fc.setPosition(frag.position())
-                fc.setPosition(
-                    frag.position() + frag.length(),
-                    QTextCursor.KeepAnchor,
+            if frag.isValid() and _colored(frag.charFormat()):
+                fragment_formats.append(
+                    (
+                        frag.position(),
+                        frag.position() + frag.length(),
+                        _cleared(frag.charFormat()),
+                    )
                 )
-                fc.setCharFormat(ncf)
             it += 1
         block = block.next()
+
+    for pos in block_backgrounds:
+        c = QTextCursor(doc)
+        c.setPosition(pos)
+        bf = QTextBlockFormat(c.blockFormat())
+        bf.clearBackground()
+        c.setBlockFormat(bf)
+    for pos, ncf in block_char_formats:
+        c = QTextCursor(doc)
+        c.setPosition(pos)
+        c.setBlockCharFormat(ncf)
+    for start, end, ncf in fragment_formats:
+        c = QTextCursor(doc)
+        c.setPosition(start)
+        c.setPosition(end, QTextCursor.KeepAnchor)
+        c.setCharFormat(ncf)
 
 
 class _DocViewTextEdit(QTextEdit):
@@ -880,6 +913,14 @@ class MainWindow(FramelessWindow):
             setter="setMultilinePlaceholder",
         )
         self._tr(self.result_card.badge_label, "main.card.badge.generated")
+        # "Clear styles" — only shown while the result actually carries
+        # formatting (the markdown round-trip); flattens it to plain text.
+        # Added first so it sits left of the always-present Copy/Clear pair.
+        self.clear_styles_btn = self._tr(
+            self.result_card.add_toolbar_button("", self._clear_result_styles),
+            "main.button.clear_styles",
+        )
+        self.clear_styles_btn.hide()
         self._tr(
             self.result_card.add_toolbar_button("", self._copy_result),
             "main.button.copy",
@@ -888,6 +929,9 @@ class MainWindow(FramelessWindow):
             self.result_card.add_toolbar_button("", self._clear_result),
             "main.button.clear",
         )
+        # Any change to the result document — a finished operation, a feed
+        # click, manual typing, the strip itself — re-decides the visibility.
+        self.result_card.text_edit.textChanged.connect(self._sync_clear_styles_btn)
         row.addWidget(self.result_card, stretch=1)
 
         return row
@@ -1241,6 +1285,14 @@ class MainWindow(FramelessWindow):
         self.result_card.set_generated_badge(False)
         self._result_state = ("idle", None, {})
         self._repaint_result_title()
+
+    def _clear_result_styles(self):
+        """Flatten the Result card to plain text — the same characters, no
+        markup. The textChanged handler below then hides the button itself."""
+        self.result_card.set_text(self.result_card.text())
+
+    def _sync_clear_styles_btn(self):
+        self.clear_styles_btn.setVisible(self.result_card.has_formatting())
 
     # ---------- result card title ----------
 

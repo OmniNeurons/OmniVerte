@@ -520,6 +520,7 @@ STRINGS: dict[str, str] = {
 
     "main.button.copy": "Kopieren",
     "main.button.clear": "Leeren",
+    "main.button.clear_styles": "Stile entfernen",
     # Segmentierte Umschreib-Schaltflächen. Die Stilnamen sind dieselben Wörter
     # wie im Dropdown auf der Seite „Allgemein“ (general.style.*), damit
     # Schaltfläche und Einstellung als dasselbe gelesen werden.
