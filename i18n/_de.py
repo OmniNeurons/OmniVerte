@@ -135,6 +135,10 @@ STRINGS: dict[str, str] = {
     "languages.swap": "Sprachen tauschen",
     "languages.swap.tooltip": "Primär und Sekundär tauschen",
     "languages.error.must_differ": "Primär- und Sekundärsprache müssen sich unterscheiden.",
+    "languages.ai.title": "KI-Textverarbeitung",
+    "languages.ai.hint": "Gilt für Übersetzen, Korrigieren und Umschreiben — sowohl die Fenster-Buttons als auch die Hotkey-Aktionen.",
+    "languages.ai.max_tokens.label": "Max. Antwortlänge",
+    "languages.ai.max_tokens.hint": "Obergrenze einer KI-Antwort in Tokens (je etwa 3–4 Zeichen). Erhöhen, wenn lange Texte abgeschnitten ankommen — abgerechnet werden nur tatsächlich erzeugte Tokens.",
 
     # ---------- app-wide ----------
     "app.tagline": "KI-Diktat · Umschreiben · Übersetzen",

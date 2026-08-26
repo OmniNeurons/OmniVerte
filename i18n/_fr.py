@@ -136,6 +136,10 @@ STRINGS: dict[str, str] = {
     "languages.swap": "Intervertir les langues",
     "languages.swap.tooltip": "Intervertir principale et secondaire",
     "languages.error.must_differ": "Les langues principale et secondaire doivent être différentes.",
+    "languages.ai.title": "Traitement de texte par IA",
+    "languages.ai.hint": "S'applique à la traduction, la correction et la réécriture — boutons de la fenêtre comme actions par raccourci.",
+    "languages.ai.max_tokens.label": "Longueur max. de réponse",
+    "languages.ai.max_tokens.hint": "Limite supérieure d'une réponse de l'IA, en tokens (environ 3–4 caractères chacun). Augmentez-la si les textes longs arrivent tronqués — seuls les tokens réellement générés sont facturés.",
 
     # ---------- app-wide ----------
     "app.tagline": "Dictée par IA · Réécriture · Traduction",

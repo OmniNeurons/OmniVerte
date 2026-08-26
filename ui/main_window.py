@@ -28,6 +28,7 @@ from typing import Callable, Optional
 import openai
 import pyperclip
 from PySide6.QtCore import (
+    QMimeData,
     QObject,
     QRunnable,
     Qt,
@@ -43,6 +44,7 @@ from PySide6.QtGui import (
     QTextBlockFormat,
     QTextCharFormat,
     QTextCursor,
+    QTextDocument,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -393,6 +395,34 @@ class _DocumentCard(QFrame):
 
     def set_text(self, value: str):
         self.text_edit.setPlainText(value or "")
+
+    def markdown(self) -> str:
+        # GitHub dialect (Qt's default) — also what gpt-4o-mini speaks natively.
+        return self.text_edit.document().toMarkdown()
+
+    def html(self) -> str:
+        return self.text_edit.document().toHtml()
+
+    def has_formatting(self) -> bool:
+        """True when the document carries markup a plain string would lose.
+
+        Compared via toMarkdown() of the live document against a plain-text
+        re-render of the same characters: both sides go through identical
+        escaping, so any difference is real formatting — a literal '*' or '#'
+        typed in plain text is escaped the same way on both sides and does
+        not trigger the rich path."""
+        doc = self.text_edit.document()
+        plain = QTextDocument()
+        plain.setPlainText(doc.toPlainText())
+        return doc.toMarkdown() != plain.toMarkdown()
+
+    def set_markdown(self, value: str):
+        self.text_edit.document().setMarkdown(value or "")
+        # Markdown can introduce link/heading colours; same sweep as after a
+        # rich paste so the theme keeps owning the palette (and the same
+        # cursor reset so subsequent typing isn't tinted).
+        _strip_text_colors(self.text_edit.document())
+        self.text_edit.setCurrentCharFormat(QTextCharFormat())
 
     def set_placeholder(self, text: str):
         # Multi-line empty-state copy — shown only while the document is empty.
@@ -1198,10 +1228,10 @@ class MainWindow(FramelessWindow):
     # ---------- card actions ----------
 
     def _copy_original(self):
-        self._copy_to_clipboard(self.original_card.text())
+        self._copy_card(self.original_card)
 
     def _copy_result(self):
-        self._copy_to_clipboard(self.result_card.text())
+        self._copy_card(self.result_card)
 
     def _clear_original(self):
         self.original_card.set_text("")
@@ -1239,7 +1269,9 @@ class MainWindow(FramelessWindow):
         text = self.original_card.text().strip()
         if not text:
             return
-        self._copy_to_clipboard(text)
+        # Rich copy when the card has formatting, so the Ctrl+V below pastes
+        # the formatted version into rich targets.
+        self._copy_card(self.original_card)
         # Best-effort paste; safe because the user explicitly clicked.
         try:
             import keyboard
@@ -1248,10 +1280,20 @@ class MainWindow(FramelessWindow):
             logger.warning(f"Insert again — paste failed: {e}")
 
     def _replace_original_with_result(self):
-        result = self.result_card.text().strip()
-        if not result:
+        if not self.result_card.text().strip():
             return
-        self.original_card.set_text(result)
+        if self.result_card.has_formatting():
+            self.original_card.set_markdown(self.result_card.markdown())
+        else:
+            self.original_card.set_text(self.result_card.text())
+
+    def _copy_card(self, card: _DocumentCard):
+        """Copy a card's content: rich (plain + HTML) when it has formatting,
+        the plain pyperclip path otherwise."""
+        if card.has_formatting():
+            self._copy_rich_to_clipboard(card.text(), card.html())
+        else:
+            self._copy_to_clipboard(card.text())
 
     def _copy_to_clipboard(self, text: str):
         try:
@@ -1259,8 +1301,31 @@ class MainWindow(FramelessWindow):
         except Exception as e:
             logger.warning(f"pyperclip.copy failed: {e}")
 
-    def _source_text(self) -> str:
-        return self.original_card.text().strip()
+    def _copy_rich_to_clipboard(self, plain: str, html: str):
+        """Both text/plain and text/html on the clipboard: rich targets (Word,
+        Gmail, Slack) paste the formatting, plain targets get clean text.
+        GUI-thread only — every caller is a button slot or a queued signal."""
+        try:
+            mime = QMimeData()
+            mime.setText(plain or "")
+            mime.setHtml(html or "")
+            QApplication.clipboard().setMimeData(mime)
+        except Exception as e:
+            logger.warning(f"Rich clipboard copy failed, falling back to plain: {e}")
+            self._copy_to_clipboard(plain)
+
+    def _source_for_llm(self) -> tuple[str, bool]:
+        """Source text for an operation + whether it travels as Markdown.
+
+        A rich source (pasted from a browser / Word / Slack) goes to the model
+        as GitHub-flavoured Markdown so its structure survives the round-trip.
+        A plain source keeps the historical plain path — running it through
+        Markdown would read literal '*'/'#' characters as markup."""
+        if self.original_card.has_formatting():
+            markdown = self.original_card.markdown().strip()
+            if markdown:
+                return markdown, True
+        return self.original_card.text().strip(), False
 
     # ---------- translation pill popup ----------
 
@@ -1313,20 +1378,23 @@ class MainWindow(FramelessWindow):
     def _run_translate(self):
         if self._client is None:
             return
-        source = self._source_text()
+        source, as_markdown = self._source_for_llm()
         if not source:
             return
         primary = self._config.get("PRIMARY_LANGUAGE") or "English"
         secondary = self._config.get("SECONDARY_LANGUAGE") or "Russian"
         direction = f"{self._lang_code(primary)} ↔ {self._lang_code(secondary)}"
         glossary_block = self._glossary_block()
+        max_tokens = self._config.llm_max_tokens
         self._run_operation(
             lambda: translate_text(
-                self._client, source, primary, secondary, glossary_block=glossary_block
+                self._client, source, primary, secondary,
+                glossary_block=glossary_block,
+                markdown=as_markdown, max_tokens=max_tokens,
             ),
             kind=KIND_TRANSLATION,
             label=f"Translation · {direction}",
-            meta={"direction": direction},
+            meta={"direction": direction, "markdown": as_markdown},
         )
 
     # ---------- rewrite actions ----------
@@ -1334,44 +1402,57 @@ class MainWindow(FramelessWindow):
     def _on_fix(self):
         if self._client is None:
             return
-        source = self._source_text()
+        source, as_markdown = self._source_for_llm()
         if not source:
             return
         glossary_block = self._glossary_block()
+        max_tokens = self._config.llm_max_tokens
         self._run_operation(
-            lambda: fix_text(self._client, source, glossary_block=glossary_block),
+            lambda: fix_text(
+                self._client, source, glossary_block=glossary_block,
+                markdown=as_markdown, max_tokens=max_tokens,
+            ),
             kind=KIND_FIX,
             label="Grammar correction",
+            meta={"markdown": as_markdown},
         )
 
     def _on_casual(self):
         if self._client is None:
             return
-        source = self._source_text()
+        source, as_markdown = self._source_for_llm()
         if not source:
             return
         glossary_block = self._glossary_block()
+        max_tokens = self._config.llm_max_tokens
         self._run_operation(
             lambda: rewrite_text(
-                self._client, source, CONVERSATIONAL_STYLE, glossary_block=glossary_block
+                self._client, source, CONVERSATIONAL_STYLE,
+                glossary_block=glossary_block,
+                markdown=as_markdown, max_tokens=max_tokens,
             ),
             kind=KIND_CASUAL,
             label="Casual rewrite",
+            meta={"markdown": as_markdown},
         )
 
     def _on_professional(self):
         if self._client is None:
             return
-        source = self._source_text()
+        source, as_markdown = self._source_for_llm()
         if not source:
             return
         glossary_block = self._glossary_block()
+        max_tokens = self._config.llm_max_tokens
         self._run_operation(
             lambda: rewrite_text(
-                self._client, source, BUSINESS_STYLE, glossary_block=glossary_block
+                self._client, source, BUSINESS_STYLE,
+                glossary_block=glossary_block,
+                markdown=as_markdown, max_tokens=max_tokens,
             ),
             kind=KIND_PROFESSIONAL,
             label="Professional rewrite",
+            meta={"markdown": as_markdown},
         )
 
     def _on_custom(self):
@@ -1381,16 +1462,20 @@ class MainWindow(FramelessWindow):
         if not prompt:
             self._open_custom_style_editor()
             return
-        source = self._source_text()
+        source, as_markdown = self._source_for_llm()
         if not source:
             return
         glossary_block = self._glossary_block()
+        max_tokens = self._config.llm_max_tokens
         self._run_operation(
             lambda: rewrite_text(
-                self._client, source, prompt, glossary_block=glossary_block
+                self._client, source, prompt,
+                glossary_block=glossary_block,
+                markdown=as_markdown, max_tokens=max_tokens,
             ),
             kind=KIND_CUSTOM,
             label="Custom rewrite",
+            meta={"markdown": as_markdown},
         )
 
     def _open_custom_style_editor(self):
@@ -1448,13 +1533,25 @@ class MainWindow(FramelessWindow):
     @Slot(str, str, str, object)
     def _on_operation_finished(self, result: str, kind: str, label: str, meta: object):
         logger.info(f"Operation finished on GUI thread: {label}")
-        self.result_card.set_text(result or "")
-        self._result_state = ("done", kind, dict(meta) if isinstance(meta, dict) else {})
+        meta_dict = dict(meta) if isinstance(meta, dict) else {}
+        if meta_dict.get("markdown") and result:
+            # Rich round-trip: render the model's Markdown in the card and put
+            # plain + HTML on the clipboard so rich targets paste formatted.
+            # History keeps the rendered plain text — the feed preview and a
+            # feed-click reload are plain surfaces; the formatted version
+            # lives in the card and on the clipboard.
+            self.result_card.set_markdown(result)
+            history_text = self.result_card.text()
+            self._copy_rich_to_clipboard(history_text, self.result_card.html())
+        else:
+            self.result_card.set_text(result or "")
+            history_text = result
+            self._copy_to_clipboard(result)
+        self._result_state = ("done", kind, meta_dict)
         self._repaint_result_title()
         self.result_card.set_generated_badge(bool(result))
-        self._copy_to_clipboard(result)
         if result:
-            self._history.add(result, kind=kind, meta=meta if isinstance(meta, dict) else {})
+            self._history.add(history_text, kind=kind, meta=meta_dict)
         self._set_operation_buttons_enabled(True)
 
     @Slot(str, str)

@@ -1547,7 +1547,7 @@ Text to process:
             {"role": "user", "content": user_content}
         ],
         temperature=0.3,
-        max_tokens=1500
+        max_tokens=self.config.llm_max_tokens
     )
     result = response.choices[0].message.content or raw
     logger.info("Received response from OpenAI")
@@ -1589,6 +1589,8 @@ Text to process:
     # None unless enabled + non-empty, so the cloud calls below are unchanged for
     # users without a glossary.
     rewrite_glossary = self._glossary_block("GLOSSARY_LLM_REWRITE")
+    # User-configured completion budget for every LLM call on this path.
+    max_tokens = self.config.llm_max_tokens
 
     try:
       if action == "translate":
@@ -1596,7 +1598,8 @@ Text to process:
         secondary = self.config.get("SECONDARY_LANGUAGE") or "Russian"
         logger.info(f"Translating transcript -> {secondary}")
         return translate_to_language(
-            self.client, raw, secondary, glossary_block=rewrite_glossary
+            self.client, raw, secondary, glossary_block=rewrite_glossary,
+            max_tokens=max_tokens,
         ) or raw
 
       if action == "custom":
@@ -1609,12 +1612,14 @@ Text to process:
         if style == "casual":
           logger.info("Rewriting transcript in casual style")
           return rewrite_text(
-              self.client, raw, CONVERSATIONAL_STYLE, glossary_block=rewrite_glossary
+              self.client, raw, CONVERSATIONAL_STYLE, glossary_block=rewrite_glossary,
+              max_tokens=max_tokens,
           ) or raw
         if style == "professional":
           logger.info("Rewriting transcript in professional style")
           return rewrite_text(
-              self.client, raw, BUSINESS_STYLE, glossary_block=rewrite_glossary
+              self.client, raw, BUSINESS_STYLE, glossary_block=rewrite_glossary,
+              max_tokens=max_tokens,
           ) or raw
         # "custom" (or any unknown value): use the user's own prompt.
         prompt = (self.config.get("CUSTOM_STYLE_PROMPT") or "").strip()
@@ -1623,7 +1628,8 @@ Text to process:
           return raw
         logger.info("Rewriting transcript in custom style")
         return rewrite_text(
-            self.client, raw, prompt, glossary_block=rewrite_glossary
+            self.client, raw, prompt, glossary_block=rewrite_glossary,
+            max_tokens=max_tokens,
         ) or raw
 
       # Default action: grammar-correct + normalize to PRIMARY language.

@@ -27,10 +27,10 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
-from qfluentwidgets import ComboBox, FluentIcon as FIF, TransparentPushButton
+from qfluentwidgets import ComboBox, FluentIcon as FIF, SpinBox, TransparentPushButton
 
 from i18n import t
-from services.config_store import Config
+from services.config_store import LLM_MAX_TOKENS_MAX, LLM_MAX_TOKENS_MIN, Config
 from services.text_operations import SUPPORTED_LANGUAGES
 from .base import BasePage, make_form_row, make_section_card
 
@@ -89,6 +89,28 @@ class LanguagesPage(BasePage):
 
         content_layout.addWidget(card)
 
+        # --- AI text processing ---
+        # One knob for every gpt-4o-mini transform (translate / fix / rewrite,
+        # window buttons and hotkey actions alike): the completion budget.
+        # Lives on this page because the transforms are what the language pair
+        # above feeds — not a transcription-backend concern.
+        card, body = make_section_card(
+            t("languages.ai.title"),
+            t("languages.ai.hint"),
+        )
+        self.max_tokens_spin = SpinBox()
+        self.max_tokens_spin.setRange(LLM_MAX_TOKENS_MIN, LLM_MAX_TOKENS_MAX)
+        self.max_tokens_spin.setSingleStep(500)
+        self.max_tokens_spin.setFixedWidth(COMBO_WIDTH)
+        body.addWidget(make_form_row(
+            t("languages.ai.max_tokens.label"),
+            self.max_tokens_spin,
+            hint=t("languages.ai.max_tokens.hint"),
+            hint_under_label=True,
+            widget_indent=40,
+        ))
+        content_layout.addWidget(card)
+
     def _swap_languages(self) -> None:
         primary = self.primary_combo.currentText()
         secondary = self.secondary_combo.currentText()
@@ -108,10 +130,12 @@ class LanguagesPage(BasePage):
         idx = self.secondary_combo.findText(secondary)
         if idx >= 0:
             self.secondary_combo.setCurrentIndex(idx)
+        self.max_tokens_spin.setValue(config.llm_max_tokens)
 
     def apply_to(self, config: Config) -> None:
         config.set("PRIMARY_LANGUAGE", self.primary_combo.currentText())
         config.set("SECONDARY_LANGUAGE", self.secondary_combo.currentText())
+        config.set("LLM_MAX_TOKENS", str(self.max_tokens_spin.value()))
 
     def validate(self) -> Optional[str]:
         if self.primary_combo.currentText() == self.secondary_combo.currentText():

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+import re
 import time
 
 import openai
@@ -23,6 +24,13 @@ import openai
 logger = logging.getLogger(__name__)
 
 CORRECTION_MODEL = "gpt-4o-mini"
+
+# Completion budget for the transforms. Callers pass the user's configured
+# LLM_MAX_TOKENS (see Config.llm_max_tokens); this default only covers direct
+# calls that don't. The ceiling is gpt-4o-mini's maximum output size — the
+# truncation retry below never asks for more than this.
+DEFAULT_MAX_TOKENS = 4000
+MAX_OUTPUT_TOKENS = 16000
 
 
 def _glossary_clause(glossary_block: str | None) -> str:
@@ -189,6 +197,193 @@ def _chat_with_watchdog(client: openai.OpenAI, label: str, **kwargs):
         f"{label}: all {_CHAT_MAX_ATTEMPTS} attempts failed"
     )
 
+# ---------- markdown-preserving transforms ----------
+#
+# The main window sends rich sources (pasted from a browser / Word / Slack) as
+# GitHub-flavoured Markdown so bold/italic/headings/lists survive the LLM
+# round-trip. The model is good but not perfect at echoing markup back, so
+# every markdown-mode result goes through deterministic guards (all in
+# `_run_transform`): unwrap a whole-reply code fence, retry once with a bigger
+# budget on truncation (finish_reason == "length" — the #1 source of broken
+# markup), and retry once with a structure reminder when the block-level shape
+# of the reply diverges from the source. A failed retry degrades gracefully:
+# the transform still returns its best result, because the translation itself
+# outranks cosmetics — and QTextDocument.setMarkdown() is tolerant of imperfect
+# markup anyway.
+
+_MARKDOWN_CLAUSE = (
+    " The user's text is GitHub-flavoured Markdown. Reproduce the markup "
+    "structure exactly: the same headings, list items, table rows, block "
+    "quotes, bold/italic/strikethrough spans, inline code, code blocks, and "
+    "link targets — only the human-readable words change. Never add markup "
+    "that was not in the source, and never wrap the whole answer in a code "
+    "fence."
+)
+
+# A retry reminder appended to the system prompt when the first reply's shape
+# diverged from the source. Phrased as a hard constraint, not a critique — the
+# retry is a fresh call and carries no memory of the failed attempt.
+_MARKDOWN_RETRY_CLAUSE = (
+    " STRICT: the output must contain exactly as many headings, list items, "
+    "and table rows as the input, and every ** and ` marker must be closed."
+)
+
+_FENCE_OPEN_RE = re.compile(r"^```[\w-]*\s*$")
+
+
+def strip_wrapping_fence(text: str) -> str:
+    """Unwrap a reply the model wrapped in one whole-answer ``` fence.
+
+    Only the unambiguous case is handled: the first line is an opening fence
+    (bare or with a language tag), the last line a bare closing one, and no
+    other fence lines appear in between. A reply that legitimately contains
+    its own code blocks inside the wrapper is left untouched — there the
+    structure check + retry take over, since unwrapping cannot be told apart
+    from content.
+    """
+    lines = (text or "").strip().splitlines()
+    if len(lines) < 2:
+        return text
+    if not _FENCE_OPEN_RE.match(lines[0]) or lines[-1].strip() != "```":
+        return text
+    inner = lines[1:-1]
+    if any(line.lstrip().startswith("```") for line in inner):
+        return text
+    return "\n".join(inner).strip()
+
+
+_MD_HEADING_RE = re.compile(r"^#{1,6}\s")
+_MD_BULLET_RE = re.compile(r"^\s*[-*+]\s")
+_MD_ORDERED_RE = re.compile(r"^\s*\d{1,3}[.)]\s")
+_MD_TABLE_RE = re.compile(r"^\s*\|")
+
+
+def _markdown_signature(text: str) -> tuple[int, int, int, int]:
+    """Counts of (headings, bullet items, ordered items, table rows), taken
+    outside code fences.
+
+    Deliberately coarse: block-level structure is the invariant a faithful
+    transform must keep, while *inline* runs (bold/italic spans) legitimately
+    move, merge, or split when word order changes between languages — counting
+    those would flag correct translations. Heading *levels* are likewise not
+    compared, only totals."""
+    headings = bullets = ordered = tables = 0
+    in_fence = False
+    for line in (text or "").splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if _MD_HEADING_RE.match(line):
+            headings += 1
+        elif _MD_BULLET_RE.match(line):
+            bullets += 1
+        elif _MD_ORDERED_RE.match(line):
+            ordered += 1
+        elif _MD_TABLE_RE.match(line):
+            tables += 1
+    return headings, bullets, ordered, tables
+
+
+def _inline_marks_balanced(text: str) -> bool:
+    """Parity check on ** and ` markers outside code fences — a cheap
+    well-formedness proxy that catches the classic hallucination (a span
+    opened but never closed) without false-positives on word-order changes."""
+    outside: list[str] = []
+    in_fence = False
+    for line in (text or "").splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            outside.append(line)
+    joined = "\n".join(outside)
+    return joined.count("**") % 2 == 0 and joined.count("`") % 2 == 0
+
+
+def markdown_structure_ok(source_md: str, result_md: str) -> bool:
+    """True when `result_md` keeps the block-level shape of `source_md` and
+    its inline markers are balanced (see _markdown_signature for what is —
+    and deliberately is not — compared)."""
+    return (
+        _markdown_signature(source_md) == _markdown_signature(result_md)
+        and _inline_marks_balanced(result_md)
+    )
+
+
+def _run_transform(
+    client: openai.OpenAI,
+    label: str,
+    *,
+    system_msg: str,
+    user_msg: str,
+    temperature: float,
+    max_tokens: int,
+    markdown: bool,
+    source_text: str,
+) -> str:
+    """One chat transform with the markdown guards layered on top.
+
+    Plain mode (markdown=False) is a single `_chat_with_watchdog` call plus
+    the truncation retry. Markdown mode additionally appends _MARKDOWN_CLAUSE
+    to the system prompt, unwraps a whole-reply fence, and retries once with
+    _MARKDOWN_RETRY_CLAUSE when the reply's block shape diverges from
+    `source_text` — keeping the first reply if the retry does no better.
+    """
+    max_tokens = max(1, min(int(max_tokens or DEFAULT_MAX_TOKENS), MAX_OUTPUT_TOKENS))
+    if markdown:
+        system_msg = system_msg + _MARKDOWN_CLAUSE
+
+    def _attempt(sys_msg: str, budget: int) -> tuple[str, str]:
+        response = _chat_with_watchdog(
+            client,
+            label,
+            model=CORRECTION_MODEL,
+            messages=[
+                {"role": "system", "content": sys_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=temperature,
+            max_tokens=budget,
+        )
+        choice = response.choices[0]
+        text = (choice.message.content or "").strip()
+        if markdown:
+            text = strip_wrapping_fence(text)
+        return text, (getattr(choice, "finish_reason", "") or "")
+
+    result, finish = _attempt(system_msg, max_tokens)
+
+    # Truncated reply: the tail — and any closing markers — never arrived.
+    # One retry with a doubled budget; whatever comes back is more complete.
+    if finish == "length" and max_tokens < MAX_OUTPUT_TOKENS:
+        bumped = min(max_tokens * 2, MAX_OUTPUT_TOKENS)
+        logger.warning(
+            "%s: reply truncated at max_tokens=%d — retrying with %d",
+            label, max_tokens, bumped,
+        )
+        retry, retry_finish = _attempt(system_msg, bumped)
+        if retry:
+            result, finish = retry, retry_finish
+        max_tokens = bumped
+
+    if markdown and result and not markdown_structure_ok(source_text, result):
+        logger.warning(
+            "%s: markdown structure diverged from source — one retry with reminder",
+            label,
+        )
+        retry, _ = _attempt(system_msg + _MARKDOWN_RETRY_CLAUSE, max_tokens)
+        if retry and markdown_structure_ok(source_text, retry):
+            result = retry
+        else:
+            logger.warning(
+                "%s: structure still diverged after retry — keeping best-effort result",
+                label,
+            )
+    return result
+
+
 # Display label → BCP-47-ish language name passed to the model. The model
 # accepts plain English language names just fine. Used by the onboarding
 # dialog's primary/secondary combos.
@@ -254,6 +449,8 @@ def translate_text(
     primary_language: str,
     secondary_language: str,
     glossary_block: str | None = None,
+    markdown: bool = False,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> str:
     """
     Translate `text` between the user's two configured languages.
@@ -269,6 +466,9 @@ def translate_text(
         text:               source text.
         primary_language:   human-readable language name (e.g. "English").
         secondary_language: human-readable language name (e.g. "Russian").
+        markdown:           `text` is GitHub-flavoured Markdown; preserve the
+                            markup through the translation (see _run_transform).
+        max_tokens:         completion budget (the user's LLM_MAX_TOKENS).
 
     Returns:
         Translated text, empty string if input was empty.
@@ -291,19 +491,16 @@ def translate_text(
         + _glossary_clause(glossary_block)
     )
 
-    response = _chat_with_watchdog(
+    return _run_transform(
         client,
         "translate",
-        model=CORRECTION_MODEL,
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user",   "content": text},
-        ],
+        system_msg=system_msg,
+        user_msg=text,
         temperature=0.2,
-        max_tokens=1500,
+        max_tokens=max_tokens,
+        markdown=markdown,
+        source_text=text,
     )
-    result = response.choices[0].message.content or ""
-    return result.strip()
 
 
 def translate_to_language(
@@ -311,6 +508,8 @@ def translate_to_language(
     text: str,
     target_language: str,
     glossary_block: str | None = None,
+    markdown: bool = False,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> str:
     """
     Translate `text` into a FIXED `target_language`, regardless of source.
@@ -344,22 +543,25 @@ def translate_to_language(
         + _glossary_clause(glossary_block)
     )
 
-    response = _chat_with_watchdog(
+    return _run_transform(
         client,
         f"translate-to-{target_language}",
-        model=CORRECTION_MODEL,
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user",   "content": text},
-        ],
+        system_msg=system_msg,
+        user_msg=text,
         temperature=0.2,
-        max_tokens=1500,
+        max_tokens=max_tokens,
+        markdown=markdown,
+        source_text=text,
     )
-    result = response.choices[0].message.content or ""
-    return result.strip()
 
 
-def fix_text(client: openai.OpenAI, text: str, glossary_block: str | None = None) -> str:
+def fix_text(
+    client: openai.OpenAI,
+    text: str,
+    glossary_block: str | None = None,
+    markdown: bool = False,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> str:
     """
     Correct spelling, grammar, and punctuation in `text` via gpt-4o-mini.
 
@@ -385,19 +587,16 @@ def fix_text(client: openai.OpenAI, text: str, glossary_block: str | None = None
         f"Text to correct:\n<text>{text}</text>"
     )
 
-    response = _chat_with_watchdog(
+    return _run_transform(
         client,
         "fix",
-        model=CORRECTION_MODEL,
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user",   "content": user_msg},
-        ],
+        system_msg=system_msg,
+        user_msg=user_msg,
         temperature=0.3,
-        max_tokens=1500,
+        max_tokens=max_tokens,
+        markdown=markdown,
+        source_text=text,
     )
-    result = response.choices[0].message.content or ""
-    return result.strip()
 
 
 def rewrite_text(
@@ -405,6 +604,8 @@ def rewrite_text(
     text: str,
     style_instruction: str,
     glossary_block: str | None = None,
+    markdown: bool = False,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> str:
     """
     Rewrite `text` according to `style_instruction` via gpt-4o-mini.
@@ -431,16 +632,13 @@ def rewrite_text(
         + _glossary_clause(glossary_block)
     )
 
-    response = _chat_with_watchdog(
+    return _run_transform(
         client,
         "rewrite",
-        model=CORRECTION_MODEL,
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user",   "content": text},
-        ],
+        system_msg=system_msg,
+        user_msg=text,
         temperature=0.4,
-        max_tokens=1500,
+        max_tokens=max_tokens,
+        markdown=markdown,
+        source_text=text,
     )
-    result = response.choices[0].message.content or ""
-    return result.strip()

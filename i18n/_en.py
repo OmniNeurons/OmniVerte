@@ -149,6 +149,10 @@ STRINGS: dict[str, str] = {
     "languages.swap": "Swap languages",
     "languages.swap.tooltip": "Swap primary and secondary",
     "languages.error.must_differ": "Primary and Secondary languages must differ.",
+    "languages.ai.title": "AI text processing",
+    "languages.ai.hint": "Applies to Translate, Fix, and rewrites — both the window buttons and the hotkey actions.",
+    "languages.ai.max_tokens.label": "Max response length",
+    "languages.ai.max_tokens.hint": "Upper limit for one AI reply, in tokens (roughly 3–4 characters each). Raise it if long texts come back cut off — only tokens actually generated are billed.",
 
     # ---------- app-wide ----------
     # `app.title` already exists; the tagline joins it here because it is brand

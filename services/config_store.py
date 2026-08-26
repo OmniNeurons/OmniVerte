@@ -29,6 +29,13 @@ KEYRING_SERVICE = "OmniVerte"
 # Keys treated as secrets — stored only in keyring, never in config.env.
 SECRET_KEYS = frozenset({"OPEN_AI_API_KEY", "GROQ_API_KEY"})
 
+# Bounds for LLM_MAX_TOKENS (see `Config.llm_max_tokens`). The ceiling is
+# gpt-4o-mini's maximum output size. Duplicated here rather than imported from
+# services.text_operations because that module imports `openai` at module
+# scope — config_store must stay importable without it.
+LLM_MAX_TOKENS_MIN = 500
+LLM_MAX_TOKENS_MAX = 16000
+
 # Fallback values for non-secret settings.
 DEFAULTS: dict[str, str] = {
     "ACTIVATION_KEY": "F9",
@@ -81,6 +88,11 @@ DEFAULTS: dict[str, str] = {
     # and shows up as the button's tooltip; prompt is the actual instruction.
     "CUSTOM_STYLE_NAME": "",
     "CUSTOM_STYLE_PROMPT": "",
+    # Completion budget (max_tokens) for the gpt-4o-mini text transforms —
+    # translation, correction, rewrite, and the transcription post-processing.
+    # A ceiling, not a spend: only tokens actually generated are billed.
+    # Replaces the old hard-coded 1500, which silently truncated long texts.
+    "LLM_MAX_TOKENS": "4000",
     # UI theme: "light" or "dark". Toggled live from the main-window header.
     "THEME": "light",
     # Interface language, as a Whisper language code ("en"/"ru") matching
@@ -275,6 +287,20 @@ class Config:
         return bool(self.get_secret(key))
 
     # ---------- backend priority helpers ----------
+
+    @property
+    def llm_max_tokens(self) -> int:
+        """LLM_MAX_TOKENS as an int, clamped to the supported range.
+
+        A hand-edited config.env can hold anything; garbage falls back to the
+        default, out-of-range values are clamped rather than rejected so the
+        transforms always get a usable budget."""
+        raw = (self.get("LLM_MAX_TOKENS") or "").strip()
+        try:
+            value = int(raw)
+        except ValueError:
+            value = int(DEFAULTS["LLM_MAX_TOKENS"])
+        return max(LLM_MAX_TOKENS_MIN, min(value, LLM_MAX_TOKENS_MAX))
 
     @property
     def backend_priority(self) -> list[str]:

@@ -290,7 +290,9 @@ def test_overlap_join_without_rapidfuzz_falls_back_to_exact(monkeypatch):
 def _writer_with_glossary(flags: dict, *, empty: bool):
     """Bare writer with a fake config (flag dict) and a stub glossary."""
     w = _bare_writer()
-    w.config = SimpleNamespace(get=lambda k, d=None: flags.get(k, d))
+    w.config = SimpleNamespace(
+        get=lambda k, d=None: flags.get(k, d), llm_max_tokens=4000
+    )
     w.glossary = SimpleNamespace(
         is_empty=empty,
         llm_block=lambda: "" if empty else "- Acme Corp",
@@ -529,7 +531,9 @@ _FUZZY_ON = {
 def _writer_with_fuzzy(flags: dict, active_action: str, *, client):
     """Bare writer whose stub glossary spies on apply_replacements()."""
     w = _bare_writer()
-    w.config = SimpleNamespace(get=lambda k, d=None: flags.get(k, d))
+    w.config = SimpleNamespace(
+        get=lambda k, d=None: flags.get(k, d), llm_max_tokens=4000
+    )
     calls = []
     w.glossary = SimpleNamespace(
         is_empty=False,

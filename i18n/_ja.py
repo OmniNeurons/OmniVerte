@@ -135,6 +135,10 @@ STRINGS: dict[str, str] = {
     "languages.swap": "言語を入れ替え",
     "languages.swap.tooltip": "主要言語と副言語を入れ替え",
     "languages.error.must_differ": "主要言語と副言語は異なる必要があります。",
+    "languages.ai.title": "AI テキスト処理",
+    "languages.ai.hint": "翻訳・修正・リライトに適用されます — ウィンドウのボタンとホットキー操作の両方に有効です。",
+    "languages.ai.max_tokens.label": "応答の最大長",
+    "languages.ai.max_tokens.hint": "AI の 1 回の応答のトークン上限（1 トークンは約 3–4 文字）。長いテキストが途中で切れる場合は増やしてください — 課金されるのは実際に生成されたトークンのみです。",
 
     # ---------- app-wide ----------
     "app.tagline": "AI口述 · 書き換え · 翻訳",

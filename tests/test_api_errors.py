@@ -220,7 +220,7 @@ def test_postprocess_failure_pastes_raw_and_notifies():
     the text arrived uncorrected."""
     w = _bare_writer()
     w.active_action = "transcribe"
-    w.config = SimpleNamespace(get=lambda *a, **k: None)
+    w.config = SimpleNamespace(get=lambda *a, **k: None, llm_max_tokens=4000)
 
     def _raise(**kwargs):
         raise TimeoutError("watchdog")

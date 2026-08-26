@@ -133,6 +133,10 @@ STRINGS: dict[str, str] = {
     "languages.swap": "互换语言",
     "languages.swap.tooltip": "互换主语言和副语言",
     "languages.error.must_differ": "主语言和副语言必须不同。",
+    "languages.ai.title": "AI 文本处理",
+    "languages.ai.hint": "适用于翻译、纠错和改写——包括窗口按钮和热键操作。",
+    "languages.ai.max_tokens.label": "回复长度上限",
+    "languages.ai.max_tokens.hint": "单次 AI 回复的令牌（token）上限（每个约 3–4 个字符）。如果长文本被截断，请调高——只按实际生成的令牌计费。",
 
     # ---------- app-wide ----------
     "app.tagline": "AI 听写 · 改写 · 翻译",
