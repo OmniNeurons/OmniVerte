@@ -6,6 +6,30 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.31] - 2026-08-26
+
+### Added
+- Rich text pasted into the main window (from a browser, Word, Slack, …) now
+  keeps its formatting — bold, italic, headings, lists, tables, links —
+  through Translate, Fix, and all rewrite styles. The result renders formatted
+  in the Result card, and copying puts both plain text and HTML on the
+  clipboard so rich targets paste the formatting while plain targets get clean
+  text. Guarded round-trip: truncated or structurally diverged model replies
+  are retried once, then degrade gracefully to the best available result.
+- A "Clear styles" button on the Result card that appears only when the result
+  actually carries formatting and flattens it to plain text.
+- Max AI response length is now configurable (Settings → Languages → AI text
+  processing; default 4000 tokens, up from the hard-coded 1500 that silently
+  truncated long texts). Applies to every gpt-4o-mini transform, window
+  buttons and hotkey actions alike.
+
+### Fixed
+- Pasting rich text whose adjacent spans carried different colours could hang
+  the app in an infinite loop (a stream of "QTextCursor::setPosition: Position
+  out of range" warnings). The colour-stripping sweep now collects its edits
+  first and applies them after the walk, and no longer touches colourless
+  fragments at all.
+
 ## [1.1.30] - 2026-08-25
 
 ### Added
