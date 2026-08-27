@@ -33,6 +33,7 @@ from services.audio_prep import (
     normalize_enhance_profile,
 )
 from services.transcription_models import (
+    GEMINI_TRANSCRIPTION_MODELS,
     GROQ_TRANSCRIPTION_MODELS,
     LOCAL_WHISPER_MODELS,
     OPENAI_TRANSCRIPTION_MODELS,
@@ -49,9 +50,9 @@ from .base import (
 
 
 # Single canonical order for every card on this page — Backend priority, API
-# keys, Model per backend. The eye reads "OpenAI → Groq → Local" once and that
-# mental map stays valid across the whole page.
-BACKEND_ORDER = ("openai", "groq", "local")
+# keys, Model per backend. The eye reads "OpenAI → Groq → Gemini → Local" once
+# and that mental map stays valid across the whole page.
+BACKEND_ORDER = ("openai", "groq", "gemini", "local")
 
 # Display name + one-line pitch per backend, as catalog KEYS rather than text.
 # A `t()` at module scope resolves once, at import, and would pin every backend
@@ -62,12 +63,14 @@ BACKEND_ORDER = ("openai", "groq", "local")
 BACKEND_INFO_KEYS = {
     "openai": ("transcription.backend.name.openai", "transcription.backend.hint.openai"),
     "groq":   ("transcription.backend.name.groq",   "transcription.backend.hint.groq"),
+    "gemini": ("transcription.backend.name.gemini", "transcription.backend.hint.gemini"),
     "local":  ("transcription.backend.name.local",  "transcription.backend.hint.local"),
 }
 
 BACKEND_MODELS = {
     "openai": OPENAI_TRANSCRIPTION_MODELS,
     "groq":   GROQ_TRANSCRIPTION_MODELS,
+    "gemini": GEMINI_TRANSCRIPTION_MODELS,
     "local":  LOCAL_WHISPER_MODELS,
 }
 
@@ -101,6 +104,7 @@ ENHANCE_CHOICES = [
 # "?" help bubble next to the field and a small always-visible "Get a key" link.
 OPENAI_KEYS_URL = "https://platform.openai.com/api-keys"
 GROQ_KEYS_URL = "https://console.groq.com/keys"
+GEMINI_KEYS_URL = "https://aistudio.google.com/apikey"
 
 
 def _backend_info(backend_id: str) -> tuple[str, str]:
@@ -128,6 +132,15 @@ def _groq_help_steps() -> list[str]:
         t("transcription.keys.groq.help.step1"),
         t("transcription.keys.groq.help.step2"),
         t("transcription.keys.groq.help.step3"),
+    ]
+
+
+def _gemini_help_steps() -> list[str]:
+    """Steps for the Gemini key help bubble. See `_openai_help_steps`."""
+    return [
+        t("transcription.keys.gemini.help.step1"),
+        t("transcription.keys.gemini.help.step2"),
+        t("transcription.keys.gemini.help.step3"),
     ]
 
 
@@ -244,11 +257,32 @@ class TranscriptionPage(BasePage):
         self.groq_key_edit.textEdited.connect(
             lambda _: self.groq_hint.setVisible(False)
         )
+
+        self.gemini_key_edit = self._build_password_edit(t("transcription.keys.gemini.placeholder"))
+        self.gemini_hint = self._build_key_hint(t("transcription.keys.gemini.nudge"))
+        body.addWidget(
+            make_form_row(
+                t("transcription.keys.gemini.label"),
+                self.gemini_key_edit,
+                label_trailing=make_help_button(
+                    t("transcription.keys.gemini.help.title"),
+                    _gemini_help_steps(),
+                    t("transcription.keys.gemini.help.link"),
+                    GEMINI_KEYS_URL,
+                ),
+                trailing=self._key_trailing(self.gemini_hint, GEMINI_KEYS_URL),
+                stretch_widget=True,
+            )
+        )
+        self.gemini_key_edit.textEdited.connect(
+            lambda _: self.gemini_hint.setVisible(False)
+        )
         content_layout.addWidget(card)
         # We track which masked placeholders the user has touched so we know
         # whether to keep / overwrite / delete the stored key on save.
         self._openai_loaded_mask: Optional[str] = None
         self._groq_loaded_mask: Optional[str] = None
+        self._gemini_loaded_mask: Optional[str] = None
 
         # --- Per-backend models ---
         card, body = make_section_card(
@@ -341,8 +375,10 @@ class TranscriptionPage(BasePage):
         """First-run only: reveal the key hints and glow the fields once."""
         self.openai_hint.setVisible(True)
         self.groq_hint.setVisible(True)
+        self.gemini_hint.setVisible(True)
         pulse_field_glow(self.openai_key_edit)
         pulse_field_glow(self.groq_key_edit)
+        pulse_field_glow(self.gemini_key_edit)
 
     def _populate_priority(self, ordered: list[str]) -> None:
         self.priority_list.clear()
@@ -408,6 +444,13 @@ class TranscriptionPage(BasePage):
         self.groq_key_edit.setText(self._groq_loaded_mask or "")
         self.groq_key_edit.setRealKeyFetcher(
             lambda: config.get_secret("GROQ_API_KEY") or ""
+        )
+
+        has_gemini = config.has_secret("GEMINI_API_KEY")
+        self._gemini_loaded_mask = MASKED_PLACEHOLDER if has_gemini else None
+        self.gemini_key_edit.setText(self._gemini_loaded_mask or "")
+        self.gemini_key_edit.setRealKeyFetcher(
+            lambda: config.get_secret("GEMINI_API_KEY") or ""
         )
 
         # Model selectors
@@ -487,6 +530,12 @@ class TranscriptionPage(BasePage):
             key="GROQ_API_KEY",
             field_text=self.groq_key_edit.text(),
             loaded_mask=self._groq_loaded_mask,
+        )
+        self._apply_secret(
+            config,
+            key="GEMINI_API_KEY",
+            field_text=self.gemini_key_edit.text(),
+            loaded_mask=self._gemini_loaded_mask,
         )
 
         for backend_id, combo in self.model_combos.items():

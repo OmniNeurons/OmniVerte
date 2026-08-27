@@ -27,7 +27,7 @@ APP_NAME = "OmniVerte"
 KEYRING_SERVICE = "OmniVerte"
 
 # Keys treated as secrets — stored only in keyring, never in config.env.
-SECRET_KEYS = frozenset({"OPEN_AI_API_KEY", "GROQ_API_KEY"})
+SECRET_KEYS = frozenset({"OPEN_AI_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY"})
 
 # Bounds for LLM_MAX_TOKENS (see `Config.llm_max_tokens`). The ceiling is
 # gpt-4o-mini's maximum output size. Duplicated here rather than imported from
@@ -67,12 +67,13 @@ DEFAULTS: dict[str, str] = {
     # First one with valid credentials becomes active — so on a fresh install
     # with no API keys this collapses to local, but the moment an OpenAI (then
     # Groq) key is entered that cloud backend takes over.
-    "BACKEND_PRIORITY": "openai,groq,local",
+    "BACKEND_PRIORITY": "openai,groq,gemini,local",
     # Per-backend model preference. The currently active model
     # (WHISPER_MODEL) is derived from these based on the active backend.
     "MODEL_LOCAL": "small",
     "MODEL_OPENAI": "gpt-4o-mini-transcribe",
     "MODEL_GROQ": "whisper-large-v3-turbo",
+    "MODEL_GEMINI": "gemini-3.5-transcribe",
     # Mic capture: empty INPUT_DEVICE = PortAudio system default. Non-empty
     # values are "name::<device name>" (see services.audio_prep). AUDIO_ENHANCE
     # is off|light (default light): high-pass + capped AGC before WAV write.

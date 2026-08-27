@@ -104,6 +104,8 @@ def _will_local_backend_be_used(config) -> bool:
       return False
     if backend == "groq" and config.has_secret("GROQ_API_KEY"):
       return False
+    if backend == "gemini" and config.has_secret("GEMINI_API_KEY"):
+      return False
   return True  # nothing matched → AudioWriter falls back to local
 
 

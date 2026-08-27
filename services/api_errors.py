@@ -20,6 +20,8 @@ try:
 except ImportError:  # pragma: no cover - openai is a hard runtime dep
     openai = None
 
+from services.gemini_transcribe import GeminiApiError
+
 
 class CloudApiError(RuntimeError):
     """A cloud call failed; carries the provider label for the UI message.
@@ -64,7 +66,23 @@ def classify_api_error(exc: BaseException) -> str:
     if isinstance(exc, CloudApiError):
         exc = exc.original
 
-    # Both providers go through the openai SDK (Groq is OpenAI-compatible).
+    # Gemini goes through our own urllib client, not the openai SDK.
+    if isinstance(exc, GeminiApiError):
+        if exc.kind == "network":
+            return "network"
+        if exc.kind == "http":
+            if exc.status in (401, 403):
+                return "auth"
+            if exc.status == 429:
+                # Google reports both a burst rate limit and an exhausted
+                # daily/billing quota as 429 RESOURCE_EXHAUSTED; "quota" in the
+                # body text is what separates "wait a minute" from "go pay".
+                return "quota" if "quota" in exc.body.lower() else "rate"
+            if exc.status == 402:
+                return "quota"
+        return "unknown"
+
+    # The other two providers go through the openai SDK (Groq is OpenAI-compatible).
     if openai is not None:
         if isinstance(exc, (openai.AuthenticationError, openai.PermissionDeniedError)):
             return "auth"

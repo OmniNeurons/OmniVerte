@@ -44,11 +44,13 @@ CLOUD_MAX_RETRIES = 1         # SDK-level retries of the SAME provider (1 retry 
 # so the settings UI can pull just the constants without dragging in numpy/
 # openai/sounddevice/etc.
 from services.transcription_models import (
+    GEMINI_TRANSCRIPTION_MODELS,
     GROQ_TRANSCRIPTION_MODELS,
     LOCAL_WHISPER_MODELS,
     OPENAI_TRANSCRIPTION_MODELS,
 )
 from services.api_errors import CloudApiError, classify_api_error
+from services import gemini_transcribe
 from services.glossary import Glossary
 from services.audio_prep import (
     normalize_enhance_profile,
@@ -58,7 +60,12 @@ from services.audio_prep import (
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 # Backends in canonical order. UI / priority lists use these names.
-ALL_BACKENDS = ("groq", "openai", "local")
+ALL_BACKENDS = ("groq", "openai", "gemini", "local")
+# The subset that talks to the network — no local model to load, and eligible
+# for the cross-provider fallback in _cloud_fallback_order.
+CLOUD_BACKENDS = ("openai", "groq", "gemini")
+# Display labels for provider-facing log lines / error toasts.
+CLOUD_BACKEND_LABELS = {"openai": "OpenAI", "groq": "Groq", "gemini": "Gemini"}
 
 # Global hotkey actions (keyboard mode). Each entry maps an internal action id
 # to its display label, the config key holding its key, and a default key.
@@ -111,6 +118,8 @@ def _backend_for_model(model_name: str) -> str | None:
     return "openai"
   if model_name in GROQ_TRANSCRIPTION_MODELS:
     return "groq"
+  if model_name in GEMINI_TRANSCRIPTION_MODELS:
+    return "gemini"
   return None
 
 
@@ -451,6 +460,10 @@ class AudioWriter:
                       max_retries=CLOUD_MAX_RETRIES)
         if groq_api_key else None
     )
+    # Gemini is not OpenAI-compatible — services.gemini_transcribe talks to the
+    # Interactions API directly, so there is no client object to build; the key
+    # itself is the "client" (None = no credentials, same contract as above).
+    self.gemini_api_key = self.config.get_secret("GEMINI_API_KEY") or None
 
   def _backend_has_creds(self, backend: str) -> bool:
     if backend == "local":
@@ -459,6 +472,8 @@ class AudioWriter:
       return self.client is not None
     if backend == "groq":
       return self.groq_client is not None
+    if backend == "gemini":
+      return self.gemini_api_key is not None
     return False
 
   def _pick_initial_backend(self) -> str:
@@ -502,6 +517,17 @@ class AudioWriter:
         self.config.set("WHISPER_MODEL", self.whisper_model_name)
       else:
         logger.info(f"Using Groq transcription model: {self.whisper_model_name}")
+        return
+
+    if self.transcription_backend == "gemini":
+      if not self.gemini_api_key:
+        logger.error("Gemini backend selected but no API key — falling back to local")
+        self.transcription_backend = "local"
+        self.whisper_model_name = self.config.get("MODEL_LOCAL", "small")
+        self.config.set("TRANSCRIPTION_BACKEND", "local")
+        self.config.set("WHISPER_MODEL", self.whisper_model_name)
+      else:
+        logger.info(f"Using Gemini transcription model: {self.whisper_model_name}")
         return
 
     # Lazy import — avoids loading ctranslate2 / CUDA when the user is running
@@ -588,7 +614,7 @@ class AudioWriter:
     if gen != self._current_gen():
       return
 
-    if self.transcription_backend in ("openai", "groq"):
+    if self.transcription_backend in CLOUD_BACKENDS:
       # No local model to construct; the cloud client was built in __init__.
       self._set_model_state("ready", gen)
       return
@@ -765,7 +791,7 @@ class AudioWriter:
     Toggle between CPU and CUDA devices and persist.
     No-op when a cloud backend is active.
     """
-    if self.transcription_backend in ("openai", "groq"):
+    if self.transcription_backend in CLOUD_BACKENDS:
       logger.info("Device toggle ignored: cloud transcription is active")
       return
 
@@ -784,6 +810,7 @@ class AudioWriter:
       - 'cpu'     — local Whisper on CPU
       - 'openai'  — OpenAI cloud transcription
       - 'groq'    — Groq cloud transcription
+      - 'gemini'  — Google Gemini cloud transcription
     """
     if target == 'openai':
       self.change_transcription_model(
@@ -797,6 +824,12 @@ class AudioWriter:
       )
       return
 
+    if target == 'gemini':
+      self.change_transcription_model(
+          self.config.get("MODEL_GEMINI", "gemini-3.5-transcribe")
+      )
+      return
+
     if target not in ('cuda', 'cpu'):
       logger.error(f"Unknown backend device target: {target}")
       return
@@ -804,7 +837,7 @@ class AudioWriter:
     self.use_device = target
     self.config.set("USE_DEVICE", self.use_device)
 
-    if self.transcription_backend in ('openai', 'groq'):
+    if self.transcription_backend in CLOUD_BACKENDS:
       # Coming back from cloud — pick the configured local model
       self.change_transcription_model(self.config.get("MODEL_LOCAL", "small"))
       return
@@ -871,7 +904,7 @@ class AudioWriter:
       if isinstance(exc, CloudApiError):
         provider = exc.provider
       if provider is None:
-        provider = {"openai": "OpenAI", "groq": "Groq"}.get(
+        provider = CLOUD_BACKEND_LABELS.get(
             self.transcription_backend, "Local Whisper"
         )
       self.ui_bridge.api_error.emit(context, classify_api_error(exc), provider)
@@ -1276,17 +1309,17 @@ class AudioWriter:
 
   def _cloud_fallback_order(self):
     """
-    Ordered cloud backends to attempt: the active one first, then the other
-    cloud provider if it has credentials. Local is deliberately not part of the
-    chain — it's offline, never hangs on the network, and loading it would cost
-    VRAM/time mid-session.
+    Ordered cloud backends to attempt: the active one first, then every other
+    cloud provider with credentials (in CLOUD_BACKENDS order). Local is
+    deliberately not part of the chain — it's offline, never hangs on the
+    network, and loading it would cost VRAM/time mid-session.
     """
-    if self.transcription_backend not in ("openai", "groq"):
+    if self.transcription_backend not in CLOUD_BACKENDS:
       return []
     order = [self.transcription_backend]
-    other = "groq" if self.transcription_backend == "openai" else "openai"
-    if self._backend_has_creds(other):
-      order.append(other)
+    for other in CLOUD_BACKENDS:
+      if other != self.transcription_backend and self._backend_has_creds(other):
+        order.append(other)
     return order
 
   def _transcribe_audio_file(self, audio_file_path, streaming=False):
@@ -1302,11 +1335,14 @@ class AudioWriter:
     last_err = None
     last_label = None
     for backend in self._cloud_fallback_order():
-      client = self.client if backend == "openai" else self.groq_client
-      label = "OpenAI" if backend == "openai" else "Groq"
+      label = CLOUD_BACKEND_LABELS[backend]
       model = self.config.get(_model_key_for_backend(backend))
       try:
-        text = self._transcribe_via_cloud(audio_file_path, client, label, model)
+        if backend == "gemini":
+          text = self._transcribe_via_gemini(audio_file_path, model)
+        else:
+          client = self.client if backend == "openai" else self.groq_client
+          text = self._transcribe_via_cloud(audio_file_path, client, label, model)
         if backend != self.transcription_backend:
           # Sticky failover: stay on the provider that worked for the rest of
           # this session so we don't re-hit the dead primary on every segment.
@@ -1404,6 +1440,28 @@ class AudioWriter:
     except Exception as e:
       logger.error(f"Error transcribing via {label}: {e}")
       raise e
+
+  def _transcribe_via_gemini(self, audio_file_path, model):
+    """Transcribe via Google's Gemini Interactions API (services.gemini_transcribe).
+
+    Gemini is not OpenAI-compatible, so it bypasses _transcribe_via_cloud.
+    Layer B rides the API's first-class ``custom_vocabulary`` field instead of
+    the Whisper prompt hack — terms bias recognition without being treated as
+    preceding speech, so the _scrub_glossary_echo pass downstream simply has
+    nothing to strip.
+    """
+    logger.info(f"Transcribing via Gemini ({model})")
+    vocabulary = None
+    if self._glossary_asr_active():
+      vocabulary = self.glossary.canonical_terms() or None
+    return gemini_transcribe.transcribe_file(
+        self.gemini_api_key,
+        audio_file_path,
+        model or "gemini-3.5-transcribe",
+        language_hint=self._whisper_language_hint(),
+        vocabulary=vocabulary,
+        timeout=CLOUD_REQUEST_TIMEOUT,
+    )
 
   def process_audio_file(self, temp_audio_file, session_gen=None):
     """Process the final audio file after recording stops."""

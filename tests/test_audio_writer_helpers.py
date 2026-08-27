@@ -35,6 +35,7 @@ def test_model_key_for_backend():
         ("whisper-1", "openai"),
         ("gpt-4o-mini-transcribe", "openai"),
         ("whisper-large-v3-turbo", "groq"),
+        ("gemini-3.5-transcribe", "gemini"),
         ("definitely-not-a-model", None),
     ],
 )
@@ -48,10 +49,14 @@ def test_backend_has_creds():
     w = _bare_writer()
     w.client = object()
     w.groq_client = None
+    w.gemini_api_key = None
     assert w._backend_has_creds("local") is True
     assert w._backend_has_creds("openai") is True
     assert w._backend_has_creds("groq") is False
+    assert w._backend_has_creds("gemini") is False
     assert w._backend_has_creds("bogus") is False
+    w.gemini_api_key = "gm-key"
+    assert w._backend_has_creds("gemini") is True
 
 
 def test_pick_initial_backend_skips_credless_entries():
@@ -75,7 +80,18 @@ def test_cloud_fallback_order_appends_other_cloud_when_it_has_creds():
     w.transcription_backend = "openai"
     w.client = object()
     w.groq_client = object()
+    w.gemini_api_key = None
     assert w._cloud_fallback_order() == ["openai", "groq"]
+
+
+def test_cloud_fallback_order_includes_every_credentialed_cloud():
+    w = _bare_writer()
+    w.transcription_backend = "gemini"
+    w.client = object()
+    w.groq_client = None
+    w.gemini_api_key = "gm-key"
+    # Active backend first, then the rest in CLOUD_BACKENDS order.
+    assert w._cloud_fallback_order() == ["gemini", "openai"]
 
 
 def test_cloud_fallback_order_is_empty_for_local():
@@ -507,6 +523,7 @@ def test_cloud_transcribe_result_is_scrubbed(tmp_path):
         text="hello world. Acme Corp, Z-tuning."
     )
     w.groq_client = None
+    w.gemini_api_key = None
     w.config = SimpleNamespace(
         get=lambda k, d=None: {
             "GLOSSARY_ENABLED": "true",
@@ -632,11 +649,14 @@ def _patch_openai(monkeypatch):
 def test_build_cloud_clients_from_secrets(monkeypatch):
     calls = _patch_openai(monkeypatch)
     w = _bare_writer()
-    w.config = _FakeConfig(secrets={"OPEN_AI_API_KEY": "sk-x", "GROQ_API_KEY": "gk-y"})
+    w.config = _FakeConfig(secrets={
+        "OPEN_AI_API_KEY": "sk-x", "GROQ_API_KEY": "gk-y", "GEMINI_API_KEY": "gm-z",
+    })
     w._build_cloud_clients()
 
     assert w.client is not None
     assert w.groq_client is not None
+    assert w.gemini_api_key == "gm-z"  # no client object — the key IS the client
     # Groq must be built against the Groq base_url; OpenAI must not be.
     groq_calls = [c for c in calls if c.get("base_url") == aw.GROQ_BASE_URL]
     assert len(groq_calls) == 1 and groq_calls[0]["api_key"] == "gk-y"
@@ -650,6 +670,7 @@ def test_build_cloud_clients_none_without_secrets(monkeypatch):
     w._build_cloud_clients()
     assert w.client is None
     assert w.groq_client is None
+    assert w.gemini_api_key is None
 
 
 def test_reload_transcription_settings_repicks_by_priority(monkeypatch):
@@ -782,11 +803,13 @@ def test_promote_backend_priority_moves_to_front():
     w = _bare_writer()
     w.config = _FakeConfig(priority=["openai", "groq", "local"])
     w._promote_backend_priority("local")
-    assert w.config.backend_priority == ["local", "openai", "groq"]
-    assert w.config.sets["BACKEND_PRIORITY"] == "local,openai,groq"
+    # The defensive top-up also appends any backend missing from the stored
+    # list (here: gemini), so every backend stays reachable.
+    assert w.config.backend_priority == ["local", "openai", "groq", "gemini"]
+    assert w.config.sets["BACKEND_PRIORITY"] == "local,openai,groq,gemini"
     # Idempotent when the backend is already the head.
     w._promote_backend_priority("local")
-    assert w.config.backend_priority == ["local", "openai", "groq"]
+    assert w.config.backend_priority == ["local", "openai", "groq", "gemini"]
 
 
 def test_promote_backend_priority_tops_up_missing_backends():
@@ -795,7 +818,7 @@ def test_promote_backend_priority_tops_up_missing_backends():
     w._promote_backend_priority("openai")
     order = w.config.backend_priority
     assert order[0] == "openai"
-    assert set(order) == {"openai", "groq", "local"}  # all backends reachable
+    assert set(order) == {"openai", "groq", "gemini", "local"}  # all backends reachable
 
 
 def test_change_transcription_model_promotes_local(monkeypatch):

@@ -9,8 +9,8 @@ def test_defaults_applied(appdata):
     c = Config()
     assert c.get("ACTIVATION_KEY") == "F9"
     assert c.get("THEME") == "light"
-    assert c.get("BACKEND_PRIORITY") == "openai,groq,local"
-    assert c.backend_priority == ["openai", "groq", "local"]
+    assert c.get("BACKEND_PRIORITY") == "openai,groq,gemini,local"
+    assert c.backend_priority == ["openai", "groq", "gemini", "local"]
 
 
 def test_default_local_model_is_friendly_for_cpu(appdata):

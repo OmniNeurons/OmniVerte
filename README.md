@@ -5,8 +5,8 @@ transcribed and pasted into whatever window you were working in — optionally
 grammar-corrected, translated, or rewritten by an LLM along the way.
 
 It lives in the system tray, transcribes locally (faster-whisper) or via the
-cloud (OpenAI / Groq), and has a small Qt/Fluent main window for reviewing and
-re-processing what you dictated.
+cloud (OpenAI / Groq / Gemini), and has a small Qt/Fluent main window for
+reviewing and re-processing what you dictated.
 
 > **Platform:** Windows 10/11 only. It leans on Win32 APIs (global keyboard
 > hooks, foreground-window focus, taskbar overlay, Credential Manager, mica
@@ -57,17 +57,20 @@ re-processing what you dictated.
   focused app never sees the keypress); this can be switched to pass-through.
   A **mouse-button** activation mode is also available.
 
-- **Three transcription backends.** Configure a priority order (default
-  **OpenAI → Groq → Local**); the first one with valid credentials becomes
-  active at launch — so with no API keys the app runs fully offline on Local,
-  and the moment you add an OpenAI (then Groq) key that cloud backend takes over:
+- **Four transcription backends.** Configure a priority order (default
+  **OpenAI → Groq → Gemini → Local**); the first one with valid credentials
+  becomes active at launch — so with no API keys the app runs fully offline on
+  Local, and the moment you add a cloud key that backend takes over:
   - **Local** — [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on
     CPU or CUDA (`tiny` … `large-v3`). Fully offline.
   - **OpenAI** — `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, `whisper-1`.
   - **Groq** — `whisper-large-v3-turbo`, `whisper-large-v3`, `distil-whisper-large-v3-en`.
+  - **Gemini** — `gemini-3.5-transcribe` (Google's dedicated ASR model with
+    first-class custom-vocabulary biasing; the corporate glossary rides it
+    natively).
 
   Cloud backends have a per-request timeout and **sticky failover**: if the
-  active cloud provider stalls, it transparently switches to the other one for
+  active cloud provider stalls, it transparently switches to the next one for
   the rest of the session.
 
 - **AI text operations** (via OpenAI `gpt-4o-mini`), from the main window:
@@ -119,6 +122,8 @@ re-processing what you dictated.
 - *(Optional)* An **OpenAI** API key — required for any AI text operation
   (grammar/translate/rewrite) and for the OpenAI transcription backend.
 - *(Optional)* A **Groq** API key — only for the Groq transcription backend.
+- *(Optional)* A **Gemini** API key ([Google AI Studio](https://aistudio.google.com/apikey)) —
+  only for the Gemini transcription backend.
 - *(Optional)* An NVIDIA GPU with CUDA for fast local transcription. CUDA is
   detected via CTranslate2 (faster-whisper's backend); **torch is not required**.
 - Some setups need the app to run **as administrator** for global keyboard
@@ -185,8 +190,8 @@ offline Local backend. After setup it starts straight into the tray.
 - **Logs** go to `%APPDATA%\OmniVerte\OmniVerte.log`.
 - **Audio** is buffered to short-lived WAV files in your OS temp directory while
   transcribing, then overwritten on the next take. With a cloud backend, that
-  audio is sent to OpenAI/Groq for transcription; with the local backend it
-  never leaves your machine.
+  audio is sent to OpenAI/Groq/Gemini for transcription; with the local backend
+  it never leaves your machine.
 
 ---
 
@@ -201,7 +206,7 @@ as before.
 It works on three independently-toggleable layers, all fed from one list:
 
 1. **ASR bias** — nudges the speech recogniser toward your terms (cloud `prompt`,
-   local `hotwords`).
+   local `hotwords`, Gemini's native `custom_vocabulary`).
 2. **LLM correction** — adds your terms to the grammar-correction prompt, and
    (separately toggleable) to translate/rewrite.
 3. **Fuzzy replace** — deterministically snaps near-miss words to the canonical
@@ -221,9 +226,9 @@ python -m services.glossary --preview "зет тюнинг"   # dry-run the repl
 ```
 
 > **Privacy:** `glossary.json` is plain, unencrypted text. When the ASR-bias or
-> LLM layers are enabled, your terms are sent to the cloud provider (OpenAI/Groq)
-> as part of the request. On the local Whisper backend they never leave your
-> machine.
+> LLM layers are enabled, your terms are sent to the cloud provider
+> (OpenAI/Groq/Gemini) as part of the request. On the local Whisper backend they
+> never leave your machine.
 
 ---
 

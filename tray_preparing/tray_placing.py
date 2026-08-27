@@ -13,6 +13,7 @@ from services.audio_writer import (
     LOCAL_WHISPER_MODELS,
     OPENAI_TRANSCRIPTION_MODELS,
     GROQ_TRANSCRIPTION_MODELS,
+    GEMINI_TRANSCRIPTION_MODELS,
 )
 from services.ui_bridge import UIBridge
 
@@ -224,6 +225,7 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
             ("tray.model.local", LOCAL_WHISPER_MODELS),
             ("tray.model.openai", OPENAI_TRANSCRIPTION_MODELS),
             ("tray.model.groq", GROQ_TRANSCRIPTION_MODELS),
+            ("tray.model.gemini", GEMINI_TRANSCRIPTION_MODELS),
         ):
             if transcription_items:
                 transcription_items.append(pystray.Menu.SEPARATOR)
@@ -237,7 +239,7 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
         # Active transcription target, as a canonical value + its display label.
         # 'cuda'/'cpu' are hardware names and read the same everywhere; the two
         # cloud backends get a proper label.
-        if current_backend in ("openai", "groq"):
+        if current_backend in ("openai", "groq", "gemini"):
             device_target = current_backend
             device_label = t(f"tray.device.{current_backend}")
         else:
@@ -280,7 +282,8 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
                 pystray.MenuItem('cuda', lambda: set_backend_device('cuda'), enabled=(device_target != 'cuda')),
                 pystray.MenuItem('cpu', lambda: set_backend_device('cpu'), enabled=(device_target != 'cpu')),
                 pystray.MenuItem(t("tray.device.openai"), lambda: set_backend_device('openai'), enabled=(device_target != 'openai')),
-                pystray.MenuItem(t("tray.device.groq"), lambda: set_backend_device('groq'), enabled=(device_target != 'groq'))
+                pystray.MenuItem(t("tray.device.groq"), lambda: set_backend_device('groq'), enabled=(device_target != 'groq')),
+                pystray.MenuItem(t("tray.device.gemini"), lambda: set_backend_device('gemini'), enabled=(device_target != 'gemini'))
             )),
 
             # Language submenu: the two languages the user configured in

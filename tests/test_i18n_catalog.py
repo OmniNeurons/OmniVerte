@@ -47,6 +47,7 @@ _KEEP_LATIN = frozenset({
     # Provider names.
     "transcription.backend.name.openai",
     "transcription.backend.name.groq",
+    "transcription.backend.name.gemini",
     # Invented company names used as an example of what to type in the box.
     "glossary.terms.names.placeholder",
     # Hardware acronyms, written Latin in Russian technical prose too.
@@ -55,8 +56,10 @@ _KEEP_LATIN = frozenset({
     # Cloud provider names, in the tray's device picker and model groups.
     "tray.device.openai",
     "tray.device.groq",
+    "tray.device.gemini",
     "tray.model.openai",
     "tray.model.groq",
+    "tray.model.gemini",
 })
 
 

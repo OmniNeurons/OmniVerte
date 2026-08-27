@@ -20,3 +20,10 @@ GROQ_TRANSCRIPTION_MODELS: tuple[str, ...] = (
     "whisper-large-v3",
     "distil-whisper-large-v3-en",
 )
+# Google's dedicated ASR model family (Interactions API, NOT OpenAI-compatible;
+# see services/gemini_transcribe.py). The -live streaming variant is a
+# websocket API and deliberately not offered — our streaming works by
+# re-transcribing chunked WAVs, which the batch model handles fine.
+GEMINI_TRANSCRIPTION_MODELS: tuple[str, ...] = (
+    "gemini-3.5-transcribe",
+)
