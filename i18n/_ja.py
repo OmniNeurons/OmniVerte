@@ -536,11 +536,15 @@ STRINGS: dict[str, str] = {
     "main.tooltip.theme.light": "ライトテーマに切り替え",
     "main.tooltip.settings": "設定を開く",
     "main.tooltip.license": "ライセンスを管理",
+    "main.tooltip.add_term": "文字起こし用の用語を追加",
     "main.tooltip.no_key": "OpenAIキーが必要です — トレイ → 設定 で設定してください。",
     # {name} is the user's own style name — data, never translated.
     "main.tooltip.custom.named": "使用するスタイル: {name}",
     "main.tooltip.custom.generic": "カスタムスタイルで書き換え",
     "main.tooltip.custom.unset": "未設定 — クリックしてカスタムスタイルを設定",
+
+    "main.glossary_pro.title": "文字起こし用語は Pro の機能です",
+    "main.glossary_pro.body": "Pro ではここから用語リストを開き、200 語まで登録でき、専門パックも使えます。無料版は 5 語までです。設定 → 用語集 から追加できます。",
 
     # Empty-state onboarding. {key} is a live hotkey name (F9/F10/F11), Latin.
     "main.hint.keyboard.transcribe": "{key}を押して口述・文字起こし。",

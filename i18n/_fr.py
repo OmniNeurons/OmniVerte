@@ -539,10 +539,14 @@ STRINGS: dict[str, str] = {
     "main.tooltip.theme.light": "Passer au thème clair",
     "main.tooltip.settings": "Ouvrir les paramètres",
     "main.tooltip.license": "Gérer votre licence",
+    "main.tooltip.add_term": "Ajouter un terme pour la transcription",
     "main.tooltip.no_key": "Clé OpenAI requise — définissez-la via la zone de notification → Paramètres.",
     "main.tooltip.custom.named": "Réécrire avec : {name}",
     "main.tooltip.custom.generic": "Réécrire avec votre style personnalisé",
     "main.tooltip.custom.unset": "Non configuré — cliquez pour définir un style personnalisé",
+
+    "main.glossary_pro.title": "Les termes de transcription sont une fonction Pro",
+    "main.glossary_pro.body": "Pro ouvre la liste des termes depuis ici et la porte à 200, plus des packs métiers prêts à l'emploi. L'offre gratuite comprend 5 termes — ajoutez-les dans Paramètres → Glossaire.",
 
     "main.hint.keyboard.transcribe": "Appuyez sur {key} pour dicter et transcrire.",
     "main.hint.keyboard.translate": "Appuyez sur {key} pour dicter, transcrire et traduire.",

@@ -4,7 +4,7 @@
 Main application window — Fluent redesign.
 
 Layout (top → bottom):
-  - Header bar (status dot + app title + status text · theme / settings buttons)
+  - Header bar (status · license chip / add-term / theme / settings)
   - Two cards side-by-side: Original (latest transcription) | Result (AI output)
   - Action bar: translation pill + segmented Fix/Casual/Professional/Custom
   - Activity Feed: compact session history with operation kind + preview
@@ -31,6 +31,7 @@ from PySide6.QtCore import (
     QMimeData,
     QObject,
     QRunnable,
+    QSize,
     Qt,
     QThreadPool,
     Signal,
@@ -68,6 +69,7 @@ from qfluentwidgets import (
     FluentIcon as FIF,
     InfoBar,
     InfoBarPosition,
+    MessageBox,
     RoundMenu,
     Theme,
     TransparentToolButton,
@@ -87,6 +89,7 @@ from services.text_operations import (
 )
 from services.ui_bridge import UIBridge
 from ui.custom_style_dialog import CustomStyleDialog
+from ui.icons import AddTermIcon
 from ui.history_manager import (
     KIND_CASUAL,
     KIND_CUSTOM,
@@ -847,6 +850,19 @@ class MainWindow(FramelessWindow):
         row.addWidget(self.tier_badge)
         row.addSpacing(4)
 
+        # Always enabled. Pro opens Glossary on the term editor; Free gets the
+        # Pro dialog. Not gated on an API key — adding a term is a settings hop.
+        # ~10% larger than the 16px gear and theme icons. Strokes in
+        # AddTermIcon are thinner so the weight still matches them.
+        self.add_term_btn = TransparentToolButton(AddTermIcon())
+        self.add_term_btn.setFixedSize(34, 34)
+        self.add_term_btn.setIconSize(QSize(18, 18))
+        self.add_term_btn.setCursor(Qt.PointingHandCursor)
+        self._tr(self.add_term_btn, "main.tooltip.add_term", setter="setToolTip")
+        self.add_term_btn.clicked.connect(self._on_add_term)
+        row.addWidget(self.add_term_btn)
+        row.addSpacing(4)
+
         # TransparentToolButton has built-in Fluent hover/press states + the
         # right cursor — much more interactive than a plain QPushButton with
         # our barely-visible SURFACE_HOVER tint.
@@ -868,6 +884,9 @@ class MainWindow(FramelessWindow):
         # Same brand line the About card shows — one key, not a copy of it.
         tagline = self._tr(QLabel(), "app.tagline")
         tagline.setObjectName("headerTagline")
+        # The tagline is painted over the icon row. Without this, a long
+        # translation steals clicks from the buttons it overlaps.
+        tagline.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
         grid.addLayout(row, 0, 0)
         grid.addWidget(tagline, 0, 0, Qt.AlignCenter)
@@ -1636,6 +1655,25 @@ class MainWindow(FramelessWindow):
         self._refresh_client_tooltip()
 
     # ---------- settings ----------
+
+    def _on_add_term(self):
+        from licensing import Feature, get_entitlement
+
+        if not get_entitlement().has(Feature.GLOSSARY):
+            self._prompt_glossary_pro()
+            return
+        self._bridge.glossary_terms_requested.emit()
+
+    def _prompt_glossary_pro(self):
+        box = MessageBox(
+            t("main.glossary_pro.title"),
+            t("main.glossary_pro.body"),
+            self,
+        )
+        box.yesButton.setText(t("license.button.buy"))
+        box.cancelButton.setText(t("common.cancel"))
+        if box.exec():
+            self._bridge.license_requested.emit()
 
     def _open_settings(self):
         # Request the settings window via the bridge. A single handler in the

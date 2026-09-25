@@ -552,10 +552,14 @@ STRINGS: dict[str, str] = {
     "main.tooltip.theme.light": "Zum hellen Design wechseln",
     "main.tooltip.settings": "Einstellungen öffnen",
     "main.tooltip.license": "Ihre Lizenz verwalten",
+    "main.tooltip.add_term": "Begriff für die Transkription hinzufügen",
     "main.tooltip.no_key": "OpenAI-Schlüssel erforderlich — über Tray → Einstellungen festlegen.",
     "main.tooltip.custom.named": "Umschreiben mit: {name}",
     "main.tooltip.custom.generic": "Mit Ihrem eigenen Stil umschreiben",
     "main.tooltip.custom.unset": "Nicht konfiguriert — klicken, um einen eigenen Stil einzurichten",
+
+    "main.glossary_pro.title": "Begriffe für die Transkription sind eine Pro-Funktion",
+    "main.glossary_pro.body": "Pro öffnet die Begriffsliste von hier und erweitert sie auf 200 Begriffe plus fertige Fachpakete. Kostenlos sind 5 Begriffe enthalten — fügen Sie diese unter Einstellungen → Glossar hinzu.",
 
     "main.hint.keyboard.transcribe": "{key} drücken, um zu diktieren und zu transkribieren.",
     "main.hint.keyboard.translate": "{key} drücken, um zu diktieren, zu transkribieren und zu übersetzen.",

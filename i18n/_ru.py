@@ -554,10 +554,14 @@ STRINGS: dict[str, str] = {
     "main.tooltip.theme.light": "Переключить на светлую тему",
     "main.tooltip.settings": "Открыть настройки",
     "main.tooltip.license": "Управление лицензией",
+    "main.tooltip.add_term": "Добавить термин для распознавания",
     "main.tooltip.no_key": "Нужен ключ OpenAI — задайте его через трей → «Настройки».",
     "main.tooltip.custom.named": "Переписать в стиле: {name}",
     "main.tooltip.custom.generic": "Переписать в вашем стиле",
     "main.tooltip.custom.unset": "Не настроено — нажмите, чтобы задать свой стиль",
+
+    "main.glossary_pro.title": "Термины для распознавания — функция Pro",
+    "main.glossary_pro.body": "Pro открывает список терминов отсюда и расширяет его до 200, плюс готовые профессиональные наборы. На бесплатном плане доступны 5 терминов — их можно добавить в Настройки → Глоссарий.",
 
     "main.hint.keyboard.transcribe": "Нажмите {key}, чтобы продиктовать и расшифровать.",
     "main.hint.keyboard.translate": "Нажмите {key}, чтобы продиктовать, расшифровать и перевести.",

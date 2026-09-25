@@ -52,6 +52,10 @@ class UIBridge(QObject):
     # single-window handler as settings_requested, just deep-linked to a page.
     license_requested = Signal()
 
+    # Main-window add-term button (Pro) → open Settings on Glossary, scrolled
+    # to the term editor. Free never emits this; it shows the Pro dialog instead.
+    glossary_terms_requested = Signal()
+
     # Emitted after the settings window saves. Listeners (tray, main window)
     # reload config-driven labels live — no app restart needed.
     settings_saved = Signal()

@@ -81,6 +81,51 @@ def test_apply_writes_flags_to_config_and_lists_to_glossary(page, tmp_path):
     assert reloaded.replacements == [{"heard": "зет тюнинг", "canonical": "Z-tuning"}]
 
 
+def test_focus_new_term_appends_a_line_enables_and_selects_names(page):
+    page.enable_switch.setChecked(False)
+    page.services_edit.setPlainText("TurboDrive")
+    page.stack.setCurrentIndex(1)  # Replacements — the shortcut must come back
+
+    page.focus_new_term()
+
+    assert page.services_edit.toPlainText() == "TurboDrive\n"
+    assert page.services_edit.textCursor().position() == len("TurboDrive\n")
+    assert page.enable_switch.isChecked()
+    assert page.stack.currentWidget().objectName() == "names"
+
+
+def test_focus_new_term_leaves_an_empty_box_empty(page):
+    page.services_edit.clear()
+    page.focus_new_term()
+    assert page.services_edit.toPlainText() == ""
+    assert page.services_edit.textCursor().position() == 0
+
+
+def test_focus_new_term_does_not_add_a_second_blank_line(page):
+    page.services_edit.setPlainText("TurboDrive\n")
+    page.focus_new_term()
+    assert page.services_edit.toPlainText() == "TurboDrive\n"
+
+
+def test_focus_new_term_scrolls_the_terms_card_to_the_top(page, qapp):
+    from PySide6.QtCore import QPoint
+    from PySide6.QtWidgets import QScrollArea
+
+    page.resize(800, 280)
+    page.show()
+    qapp.processEvents()
+    try:
+        page.focus_new_term()
+        qapp.processEvents()
+        scroll = page.findChild(QScrollArea, "settingsScroll")
+        inner = scroll.widget()
+        top = page._terms_card.mapTo(inner, QPoint(0, 0)).y()
+        assert scroll.verticalScrollBar().value() == max(0, top - 8)
+        assert top > 8  # enable + packs sit above the terms card
+    finally:
+        page.hide()
+
+
 def test_names_box_merges_own_and_counterparties(page, tmp_path):
     """The merged Names box reads own_names + counterparties and writes own_names."""
     g = Glossary(tmp_path / "glossary.json")

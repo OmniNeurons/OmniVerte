@@ -327,6 +327,18 @@ class SettingsWindow(FluentWindow):
         if page is not None:
             self._switch_to(page)
 
+    def show_glossary_terms(self) -> None:
+        """Open Glossary scrolled to the term editor, cursor on a new line.
+
+        Deferred one tick: the scroll range exists only after the page is shown.
+        Same reason the onboarding cue waits.
+        """
+        page = self._page_by_id.get(GlossaryPage.PAGE_ID)
+        if not isinstance(page, GlossaryPage):
+            return
+        self._switch_to(page)
+        QTimer.singleShot(0, page.focus_new_term)
+
     # ---------- actions ----------
 
     def _on_save(self):

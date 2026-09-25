@@ -400,15 +400,21 @@ def main():
       except Exception as e:
         logger.warning(f"Settings window refresh from config failed: {e}")
 
-    def _open_settings_window(page_id=None):
+    def _open_settings_window(page_id=None, focus=None):
+      def _reveal(window):
+        # "terms" goes past the page switch into the term editor.
+        if focus == "terms":
+          window.show_glossary_terms()
+        elif page_id:
+          window.show_page(page_id)
+
       existing = settings_holder["window"]
       if existing is not None:
         _refresh_settings_from_config(existing)
         existing.show()
         existing.raise_()
         existing.activateWindow()
-        if page_id:
-          existing.show_page(page_id)
+        _reveal(existing)
         return
 
       # Take the spare from the wings, or build one on the spot if a click beat
@@ -424,8 +430,7 @@ def main():
       window.show()
       window.raise_()
       window.activateWindow()
-      if page_id:
-        window.show_page(page_id)
+      _reveal(window)
       # Center the settings window over the main window so the two are aligned
       # to each other, regardless of where Windows would have cascaded it.
       # Deferred to the next event-loop tick: on Windows the OS emits its own
@@ -438,9 +443,13 @@ def main():
     ui_bridge.settings_requested.connect(lambda: _open_settings_window())
 
     # Main-window tier badge → open Settings deep-linked to the License page.
-    from ui.settings_pages import LicensePage
+    # Add-term (Pro) → Glossary, scrolled to the term editor.
+    from ui.settings_pages import GlossaryPage, LicensePage
     ui_bridge.license_requested.connect(
         lambda: _open_settings_window(LicensePage.PAGE_ID)
+    )
+    ui_bridge.glossary_terms_requested.connect(
+        lambda: _open_settings_window(GlossaryPage.PAGE_ID, focus="terms")
     )
 
     # A license activation/clear (license settings page) refreshed the

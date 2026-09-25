@@ -628,11 +628,17 @@ STRINGS: dict[str, str] = {
     "main.tooltip.theme.light": "Switch to light theme",
     "main.tooltip.settings": "Open settings",
     "main.tooltip.license": "Manage your license",
+    "main.tooltip.add_term": "Add a term for transcription",
     "main.tooltip.no_key": "OpenAI key required — set it via tray → Settings.",
     # `{name}` is the user's own style name — data, never translated.
     "main.tooltip.custom.named": "Rewrite using: {name}",
     "main.tooltip.custom.generic": "Rewrite using your custom style",
     "main.tooltip.custom.unset": "Not configured — click to set up a custom style",
+
+    # Free click on the header "add term" button. Pro skips this and opens
+    # Settings → Glossary. The 5/200 numbers are the tier caps in licensing.
+    "main.glossary_pro.title": "Transcription terms are a Pro feature",
+    "main.glossary_pro.body": "Pro opens the term list from here and raises it to 200 terms, plus ready-made profession packs. Free includes 5 terms — add those in Settings → Glossary.",
 
     # Empty-state onboarding in the Original card: which hotkey does what. One
     # key per line, joined with "\n" by the window — the newline stays out of

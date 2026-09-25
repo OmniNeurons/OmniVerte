@@ -523,10 +523,14 @@ STRINGS: dict[str, str] = {
     "main.tooltip.theme.light": "切换到浅色主题",
     "main.tooltip.settings": "打开设置",
     "main.tooltip.license": "管理你的许可证",
+    "main.tooltip.add_term": "添加转写术语",
     "main.tooltip.no_key": "需要 OpenAI 密钥 — 通过托盘 → 设置进行设置。",
     "main.tooltip.custom.named": "改写风格：{name}",
     "main.tooltip.custom.generic": "以你的自定义风格改写",
     "main.tooltip.custom.unset": "尚未配置 — 点击以设置自定义风格",
+
+    "main.glossary_pro.title": "转写术语是 Pro 功能",
+    "main.glossary_pro.body": "Pro 可从这里直接打开术语列表，并将上限提高到 200 条，另含现成的专业词包。免费版包含 5 条术语，可在设置 → 术语表中添加。",
 
     "main.hint.keyboard.transcribe": "按 {key} 即可听写并转写。",
     "main.hint.keyboard.translate": "按 {key} 即可听写、转写并翻译。",

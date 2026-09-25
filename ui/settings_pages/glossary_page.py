@@ -22,10 +22,12 @@ from __future__ import annotations
 
 from typing import Optional
 
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QScrollArea,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -88,6 +90,25 @@ def _dedup(items: list[str]) -> list[str]:
             seen.add(key)
             out.append(item)
     return out
+
+
+def _ready_for_new_line(edit: TextEdit) -> None:
+    """Leave the cursor on a fresh line at the end, as one undo step.
+
+    An empty box stays empty so its placeholder remains. A box that already
+    ends on a newline is not given a second blank one.
+    """
+    cursor = edit.textCursor()
+    cursor.beginEditBlock()
+    try:
+        cursor.movePosition(QTextCursor.End)
+        current = edit.toPlainText()
+        if current and not current.endswith("\n"):
+            cursor.insertText("\n")
+        cursor.movePosition(QTextCursor.End)
+        edit.setTextCursor(cursor)
+    finally:
+        cursor.endEditBlock()
 
 
 def _append_lines(edit: TextEdit, lines: list[str]) -> None:
@@ -301,6 +322,7 @@ class GlossaryPage(BasePage):
             t("glossary.terms.title"),
             t("glossary.terms.hint"),
         )
+        self._terms_card = card
 
         # Live cap counter — updates as you type so the Free 5-term limit (and
         # how much of it is left) is always visible, never a surprise on save.
@@ -313,6 +335,7 @@ class GlossaryPage(BasePage):
         self.stack = QStackedWidget()
 
         names_tab = self._build_names_tab()
+        self._names_tab = names_tab
         repl_tab = self._build_replacements_tab()
         self._add_tab(names_tab, "names", t("glossary.terms.tab.names"))
         self._add_tab(repl_tab, "replacements", t("glossary.terms.tab.replacements"))
@@ -440,6 +463,37 @@ class GlossaryPage(BasePage):
         return col
 
     # ---------- behaviour ----------
+
+    def focus_new_term(self) -> None:
+        """Land the cursor on a fresh line in Services & terms.
+
+        The main window's add-term button opens Settings here. Turning the
+        master switch on is widget state only — nothing is written until Save.
+        Layer switches the user turned off stay off.
+        """
+        self.stack.setCurrentWidget(self._names_tab)
+        self.pivot.setCurrentItem("names")
+        if not self.enable_switch.isChecked():
+            self.enable_switch.setChecked(True)
+        self._scroll_terms_card_to_top()
+        _ready_for_new_line(self.services_edit)
+        self.services_edit.setFocus(Qt.OtherFocusReason)
+
+    def _scroll_terms_card_to_top(self) -> None:
+        """Put the terms card at the top of the page scroll, not merely visible.
+
+        ensureWidgetVisible would leave it at the bottom edge, under the
+        packs card. Before the window is shown the card has no position yet;
+        the caller defers this until after show().
+        """
+        scroll = self.findChild(QScrollArea, "settingsScroll")
+        if scroll is None:
+            return
+        inner = scroll.widget()
+        if inner is None:
+            return
+        top = self._terms_card.mapTo(inner, QPoint(0, 0)).y()
+        scroll.verticalScrollBar().setValue(max(0, top - 8))
 
     def _on_enable_toggle(self, *_):
         """Grey out the sub-switches and threshold when the master switch is off."""
