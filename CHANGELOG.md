@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.32] - 2026-09-25
+
+### Added
+- A header button between the license chip and the theme switch for adding a
+  glossary term. Pro opens Settings on the Glossary term list, scrolled to the
+  editor and ready to type. Without Pro the button explains that the shortcut
+  and the larger glossary come with a license; the five Free terms stay
+  available under Settings → Glossary.
+- Google Gemini 3.5 Transcribe as a cloud transcription backend in the priority
+  chain. Glossary terms go out as the API's own vocabulary list.
+
 ## [1.1.31] - 2026-08-26
 
 ### Added
