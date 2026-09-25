@@ -42,6 +42,18 @@ def test_translate_strips_output_and_passes_both_languages():
     assert "English" in system_msg and "Russian" in system_msg
 
 
+def test_translate_prompt_decides_direction_by_dominant_language():
+    """Mixed input (95 % English / 5 % Russian) must become fully Russian, not
+    English with the Russian words translated — the prompt has to say so."""
+    client = make_client("Привет")
+    translate_text(client, "Hello, привет", "English", "Russian")
+    system_msg = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+    assert "DOMINANT language" in system_msg
+    assert "dominant English -> target Russian" in system_msg
+    assert "dominant Russian -> target English" in system_msg
+    assert "Translate the ENTIRE text into the target language" in system_msg
+
+
 def test_translate_to_language_targets_fixed_language():
     client = make_client("Bonjour")
     out = translate_to_language(client, "Hello", "French")

@@ -461,6 +461,12 @@ def translate_text(
     English" no-op when the user clicks Translate on text already in their
     preferred target language.
 
+    Mixed-language input is decided by the DOMINANT language (the one most of
+    the words are in), and the whole text is rendered in the other language, so
+    the result is monolingual. Without this rule the model reads a 95 % English
+    / 5 % Russian text as "English with foreign words", keeps the English and
+    translates only the Russian words — the opposite of what the user wants.
+
     Args:
         client:             an already-configured OpenAI client.
         text:               source text.
@@ -482,9 +488,18 @@ def translate_text(
 
     system_msg = (
         f"The user works between two languages: {primary_language} and {secondary_language}. "
-        f"Detect the source language of the user's text. "
-        f"If it is in {primary_language}, translate it to {secondary_language}. "
-        f"Otherwise, translate it to {primary_language}. "
+        "Follow these steps.\n"
+        "Step 1. Determine the DOMINANT language of the user's text: the language most of the "
+        "words are written in. The text may contain words or phrases in another language; "
+        "they do not change the dominant language.\n"
+        f"Step 2. Choose the target language by this rule: "
+        f"dominant {primary_language} -> target {secondary_language}; "
+        f"dominant {secondary_language} -> target {primary_language}; "
+        f"dominant any other language -> target {primary_language}.\n"
+        "Step 3. Translate the ENTIRE text into the target language. Every sentence and every "
+        "word of the output must be in the target language, including the words that were in "
+        "the minority language. Never keep the dominant-language text unchanged and translate "
+        "only the minority-language words: that is the wrong direction.\n"
         "Preserve proper nouns, code identifiers, URLs, and inline code as-is. "
         "Return ONLY the translation, with no explanations, no quotes, no preamble."
         + _NO_CONVERSATION_GUARD
