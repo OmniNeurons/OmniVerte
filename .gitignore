@@ -19,6 +19,7 @@ data/
 # Notes / tooling
 _notes/
 .claude
+.claude_other_files/
 .grok
 CLAUDE.md
 AGENTS.md
