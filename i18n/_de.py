@@ -46,6 +46,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Aktivierungstasten",
     "tray.keys.change": "Ändern (Taste drücken)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "nicht belegt",
     "tray.action.transcribe": "Transkribieren",
     "tray.action.translate": "Transkribieren und übersetzen",
     "tray.action.custom": "Transkribieren und umschreiben",
@@ -95,6 +96,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "Diktieren, dann im unten gewählten Stil umschreiben und einfügen. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
     "general.hotkey.quick": "Schnelles Diktat",
     "general.hotkey.quick.hint": "Fügt den Rohtext ein, sobald Sie aufhören zu sprechen – ohne KI-Korrektur oder Umschreiben. Transkribiert live über ElevenLabs, wenn dessen Schlüssel auf der Seite „Transkription“ hinterlegt ist. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
+    "general.hotkey.none": "Nicht belegt",
 
     "general.stylepair.name": "Eigener Stil",
     "general.stylepair.hint": "{key} schreibt Ihr Diktat in diesem Stil um. „Eigener“ verwendet Ihren Prompt von der Seite „Eigener Stil“.",
@@ -120,14 +122,15 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Beim Windows-Start starten",
     "general.behaviour.autostart.hint": "Omni Verte automatisch starten, wenn Sie sich bei Windows anmelden.",
 
-    # Werden in general.error.hotkey_empty eingesetzt; als Genitiv formuliert
+    # Werden in general.hotkey.released eingesetzt; als Genitiv formuliert
     # („Taste zum Transkribieren“ wäre umständlich), daher eigene Schlüssel und
     # nicht die Zeilenbeschriftungen wiederverwendet.
     "general.action.transcribe": "zum Transkribieren",
     "general.action.translate": "zum Übersetzen",
     "general.action.custom": "für den eigenen Stil",
     "general.action.quick": "für schnelles Diktat",
-    "general.error.hotkey_empty": "Die Taste {action} darf nicht leer sein, wenn der Tastaturmodus gewählt ist.",
+    "general.hotkey.released": "Die Taste {key} wurde hierher verschoben; die Taste {action} ist jetzt leer.",
+    "general.error.hotkey_none_assigned": "Weisen Sie mindestens eine Taste zu oder wechseln Sie in den Mausmodus.",
     "general.error.hotkey_duplicate": "Jede Aktion braucht eine eigene Taste — derzeit sind zwei gleich.",
 
     # ---------- settings: Languages page ----------
@@ -350,6 +353,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} Begriffe — alle aktiv.",
     "glossary.terms.counter.used": "{total} von {cap} Begriffen genutzt · {remaining} weitere verfügbar.",
+    "glossary.terms.quick_limit": "Schnelles Diktat (ElevenLabs) berücksichtigt nur die ersten {limit} Begriffe: {count} Ihrer {total} fehlen in seinen Erkennungshinweisen. Die lokale Ersetzung gilt weiterhin für alle.",
+    "glossary.terms.quick_limit.tooltip": "Nicht im schnellen Diktat:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs lehnt Begriffe mit mehr als {chars} Zeichen ab, daher überspringt das schnelle Diktat: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} von {total} Begriffen aktiv — der Rest ist gespeichert, aber "
         "inaktiv. Pro aktiviert alle (bis zu {pro_cap})."
@@ -499,6 +505,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Taste erfassen",
     "hotkeycapture.listening": "Taste drücken…",
     "hotkeycapture.tooltip": "Klicken, dann die gewünschte Taste drücken — sie wird in dieses Feld eingetragen.",
+    "hotkeycapture.clear": "Leeren — diese Aktion erhält keine Taste",
 
     # ---------- history kinds (Activity Feed) ----------
     # Durchgehend Substantive, wie im englischen Register: das sind Bezeichnungen
@@ -525,6 +532,7 @@ STRINGS: dict[str, str] = {
     # damit sie nie mit diktiertem Text verwechselt werden.
     "error.transcribe.title": "Sprache wurde nicht transkribiert",
     "error.postprocess.title": "Text ohne Korrektur eingefügt",
+    "error.realtime_fallback.title": "Schnelles Diktat auf dem üblichen Weg erkannt",
     "error.api.quota": "{provider}: API-Guthaben aufgebraucht — Kontostand prüfen",
     "error.api.auth": "{provider}: API-Schlüssel abgelehnt — in den Einstellungen prüfen",
     "error.api.rate": "{provider}: Anfragelimit erreicht — in einer Minute erneut versuchen",

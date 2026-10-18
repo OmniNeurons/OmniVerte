@@ -19,6 +19,8 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from qfluentwidgets import (
     ComboBox,
+    InfoBar,
+    InfoBarPosition,
     LineEdit,
     RadioButton,
     SwitchButton,
@@ -127,41 +129,41 @@ class GeneralPage(BasePage):
         body.addWidget(self.mode_keyboard)
 
         self.hotkey_edit = LineEdit()
-        self.hotkey_edit.setPlaceholderText("F9")
+        self.hotkey_edit.setPlaceholderText(t("general.hotkey.none"))
         self.hotkey_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
         transcribe_row = make_form_row(
             t("general.hotkey.transcribe"),
-            make_capture_field(self.hotkey_edit),
+            make_capture_field(self.hotkey_edit, self._release_hotkey),
             hint=t("general.hotkey.transcribe.hint"),
             align_right=True,
         )
 
         self.hotkey_quick_edit = LineEdit()
-        self.hotkey_quick_edit.setPlaceholderText("F8")
+        self.hotkey_quick_edit.setPlaceholderText(t("general.hotkey.none"))
         self.hotkey_quick_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
         quick_row = make_form_row(
             t("general.hotkey.quick"),
-            make_capture_field(self.hotkey_quick_edit),
+            make_capture_field(self.hotkey_quick_edit, self._release_hotkey),
             hint=t("general.hotkey.quick.hint"),
             align_right=True,
         )
 
         self.hotkey_translate_edit = LineEdit()
-        self.hotkey_translate_edit.setPlaceholderText("F10")
+        self.hotkey_translate_edit.setPlaceholderText(t("general.hotkey.none"))
         self.hotkey_translate_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
         translate_row = make_form_row(
             t("general.hotkey.translate"),
-            make_capture_field(self.hotkey_translate_edit),
+            make_capture_field(self.hotkey_translate_edit, self._release_hotkey),
             hint=t("general.hotkey.translate.hint"),
             align_right=True,
         )
 
         self.hotkey_custom_edit = LineEdit()
-        self.hotkey_custom_edit.setPlaceholderText("F11")
+        self.hotkey_custom_edit.setPlaceholderText(t("general.hotkey.none"))
         self.hotkey_custom_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
         custom_row = make_form_row(
             t("general.hotkey.custom"),
-            make_capture_field(self.hotkey_custom_edit),
+            make_capture_field(self.hotkey_custom_edit, self._release_hotkey),
             hint=t("general.hotkey.custom.hint"),
             align_right=True,
         )
@@ -292,12 +294,36 @@ class GeneralPage(BasePage):
         self._sync_custom_style_pair()
         return panel
 
+    def _hotkey_fields(self) -> list[tuple[str, str, LineEdit]]:
+        """(config key, action-name catalog key, edit) for every hotkey field.
+
+        The name is a catalog key rather than text so error messages decline
+        properly in languages where the action name changes form.
+        """
+        return [
+            ("HOTKEY_TRANSCRIBE", "general.action.transcribe", self.hotkey_edit),
+            ("HOTKEY_QUICK", "general.action.quick", self.hotkey_quick_edit),
+            ("HOTKEY_TRANSLATE", "general.action.translate", self.hotkey_translate_edit),
+            ("HOTKEY_CUSTOM", "general.action.custom", self.hotkey_custom_edit),
+        ]
+
+    def _release_hotkey(self, target: LineEdit, key: str) -> None:
+        """A caught key moves: whichever other action held it is left unbound."""
+        for _, name_key, edit in self._hotkey_fields():
+            if edit is target or edit.text().strip().lower() != key.lower():
+                continue
+            edit.clear()
+            InfoBar.info(
+                title="",
+                content=t("general.hotkey.released", key=key, action=t(name_key)),
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self.window(),
+            )
+
     def _sync_custom_style_pair(self) -> None:
-        key = (
-            self.hotkey_custom_edit.text().strip()
-            or self.hotkey_custom_edit.placeholderText()
-            or "F11"
-        )
+        key = self.hotkey_custom_edit.text().strip() or "—"
         self.custom_hotkey_badge.setText(key)
         self.custom_style_hint.setText(t("general.stylepair.hint", key=key))
 
@@ -326,11 +352,10 @@ class GeneralPage(BasePage):
         else:
             self.mode_keyboard.setChecked(True)
 
-        # Transcribe key: prefer the new key, fall back to the legacy one.
-        self.hotkey_edit.setText(config.get("HOTKEY_TRANSCRIBE") or config.get("ACTIVATION_KEY") or "F9")
-        self.hotkey_translate_edit.setText(config.get("HOTKEY_TRANSLATE") or "F10")
-        self.hotkey_custom_edit.setText(config.get("HOTKEY_CUSTOM") or "F11")
-        self.hotkey_quick_edit.setText(config.get("HOTKEY_QUICK") or "F8")
+        # "" on file = the action is deliberately unbound (an absent key gets
+        # its default from Config.DEFAULTS).
+        for config_key, _, edit in self._hotkey_fields():
+            edit.setText((config.get(config_key) or "").strip())
 
         current_style = (config.get("HOTKEY_CUSTOM_STYLE") or "custom").lower()
         for i, (_, value) in enumerate(CUSTOM_STYLE_CHOICES):
@@ -365,12 +390,11 @@ class GeneralPage(BasePage):
 
         # Always persist the user's currently-typed keys, even when mode=mouse,
         # so toggling back to keyboard later restores their preferred hotkeys.
-        hotkey = self.hotkey_edit.text().strip() or "F9"
-        config.set("HOTKEY_TRANSCRIBE", hotkey)
-        config.set("ACTIVATION_KEY", hotkey)  # keep legacy key in sync
-        config.set("HOTKEY_TRANSLATE", self.hotkey_translate_edit.text().strip() or "F10")
-        config.set("HOTKEY_CUSTOM", self.hotkey_custom_edit.text().strip() or "F11")
-        config.set("HOTKEY_QUICK", self.hotkey_quick_edit.text().strip() or "F8")
+        # An empty field is saved as "" = no key for that action.
+        for config_key, _, edit in self._hotkey_fields():
+            config.set(config_key, edit.text().strip())
+        if self.hotkey_edit.text().strip():
+            config.set("ACTIVATION_KEY", self.hotkey_edit.text().strip())  # legacy sync
         _, style_val = CUSTOM_STYLE_CHOICES[self.custom_style_combo.currentIndex()]
         config.set("HOTKEY_CUSTOM_STYLE", style_val)
         config.set("HOTKEYS_SUPPRESS", "true" if self.suppress_switch.isChecked() else "false")
@@ -387,22 +411,17 @@ class GeneralPage(BasePage):
     def validate(self) -> Optional[str]:
         if not self.mode_keyboard.isChecked():
             return None
-        # Action-name key → the field holding that action's hotkey. The name is
-        # a catalog key rather than text so the error message declines properly
-        # in languages where "Transcribe hotkey can't be empty" is not simply
-        # the action's name with a suffix bolted on.
-        fields = [
-            ("general.action.transcribe", self.hotkey_edit),
-            ("general.action.translate", self.hotkey_translate_edit),
-            ("general.action.custom", self.hotkey_custom_edit),
-            ("general.action.quick", self.hotkey_quick_edit),
+        # An empty field is fine (that action has no key), but with none at
+        # all keyboard mode could not start a recording.
+        normalised = [
+            edit.text().strip().lower()
+            for _, _, edit in self._hotkey_fields()
+            if edit.text().strip()
         ]
-        keys = [(name_key, edit.text().strip()) for name_key, edit in fields]
-        for name_key, key in keys:
-            if not key:
-                return t("general.error.hotkey_empty", action=t(name_key))
+        if not normalised:
+            return t("general.error.hotkey_none_assigned")
         # Two actions on the same key would both fire — reject duplicates.
-        normalised = [k.lower() for _, k in keys]
+        # (A caught key already moved; this catches a typed one.)
         if len(set(normalised)) != len(normalised):
             return t("general.error.hotkey_duplicate")
         return None

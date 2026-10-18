@@ -44,6 +44,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Tasti di attivazione",
     "tray.keys.change": "Cambia (premi un tasto)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "non assegnato",
     "tray.action.transcribe": "Trascrivi",
     "tray.action.translate": "Trascrivi + traduci",
     "tray.action.custom": "Trascrivi + stile",
@@ -94,6 +95,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "Detta, poi riscrivi nello stile scelto qui sotto e incolla. Clicca «Cattura il tasto» per assegnare un tasto.",
     "general.hotkey.quick": "Dettatura rapida",
     "general.hotkey.quick.hint": "Incolla il testo grezzo appena smetti di parlare, senza correzione o riscrittura con l’IA. Trascrive in diretta con ElevenLabs se la sua chiave è impostata nella pagina Trascrizione. Clicca «Cattura il tasto» per assegnare un tasto.",
+    "general.hotkey.none": "Non assegnato",
 
     "general.stylepair.name": "Personalizzato",
     "general.stylepair.hint": "Premendo {key} il dettato viene riscritto in questo stile. «Personalizzato» usa il tuo prompt dalla pagina «Stile personalizzato».",
@@ -119,14 +121,15 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Avvia all'accensione di Windows",
     "general.behaviour.autostart.hint": "Avvia Omni Verte automaticamente quando accedi a Windows.",
 
-    # Inseriti in general.error.hotkey_empty. Chiavi separate dalle etichette
+    # Inseriti in general.hotkey.released. Chiavi separate dalle etichette
     # delle righe: l'errore nomina l'azione ("Il tasto di Traduci non può
     # essere vuoto") e una lingua deve poter flettere il nome in quel contesto.
     "general.action.transcribe": "Trascrivi",
     "general.action.translate": "Traduci",
     "general.action.custom": "Stile personalizzato",
     "general.action.quick": "Dettatura rapida",
-    "general.error.hotkey_empty": "Il tasto di «{action}» non può essere vuoto quando è selezionata la modalità tastiera.",
+    "general.hotkey.released": "Il tasto {key} è stato spostato qui; il tasto di «{action}» ora è vuoto.",
+    "general.error.hotkey_none_assigned": "Assegna almeno un tasto o passa alla modalità mouse.",
     "general.error.hotkey_duplicate": "Ogni azione richiede un tasto distinto — al momento due coincidono.",
 
     # ---------- settings: Languages page ----------
@@ -348,6 +351,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} termini — tutti attivi.",
     "glossary.terms.counter.used": "{total} di {cap} termini usati · altri {remaining} disponibili.",
+    "glossary.terms.quick_limit": "La dettatura rapida (ElevenLabs) usa solo i primi {limit} termini: {count} dei tuoi {total} restano fuori dai suoi suggerimenti di riconoscimento. La sostituzione locale li copre comunque tutti.",
+    "glossary.terms.quick_limit.tooltip": "Non inviati alla dettatura rapida:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs rifiuta i termini più lunghi di {chars} caratteri, quindi la dettatura rapida salta: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} di {total} termini attivi — gli altri sono salvati ma inattivi. "
         "Pro li attiva tutti (fino a {pro_cap})."
@@ -488,6 +494,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Cattura il tasto",
     "hotkeycapture.listening": "Premi un tasto…",
     "hotkeycapture.tooltip": "Clicca, poi premi il tasto che vuoi — verrà inserito in questo campo.",
+    "hotkeycapture.clear": "Cancella: questa azione non avrà alcun tasto",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "Trascrizione",
@@ -512,6 +519,7 @@ STRINGS: dict[str, str] = {
     # possano mai passare per testo dettato.
     "error.transcribe.title": "Il parlato non è stato trascritto",
     "error.postprocess.title": "Testo incollato senza correzione",
+    "error.realtime_fallback.title": "Dettatura rapida trascritta nel modo consueto",
     "error.api.quota": "{provider}: crediti API esauriti — controlla il saldo dell'account",
     "error.api.auth": "{provider}: chiave API rifiutata — controllala nelle impostazioni",
     "error.api.rate": "{provider}: limite di richieste raggiunto — riprova tra un minuto",

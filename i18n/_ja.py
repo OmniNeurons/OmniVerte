@@ -47,6 +47,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "起動キー",
     "tray.keys.change": "変更(キーを押す)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "未設定",
     "tray.action.transcribe": "文字起こし",
     "tray.action.translate": "文字起こし + 翻訳",
     "tray.action.custom": "文字起こし + スタイル変換",
@@ -95,6 +96,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "口述すると、下で選んだスタイルに書き換えて貼り付けます。「キーを取得」をクリックしてキーを割り当てます。",
     "general.hotkey.quick": "クイック口述",
     "general.hotkey.quick.hint": "話し終えた瞬間に未加工のテキストを貼り付けます。AIによる校正や書き換えはありません。「文字起こし」ページでElevenLabsのキーを設定すると、話しながらリアルタイムで文字起こしします。「キーを取得」をクリックしてキーを割り当てます。",
+    "general.hotkey.none": "未設定",
 
     "general.stylepair.name": "カスタム",
     "general.stylepair.hint": "{key}を押すと、口述内容をこのスタイルに書き換えます。「カスタム」は「カスタムスタイル」ページのプロンプトを使います。",
@@ -120,14 +122,15 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Windows起動時に自動起動",
     "general.behaviour.autostart.hint": "Windowsにサインインしたとき、Omni Verteを自動的に起動します。",
 
-    # Action names interpolated into general.error.hotkey_empty. Kept as their
+    # Action names interpolated into general.hotkey.released. Kept as their
     # own keys (not the row labels) so the error frame can name the action
     # naturally in Japanese ("〜の…").
     "general.action.transcribe": "文字起こし",
     "general.action.translate": "翻訳",
     "general.action.custom": "カスタムスタイル",
     "general.action.quick": "クイック口述",
-    "general.error.hotkey_empty": "キーボードモードを選択した場合、{action}のショートカットキーを空にはできません。",
+    "general.hotkey.released": "{key} をここに移動しました。{action}のショートカットキーは未設定になりました。",
+    "general.error.hotkey_none_assigned": "ショートカットキーを1つ以上割り当てるか、マウスモードに切り替えてください。",
     "general.error.hotkey_duplicate": "各アクションには別々のショートカットキーが必要です — 現在2つが重複しています。",
 
     # ---------- settings: Languages page ----------
@@ -356,6 +359,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "用語{total}件 — すべて有効。",
     "glossary.terms.counter.used": "{cap}件中{total}件の用語を使用中 · あと{remaining}件追加できます。",
+    "glossary.terms.quick_limit": "クイック口述（ElevenLabs）は先頭の {limit} 語しか使いません。{total} 語のうち {count} 語は認識ヒントに含まれません。ローカル置換は引き続きすべてに適用されます。",
+    "glossary.terms.quick_limit.tooltip": "クイック口述に送られない用語：",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs は {chars} 文字を超える用語を受け付けないため、クイック口述では次を省きます：{terms}。",
     "glossary.terms.counter.over_free": (
         "{total}件中{cap}件の用語が有効 — 残りは保存されていますが無効です。"
         "Proならすべて有効になります(最大{pro_cap}件)。"
@@ -489,6 +495,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "キーを取得",
     "hotkeycapture.listening": "キーを押してください…",
     "hotkeycapture.tooltip": "クリックしてから使いたいキーを押すと、このフィールドに入ります。",
+    "hotkeycapture.clear": "クリア（この操作にはキーを割り当てません）",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "文字起こし",
@@ -510,6 +517,7 @@ STRINGS: dict[str, str] = {
     # 目立つ「!!! ⚠ … ⚠ !!!」枠付きで表示され、口述テキストと混同されない。
     "error.transcribe.title": "音声を文字起こしできませんでした",
     "error.postprocess.title": "テキストは補正なしで貼り付けられました",
+    "error.realtime_fallback.title": "クイック口述は通常の方法で文字起こししました",
     "error.api.quota": "{provider}：APIクレジットを使い切りました — アカウント残高を確認してください",
     "error.api.auth": "{provider}：APIキーが拒否されました — 設定で確認してください",
     "error.api.rate": "{provider}：リクエスト上限に達しました — 1分後に再試行してください",

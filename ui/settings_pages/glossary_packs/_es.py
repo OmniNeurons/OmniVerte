@@ -22,27 +22,13 @@ PACKS: dict[str, PackContent] = {
     "legal": PackContent(
         terms=[
             # Procedimiento
-            "demanda", "contestación a la demanda", "reconvención",
-            "escrito de alegaciones", "recurso de apelación", "recurso de casación",
-            "auto", "sentencia", "providencia", "juicio ordinario", "juicio verbal",
-            "procedimiento monitorio", "medidas cautelares", "costas procesales",
-            "competencia territorial", "litispendencia", "cosa juzgada",
-            "prueba documental", "prueba pericial", "prueba testifical",
-            "interrogatorio de partes", "demandante", "demandado",
-            "prescripción", "caducidad", "arbitraje", "laudo arbitral",
-            "ejecución de sentencia",
+            "reconvención", "recurso de casación", "procedimiento monitorio",
+            "litispendencia", "cosa juzgada", "prueba testifical",
+            "laudo arbitral",
             # Contratos
-            "contrato de compraventa", "contrato de arrendamiento",
-            "contrato de obra", "contrato de prestación de servicios",
-            "oferta", "aceptación", "consentimiento", "cláusula penal", "arras",
-            "fianza", "aval", "cesión de créditos", "novación", "subrogación",
-            "resolución del contrato", "desistimiento", "incumplimiento", "mora",
-            "fuerza mayor", "caso fortuito", "daños y perjuicios",
-            "lucro cesante", "daño emergente", "poder notarial", "buena fe",
+            "cláusula penal", "arras", "cesión de créditos", "novación",
+            "subrogación", "caso fortuito", "lucro cesante", "daño emergente",
             # Societario
-            "escritura de constitución", "estatutos sociales", "junta general",
-            "consejo de administración", "administrador único", "capital social",
-            "participaciones sociales", "sociedad limitada", "sociedad anónima",
             "Registro Mercantil", "diligencia debida", "CIF", "LEC",
         ],
         replacements=[
@@ -54,26 +40,15 @@ PACKS: dict[str, PackContent] = {
     "medical": PackContent(
         terms=[
             # Anamnesis / exploración
-            "anamnesis", "motivo de consulta", "antecedentes personales",
-            "antecedentes familiares", "enfermedad actual", "exploración física",
-            "auscultación", "palpación", "percusión", "diagnóstico diferencial",
-            "comorbilidad", "etiología", "patogenia", "pronóstico", "secuelas",
-            "informe de alta", "evolución clínica",
+            "anamnesis", "auscultación", "comorbilidad", "etiología", "patogenia",
             # Síntomas / hallazgos
             "disnea", "taquicardia", "bradicardia", "arritmia", "cianosis",
-            "edema", "eritema", "hematuria", "hemoptisis", "mialgia", "síncope",
-            "ictericia", "palidez", "hipertensión arterial", "hipotensión",
-            "hipoxia", "fiebre", "febrícula", "afebril", "sin hallazgos",
+            "eritema", "hematuria", "hemoptisis", "mialgia", "síncope",
+            "ictericia", "hipoxia", "febrícula", "afebril",
             # Pruebas
-            "ECG", "EEG", "RMN", "TAC", "ecografía", "radiografía", "hemograma",
-            "analítica", "bioquímica", "biopsia", "endoscopia", "ecocardiograma",
+            "ECG", "EEG", "RMN", "TAC", "hemograma", "ecocardiograma",
             # Plan
-            "contraindicación", "profilaxis", "en ayunas", "vía intravenosa",
-            "vía intramuscular", "vía subcutánea", "vía oral", "a demanda",
-            "urgente", "seguimiento",
-            # Anatomía
-            "anterior", "posterior", "proximal", "distal", "lateral",
-            "medial", "bilateral", "unilateral",
+            "profilaxis",
         ],
         replacements=[
             ("ecg", "ECG"),
@@ -85,27 +60,17 @@ PACKS: dict[str, PackContent] = {
     "it": PackContent(
         # Spanish developers speak Spanish and write tool and process names in
         # Latin — the same split as the Russian IT pack.
+        # Only what speech recognition genuinely gets wrong: jargon, Latin tool
+        # names, rare terms. Everyday words of the profession (branch, release,
+        # task, database) are left out — the recognizer already knows them, and
+        # every term spends a slot of a capped bias list (ElevenLabs: 50).
         terms=[
-            # Proceso
-            "rama", "fusión", "despliegue", "revisión de código", "deuda técnica",
-            "refactorización", "regresión", "incidencia", "entorno de pruebas",
-            "puesta en producción", "versión candidata", "compilación",
-            # Arquitectura
-            "microservicio", "monolito", "balanceador de carga", "latencia",
-            "rendimiento", "fuga de memoria", "condición de carrera",
-            "tolerancia a fallos", "escalabilidad", "retrocompatibilidad",
-            "cola de mensajes", "caché", "punto de entrada", "idempotente",
-            # Datos
-            "base de datos", "índice", "migración", "transacción", "bloqueo",
-            "replicación", "particionado",
-            # Operación
-            "monitorización", "registro de eventos", "trazabilidad", "métricas",
-            "prueba unitaria", "prueba de integración", "cobertura de pruebas",
-            "pruebas de carga",
+            # Jerga que el reconocimiento de voz suele fallar
+            "microservicio", "idempotente",
             # Herramientas y procesos que se escriben en inglés
             "merge request", "pull request", "commit", "rollback", "hotfix",
-            "sprint", "backlog", "deploy", "Kubernetes", "Docker", "PostgreSQL",
-            "Redis", "Kafka", "nginx", "Git", "GitLab", "CI/CD", "API",
+            "backlog", "deploy", "Kubernetes", "Docker", "PostgreSQL", "Redis",
+            "Kafka", "nginx", "Git", "GitLab", "CI/CD", "API",
         ],
         replacements=[
             ("kubernetes", "Kubernetes"),
@@ -116,23 +81,15 @@ PACKS: dict[str, PackContent] = {
     "finance": PackContent(
         terms=[
             # Contabilidad
-            "cuentas a pagar", "cuentas a cobrar", "devengo", "amortización",
-            "balance de situación", "cuenta de pérdidas y ganancias",
-            "estado de flujos de efectivo", "libro mayor", "margen bruto",
-            "margen neto", "gastos operativos", "conciliación bancaria",
-            "provisión", "cierre contable", "factura", "ejercicio fiscal",
+            "devengo", "libro mayor",
             # Métricas
-            "fondo de maniobra", "flujo de caja", "flujo de caja libre",
-            "rentabilidad", "umbral de rentabilidad", "liquidez", "solvencia",
-            "apalancamiento", "tasa de descuento", "valor actual neto",
-            "tasa interna de retorno", "EBITDA", "CAPEX", "OPEX", "ROI",
+            "fondo de maniobra", "umbral de rentabilidad", "apalancamiento",
+            "valor actual neto", "tasa interna de retorno",
+            "EBITDA", "CAPEX", "OPEX", "ROI",
             # Operaciones / capital
-            "capital social", "ampliación de capital", "dilución", "valoración",
-            "ronda de financiación", "pacto de socios", "due diligence",
-            "participaciones", "dividendos", "cobertura", "garantía",
+            "pacto de socios", "due diligence",
             # Fiscal / regulatorio
-            "IVA", "impuesto de sociedades", "IRPF", "auditoría de cuentas",
-            "NIIF", "plan general contable",
+            "IVA", "IRPF", "NIIF", "plan general contable",
         ],
         replacements=[
             ("ebitda", "EBITDA"),
@@ -148,20 +105,14 @@ PACKS: dict[str, PackContent] = {
     "sales": PackContent(
         terms=[
             # Embudo
-            "cliente potencial", "oportunidad", "embudo de ventas",
-            "etapa de la oportunidad", "primer contacto", "llamada en frío",
-            "propuesta comercial", "presupuesto", "demostración",
-            "prueba de concepto", "piloto", "negociación", "cierre",
-            "ciclo de venta", "previsión de ventas", "objetivo de ventas",
+            "embudo de ventas", "llamada en frío", "prueba de concepto",
             "ratio de conversión", "ticket medio",
             # Relación con el cliente
-            "objeción", "gestión de objeciones", "responsable de decisión",
-            "interlocutor", "punto de dolor", "propuesta de valor",
-            "venta adicional", "venta cruzada", "renovación", "fidelización",
-            "tasa de abandono", "cartera de clientes", "punto de contacto",
-            "seguimiento comercial", "alta de cliente",
+            "gestión de objeciones", "punto de dolor", "propuesta de valor",
+            "venta adicional", "venta cruzada", "tasa de abandono",
+            "punto de contacto",
             # Términos
-            "CRM", "KPI", "NPS", "pedido de compra", "contrato marco",
+            "CRM", "KPI", "NPS",
         ],
         replacements=[
             ("crm", "CRM"),

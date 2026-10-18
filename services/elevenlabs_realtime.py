@@ -39,11 +39,32 @@ SAMPLE_RATE = 16000
 # promptly, large enough not to flood the socket with tiny frames.
 CHUNK_BYTES = SAMPLE_RATE * 2 // 10
 
-# keyterms rides in the URL query; cap it so a large Pro glossary cannot blow
-# past URL length limits. Glossary order is priority order — keep the head.
-MAX_KEYTERMS = 100
+# Server limit (verified live: "Number of keyterms cannot exceed 50") — more
+# fails the whole session with invalid_request. Glossary order is priority
+# order — keep the head.
+MAX_KEYTERMS = 50
+# Also a server limit (verified live: "Each keyterm must be at most 20
+# characters"). Longer terms are skipped before the cap, so they cost no slot.
+MAX_KEYTERM_CHARS = 20
 
-CONNECT_TIMEOUT = 10.0
+
+def usable_keyterms(terms: list[str]) -> tuple[list[str], list[str]]:
+    """Split glossary terms into (sent, too_long); ``sent`` is capped.
+
+    Pure — shared by build_url and the Glossary page's limit warning, so the
+    page shows exactly what the session will send.
+    """
+    clean = [term.strip() for term in terms if term and term.strip()]
+    too_long = [term for term in clean if len(term) > MAX_KEYTERM_CHARS]
+    fitting = [term for term in clean if len(term) <= MAX_KEYTERM_CHARS]
+    return fitting[:MAX_KEYTERMS], too_long
+
+# A dead connect is retried once: a short network blip should not cost the
+# whole realtime session. Each attempt is short; audio keeps buffering
+# meanwhile. CONNECT_TIMEOUT bounds finish()'s wait for the session overall.
+CONNECT_ATTEMPTS = 2
+CONNECT_ATTEMPT_TIMEOUT = 4.0
+CONNECT_TIMEOUT = CONNECT_ATTEMPTS * CONNECT_ATTEMPT_TIMEOUT + 2.0
 # How long finish() waits for the server to answer the final commit. The short
 # variant applies when nothing is pending (the last segment was already
 # committed by VAD) — then the server may have nothing to say at all.
@@ -102,9 +123,9 @@ def build_url(language: str | None = None,
         for code in secondary_languages or []:
             if code and code != language:
                 params.append(("secondary_languages", code))
-    for term in (keyterms or [])[:MAX_KEYTERMS]:
-        if term and term.strip():
-            params.append(("keyterms", term.strip()))
+    sent, _ = usable_keyterms(keyterms or [])
+    for term in sent:
+        params.append(("keyterms", term))
     return f"{REALTIME_URL}?{urllib.parse.urlencode(params)}"
 
 
@@ -122,7 +143,7 @@ def _connect(url: str, api_key: str):
     """Open the socket; split out so tests can inject a fake."""
     return websocket.create_connection(
         url,
-        timeout=CONNECT_TIMEOUT,
+        timeout=CONNECT_ATTEMPT_TIMEOUT,
         header=[f"xi-api-key: {api_key}", "User-Agent: OmniVerte (Windows)"],
     )
 
@@ -253,11 +274,23 @@ class RealtimeSession:
 
     def _run(self) -> None:
         try:
-            try:
-                self._ws = self._connect(self._url, self._api_key)
-            except Exception as e:
-                with self._lock:
-                    self._fail_locked(_handshake_error(e))
+            for attempt in range(1, CONNECT_ATTEMPTS + 1):
+                try:
+                    self._ws = self._connect(self._url, self._api_key)
+                    break
+                except Exception as e:
+                    err = _handshake_error(e)
+                    # An HTTP answer (bad key, quota) will not change on retry;
+                    # neither is it worth retrying once the take is over.
+                    if err.kind != "network" or attempt == CONNECT_ATTEMPTS or self._closing:
+                        with self._lock:
+                            self._fail_locked(err)
+                        return
+                    logger.info(f"ElevenLabs realtime: connect attempt {attempt} failed ({e}), retrying")
+            if self._closing:
+                # finish() gave up while we were connecting; its close() saw
+                # no socket yet, so drop this late one ourselves.
+                self.close()
                 return
             # Blocking reads from here on; close() unblocks them.
             self._ws.settimeout(None)

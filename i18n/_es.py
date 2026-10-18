@@ -46,6 +46,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Teclas de activación",
     "tray.keys.change": "Cambiar (pulse una tecla)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "sin asignar",
     "tray.action.transcribe": "Transcribir",
     "tray.action.translate": "Transcribir y traducir",
     "tray.action.custom": "Transcribir y reescribir",
@@ -96,6 +97,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "Dicte y luego reescriba en el estilo elegido abajo y pegue. Pulse «Capturar la tecla» para asignar una tecla.",
     "general.hotkey.quick": "Dictado rápido",
     "general.hotkey.quick.hint": "Pega el texto en bruto en cuanto deja de hablar, sin corrección ni reescritura por IA. Transcribe en directo con ElevenLabs si su clave está configurada en la página Transcripción. Pulse «Capturar la tecla» para asignar una tecla.",
+    "general.hotkey.none": "Sin asignar",
 
     "general.stylepair.name": "Personalizado",
     "general.stylepair.hint": "Al pulsar {key} se reescribe lo dictado en este estilo. «Personalizado» usa su instrucción de la página Estilo personalizado.",
@@ -121,13 +123,14 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Iniciar al arrancar Windows",
     "general.behaviour.autostart.hint": "Iniciar Omni Verte automáticamente al iniciar sesión en Windows.",
 
-    # Se interpolan en general.error.hotkey_empty: «La tecla de transcripción no
+    # Se interpolan en general.hotkey.released: «La tecla de transcripción no
     # puede estar vacía…». Por eso son claves aparte y no las etiquetas de fila.
     "general.action.transcribe": "transcripción",
     "general.action.translate": "traducción",
     "general.action.custom": "estilo personalizado",
     "general.action.quick": "dictado rápido",
-    "general.error.hotkey_empty": "La tecla de {action} no puede estar vacía cuando está seleccionado el modo teclado.",
+    "general.hotkey.released": "La tecla {key} se movió aquí; la tecla de {action} quedó vacía.",
+    "general.error.hotkey_none_assigned": "Asigne al menos una tecla o cambie al modo ratón.",
     "general.error.hotkey_duplicate": "Cada acción necesita una tecla distinta — ahora hay dos iguales.",
 
     # ---------- settings: Languages page ----------
@@ -353,6 +356,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} términos — todos activos.",
     "glossary.terms.counter.used": "{total} de {cap} términos usados · quedan {remaining} disponibles.",
+    "glossary.terms.quick_limit": "El dictado rápido (ElevenLabs) solo usa los primeros {limit} términos: {count} de sus {total} quedan fuera de sus pistas de reconocimiento. El reemplazo local sigue cubriéndolos todos.",
+    "glossary.terms.quick_limit.tooltip": "No se envían al dictado rápido:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs rechaza términos de más de {chars} caracteres, así que el dictado rápido omite: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} de {total} términos activos — el resto están guardados pero "
         "inactivos. Pro los activa todos (hasta {pro_cap})."
@@ -490,6 +496,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Capturar la tecla",
     "hotkeycapture.listening": "Pulse una tecla…",
     "hotkeycapture.tooltip": "Pulse el botón y luego la tecla que quiera — se rellena este campo.",
+    "hotkeycapture.clear": "Borrar: esta acción no tendrá tecla",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "Transcripción",
@@ -514,6 +521,7 @@ STRINGS: dict[str, str] = {
     # nunca se confundan con texto dictado.
     "error.transcribe.title": "La voz no se transcribió",
     "error.postprocess.title": "Texto pegado sin corrección",
+    "error.realtime_fallback.title": "Dictado rápido transcrito por la vía habitual",
     "error.api.quota": "{provider}: créditos de la API agotados — revise el saldo de su cuenta",
     "error.api.auth": "{provider}: clave de API rechazada — revísela en Ajustes",
     "error.api.rate": "{provider}: límite de peticiones alcanzado — inténtelo en un minuto",

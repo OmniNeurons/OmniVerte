@@ -943,7 +943,17 @@ def test_realtime_failure_replays_audio_through_batch_chain(monkeypatch):
     w.realtime_transcribe(session_gen=1)
     assert len(replayed[0]) == 2                # every captured frame replayed
     assert w.transcribed_segments == ["from batch"]
-    assert w.notified == [("transcribe", "ElevenLabs")]
+    assert w.notified == [("realtime_fallback", "ElevenLabs")]
+
+
+def test_realtime_failure_with_failed_replay_leaves_the_notice_to_the_chain(monkeypatch):
+    from services.elevenlabs_realtime import ElevenLabsApiError
+
+    session = _FakeSession(error=ElevenLabsApiError("down", kind="network"))
+    w = _realtime_writer(monkeypatch, session)
+    w._transcribe_frames_batch = lambda frames: ""   # chain failed (reports itself)
+    w.realtime_transcribe(session_gen=1)
+    assert w.notified == []
 
 
 def test_realtime_result_from_stale_session_is_dropped(monkeypatch):

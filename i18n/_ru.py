@@ -45,6 +45,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Клавиши активации",
     "tray.keys.change": "Изменить (нажмите клавишу)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "не назначена",
     "tray.action.transcribe": "Расшифровать",
     "tray.action.translate": "Расшифровать и перевести",
     "tray.action.custom": "Расшифровать и переписать",
@@ -95,6 +96,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "Продиктовать, затем переписать в выбранном стиле и вставить. Нажмите «Задать», чтобы задать клавишу.",
     "general.hotkey.quick": "Быстрая диктовка",
     "general.hotkey.quick.hint": "Вставить текст сразу, как только вы замолчите, — без ИИ-коррекции и переписывания. Распознаёт на лету через ElevenLabs, если ключ задан на странице «Транскрипция». Нажмите «Задать», чтобы задать клавишу.",
+    "general.hotkey.none": "Не назначена",
 
     "general.stylepair.name": "Кастомный стиль",
     "general.stylepair.hint": "Нажатие {key} переписывает продиктованное в этом стиле. «Кастомный» использует ваш промпт со страницы «Кастомный стиль».",
@@ -120,14 +122,15 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Запускать вместе с Windows",
     "general.behaviour.autostart.hint": "Запускать Omni Verte автоматически при входе в Windows.",
 
-    # Подставляются в general.error.hotkey_empty в родительном падеже:
-    # «Клавиша расшифровки не может быть пустой…». Поэтому это отдельные
+    # Подставляются в general.hotkey.released в родительном падеже:
+    # «…снята с расшифровки». Поэтому это отдельные
     # ключи, а не переиспользование подписей строк.
     "general.action.transcribe": "расшифровки",
     "general.action.translate": "перевода",
     "general.action.custom": "своего стиля",
     "general.action.quick": "быстрой диктовки",
-    "general.error.hotkey_empty": "Клавиша {action} не может быть пустой, когда выбран режим клавиатуры.",
+    "general.hotkey.released": "Клавиша {key} перенесена сюда и снята с {action}.",
+    "general.error.hotkey_none_assigned": "Назначьте хотя бы одну клавишу или переключитесь на режим мыши.",
     "general.error.hotkey_duplicate": "У каждого действия должна быть своя клавиша — сейчас две совпадают.",
 
     # ---------- settings: Languages page ----------
@@ -351,6 +354,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "Терминов: {total} — все активны.",
     "glossary.terms.counter.used": "Использовано терминов: {total} из {cap} · доступно ещё {remaining}.",
+    "glossary.terms.quick_limit": "Быстрая диктовка (ElevenLabs) учитывает только первые {limit} терминов: {count} из ваших {total} не попадут в её подсказки распознаванию. Локальная замена по-прежнему работает для всех.",
+    "glossary.terms.quick_limit.tooltip": "Не попадут в быструю диктовку:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs не принимает термины длиннее {chars} символов, поэтому быстрая диктовка пропустит: {terms}.",
     "glossary.terms.counter.over_free": (
         "Активны {cap} из {total} терминов — остальные сохранены, но не "
         "используются. Pro активирует все (до {pro_cap})."
@@ -499,6 +505,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Задать",
     "hotkeycapture.listening": "Нажмите клавишу…",
     "hotkeycapture.tooltip": "Нажмите кнопку, затем — нужную клавишу: она подставится в это поле.",
+    "hotkeycapture.clear": "Очистить — у действия не будет клавиши",
 
     # ---------- history kinds (Activity Feed) ----------
     # Nouns throughout, matching English's register: these are labels on a feed
@@ -527,6 +534,7 @@ STRINGS: dict[str, str] = {
     # принять за надиктованный текст и случайно отправить в чат.
     "error.transcribe.title": "Речь не расшифрована",
     "error.postprocess.title": "Текст вставлен без коррекции",
+    "error.realtime_fallback.title": "Быстрая диктовка распознана обычным способом",
     "error.api.quota": "{provider}: закончились кредиты API — проверьте баланс аккаунта",
     "error.api.auth": "{provider}: ключ API отклонён — проверьте его в настройках",
     "error.api.rate": "{provider}: превышен лимит запросов — попробуйте через минуту",

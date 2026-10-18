@@ -44,22 +44,25 @@ reviewing and re-processing what you dictated.
 
 - **Hotkey dictation with per-action keys.** Four independent global hotkeys,
   each captures speech and then applies a different transform:
-  - `F9` — **Transcribe**: grammar-correct and normalize to your primary language.
-  - `F10` — **Transcribe + Translate**: force-translate into your secondary language.
-  - `F11` — **Transcribe + Custom style**: rewrite using your own saved prompt.
-  - `F8` — **Quick dictation**: no AI pass — the raw transcript is pasted the
+  - `F8` — **Transcribe**: grammar-correct and normalize to your primary language.
+  - `F9` — **Quick dictation**: no AI pass — the raw transcript is pasted the
     moment you stop talking. With an ElevenLabs key it streams live through
     **Scribe v2 Realtime** (speech is transcribed *while* you talk, so the text
     is ready almost instantly); without one it uses the normal backend chain,
     just skipping the LLM. Built for short commands — coding, prompting agents.
+  - `F10` — **Transcribe + Translate**: force-translate into your secondary language.
+  - `F11` — **Transcribe + Custom style**: rewrite using your own saved prompt.
 
   The transform is decided by the key that **stops** the take, not the one
-  that starts it — so you can begin dictating with `F9`, decide mid-sentence
+  that starts it — so you can begin dictating with `F8`, decide mid-sentence
   you'd rather have the result in your secondary language, and just press
   `F10` to finish. (The key that *starts* the take decides only where the
-  transcript comes from: `F8` = live streaming, the others = the backend chain.)
+  transcript comes from: `F9` = live streaming, the others = the backend chain.)
 
-  Keys are rebindable. By default they are *hard-captured* (swallowed so the
+  Keys are rebindable, and any action can be left without a key (clear its
+  field) — an unused action then intercepts nothing. Catching a key that
+  another action already holds moves it: the other action is left unbound.
+  By default keys are *hard-captured* (swallowed so the
   focused app never sees the keypress); this can be switched to pass-through.
   A **mouse-button** activation mode is also available.
 
@@ -131,7 +134,7 @@ reviewing and re-processing what you dictated.
 - *(Optional)* A **Gemini** API key ([Google AI Studio](https://aistudio.google.com/apikey)) —
   only for the Gemini transcription backend.
 - *(Optional)* An **ElevenLabs** API key ([ElevenLabs](https://elevenlabs.io/app/settings/api-keys)) —
-  only for live streaming on the quick-dictation hotkey (`F8`). The app calls a
+  only for live streaming on the quick-dictation hotkey (`F9`). The app calls a
   single endpoint (`/v1/speech-to-text/realtime`), so create a **restricted**
   key with only **Speech to Text** enabled and every other permission (Text to
   Speech, Voices, Models, History, Dubbing, Agents, User/Workspace, …) off. An
@@ -277,7 +280,7 @@ server revocation drops you back to Free.
 
 1. **Dictate** — press any action hotkey (`F8`/`F9`/`F10`/`F11` by default) to
    start. Press *any* of them again to stop; the key you press to stop decides
-   how the text is processed (e.g. start with `F9`, finish with `F10` to get
+   how the text is processed (e.g. start with `F8`, finish with `F10` to get
    the translation instead of plain transcription). The result is pasted into
    the window that had focus when you started.
 2. **Translate / rewrite** — open the main window (double-tap the hotkey, or

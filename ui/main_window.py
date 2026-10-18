@@ -1167,16 +1167,20 @@ class MainWindow(FramelessWindow):
                 t("main.hint.mouse.dictate", button=t(f"main.mouse.{btn}")),
                 t("main.hint.mouse.hotkeys"),
             ))
-        transcribe = self._config.get("HOTKEY_TRANSCRIBE") or self._config.get("ACTIVATION_KEY") or "F9"
-        translate = self._config.get("HOTKEY_TRANSLATE") or "F10"
-        custom = self._config.get("HOTKEY_CUSTOM") or "F11"
-        quick = self._config.get("HOTKEY_QUICK") or "F8"
-        return "\n".join((
-            t("main.hint.keyboard.transcribe", key=transcribe),
-            t("main.hint.keyboard.quick", key=quick),
-            t("main.hint.keyboard.translate", key=translate),
-            t("main.hint.keyboard.custom", key=custom, style=self._custom_style_label()),
-        ))
+        # An action whose key is "" is unbound and gets no line.
+        def key_of(config_key: str) -> str:
+            return (self._config.get(config_key) or "").strip()
+
+        lines = []
+        if key := key_of("HOTKEY_TRANSCRIBE"):
+            lines.append(t("main.hint.keyboard.transcribe", key=key))
+        if key := key_of("HOTKEY_QUICK"):
+            lines.append(t("main.hint.keyboard.quick", key=key))
+        if key := key_of("HOTKEY_TRANSLATE"):
+            lines.append(t("main.hint.keyboard.translate", key=key))
+        if key := key_of("HOTKEY_CUSTOM"):
+            lines.append(t("main.hint.keyboard.custom", key=key, style=self._custom_style_label()))
+        return "\n".join(lines)
 
     @staticmethod
     def _lang_code(name: str) -> str:

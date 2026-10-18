@@ -18,20 +18,16 @@ LOCALE = "en"
 PACKS: dict[str, PackContent] = {
     "legal": PackContent(
         terms=[
+            # Only what speech recognition genuinely gets wrong: rare terms of
+            # art, homophones (tort, lien, writ), Latin. Everyday legal words
+            # (contract, court, settlement) are left out — the recognizer
+            # already knows them, and every term spends a slot of a capped bias
+            # list (ElevenLabs: 50).
             # Procedure
-            "affidavit", "amicus curiae", "arbitration", "cause of action",
-            "cease and desist", "class action", "counterclaim", "deposition",
-            "discovery", "due diligence", "injunction", "interrogatories",
-            "judgment", "jurisdiction", "litigation", "motion to dismiss",
-            "plaintiff", "pleading", "res judicata", "settlement", "subpoena",
-            "summary judgment", "tort", "venue", "voir dire", "writ",
+            "affidavit", "amicus curiae", "interrogatories", "res judicata",
+            "subpoena", "tort", "voir dire", "writ",
             # Contract / corporate
-            "arm's length", "assignment", "breach of contract", "consideration",
-            "covenant", "estoppel", "force majeure", "good faith",
-            "indemnity", "indemnification", "injunctive relief", "lien",
-            "liquidated damages", "material adverse change", "novation",
-            "power of attorney", "severability", "statute of limitations",
-            "termination for convenience", "warranty",
+            "estoppel", "force majeure", "lien", "novation", "severability",
             # Latin / terms of art
             "bona fide", "de facto", "de jure", "ex parte", "inter alia",
             "prima facie", "pro bono", "pro rata", "quid pro quo", "ultra vires",
@@ -43,48 +39,38 @@ PACKS: dict[str, PackContent] = {
     ),
     "medical": PackContent(
         terms=[
+            # Only specialist vocabulary and order abbreviations; everyday
+            # words (blood pressure, fever, pain, MRI) are left out — the
+            # recognizer already knows them, and the bias list is capped.
             # History / exam
-            "anamnesis", "auscultation", "chief complaint", "comorbidity",
-            "differential diagnosis", "etiology", "history of present illness",
-            "palpation", "past medical history", "percussion", "prognosis",
-            "review of systems", "sequelae",
+            "anamnesis", "auscultation", "comorbidity", "etiology",
+            "palpation", "sequelae",
             # Findings / symptoms
-            "afebrile", "arrhythmia", "bradycardia", "cyanosis", "dyspnea",
-            "edema", "erythema", "hematuria", "hemoptysis", "hypertension",
-            "hypotension", "hypoxia", "jaundice", "myalgia", "pallor",
-            "syncope", "tachycardia",
+            "afebrile", "bradycardia", "cyanosis", "dyspnea", "edema",
+            "erythema", "hematuria", "hemoptysis", "myalgia", "syncope",
+            "tachycardia",
             # Studies / orders
-            "auscultatory", "biopsy", "CBC", "CT", "ECG", "EEG", "MRI",
-            "ultrasound", "X-ray",
+            "CBC", "ECG", "EEG",
             # Plan
-            "contraindication", "NPO", "prophylaxis", "stat",
-            "titrate", "PRN", "BID", "TID", "QID",
-            # Anatomy / direction
-            "anterior", "posterior", "proximal", "distal", "lateral",
-            "medial", "bilateral", "unilateral",
+            "NPO", "prophylaxis", "titrate", "PRN", "BID", "TID", "QID",
         ],
         replacements=[],
     ),
     "it": PackContent(
+        # Only what speech recognition genuinely gets wrong: jargon, Latin tool
+        # names, rare terms. Everyday words of the profession (branch, release,
+        # task, database) are left out — the recognizer already knows them, and
+        # every term spends a slot of a capped bias list (ElevenLabs: 50).
         terms=[
             # Version control / process
-            "merge request", "pull request", "rebase", "cherry-pick", "squash",
-            "commit", "branch", "changelog", "code review", "hotfix",
-            "regression", "rollback", "release candidate", "retrospective",
-            "sprint", "backlog", "standup", "tech debt",
+            "merge request", "pull request", "rebase", "cherry-pick", "changelog",
+            "hotfix", "rollback",
             # Architecture / concepts
-            "API", "backend", "frontend", "cache", "endpoint", "idempotent",
-            "latency", "load balancer", "microservice", "middleware",
-            "migration", "monolith", "throughput", "webhook", "race condition",
-            "memory leak", "feature flag", "canary release",
-            "blue-green deployment",
+            "API", "endpoint", "idempotent", "middleware", "webhook", "microservice",
+            "feature flag", "canary release", "blue-green deployment",
             # Infra / tooling
-            "Kubernetes", "Docker", "container", "CI/CD", "pipeline",
-            "Terraform", "nginx", "PostgreSQL", "Redis", "Kafka", "gRPC",
-            "GitHub", "GitLab", "observability", "telemetry",
-            # Quality
-            "unit test", "integration test", "end-to-end test", "coverage",
-            "linter", "staging", "production", "stack trace",
+            "Kubernetes", "Docker", "CI/CD", "Terraform", "nginx", "PostgreSQL",
+            "Redis", "Kafka", "gRPC", "GitHub", "GitLab", "linter", "stack trace",
         ],
         # The strongest case for replacements in any pack: Russian developers
         # pronounce these in Russian and write them in Latin without exception.
@@ -110,22 +96,20 @@ PACKS: dict[str, PackContent] = {
     ),
     "finance": PackContent(
         terms=[
+            # Only acronyms and terms of art; everyday words (budget, invoice,
+            # revenue, equity) are left out — the recognizer already knows
+            # them, and the bias list is capped. "cash flow", "cap table",
+            # "term sheet" and "due diligence" stay: the map below produces them.
             # Reporting
-            "accounts payable", "accounts receivable", "accrual",
-            "amortization", "balance sheet", "cash flow statement",
-            "depreciation", "general ledger", "gross margin",
-            "income statement", "net margin", "operating expenses", "P&L",
-            "reconciliation", "write-off", "CAPEX", "OPEX",
+            "accrual", "P&L", "CAPEX", "OPEX",
             # Metrics
-            "ARR", "MRR", "CAC", "LTV", "churn", "burn rate", "runway",
+            "ARR", "MRR", "CAC", "LTV",
             "EBITDA", "EBIT", "CAGR", "ROI", "IRR", "NPV", "WACC",
-            "working capital", "cash flow", "free cash flow",
+            "cash flow",
             # Deals / capital
-            "cap table", "convertible note", "due diligence", "equity",
-            "liquidity", "valuation", "term sheet", "dilution",
-            "vesting", "cliff", "escrow", "hedge", "leverage",
+            "cap table", "due diligence", "term sheet", "escrow",
             # Compliance
-            "audit trail", "IFRS", "GAAP", "VAT", "invoice", "fiscal year",
+            "IFRS", "GAAP", "VAT",
         ],
         # Only the borrowings a Russian speaker says in Russian but writes in
         # Latin.
@@ -141,21 +125,15 @@ PACKS: dict[str, PackContent] = {
     ),
     "sales": PackContent(
         terms=[
-            # Pipeline
-            "lead", "prospect", "qualified lead", "opportunity", "pipeline",
-            "deal stage", "discovery call", "demo", "proof of concept",
-            "pilot", "proposal", "quote", "negotiation", "closed won",
-            "closed lost", "win rate", "sales cycle", "forecast", "quota",
+            # Only acronyms and hyphenation-sensitive forms; everyday words
+            # (customer, deal, discount, call, meeting) are left out — the
+            # recognizer already knows them, and the bias list is capped.
             # Method / motion
-            "cold outreach", "follow-up", "touchpoint", "objection handling",
-            "decision maker", "champion", "gatekeeper", "stakeholder",
-            "pain point", "value proposition", "upsell", "cross-sell",
-            "renewal", "onboarding", "account review",
+            "follow-up", "touchpoint", "upsell", "cross-sell",
             # Metrics / terms
             # ("SQL" as sales-qualified lead is left out on purpose — it would
             # collide with the database language for anyone who says both.)
-            "conversion rate", "MQL", "ICP", "TAM", "NPS",
-            "retention", "churn", "SLA", "purchase order",
+            "MQL", "ICP", "TAM", "NPS", "SLA",
         ],
         replacements=[],
     ),

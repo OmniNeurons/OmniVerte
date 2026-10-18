@@ -49,6 +49,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Activation keys",
     "tray.keys.change": "Change (press a key)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "not set",
     # Action names for the hotkey submenu. Keyed from HOTKEY_ACTIONS'
     # `label_key` in services/audio_writer.py.
     "tray.action.transcribe": "Transcribe",
@@ -104,6 +105,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "Dictate, then rewrite using the style chosen below and paste. Click “Catch the key” to grab a key.",
     "general.hotkey.quick": "Quick dictation",
     "general.hotkey.quick.hint": "Paste the raw transcript the moment you stop talking — no AI correction or rewrite. Streams live through ElevenLabs when its key is set on the Transcription page. Click “Catch the key” to grab a key.",
+    "general.hotkey.none": "Not set",
 
     # The `[F11] Custom → [ style ▾ ]` panel. {key} is the live hotkey, so the
     # copy stays right after a rebind.
@@ -133,15 +135,16 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Launch on Windows startup",
     "general.behaviour.autostart.hint": "Start Omni Verte automatically when you sign in to Windows.",
 
-    # Action names, interpolated into general.error.hotkey_empty. Separate keys
-    # rather than reusing the row labels: the error names the action ("Translate
-    # hotkey can't be empty"), and a language that inflects the name in that
+    # Action names, interpolated into general.hotkey.released. Separate keys
+    # rather than reusing the row labels: the message names the action ("Translate
+    # now has no key"), and a language that inflects the name in that
     # frame must be free to.
     "general.action.transcribe": "Transcribe",
     "general.action.translate": "Translate",
     "general.action.custom": "Custom-style",
     "general.action.quick": "Quick dictation",
-    "general.error.hotkey_empty": "{action} hotkey can't be empty when keyboard mode is selected.",
+    "general.hotkey.released": "{key} moved here — {action} now has no key.",
+    "general.error.hotkey_none_assigned": "Assign at least one hotkey, or switch to mouse mode.",
     "general.error.hotkey_duplicate": "Each action needs a distinct hotkey — two are currently the same.",
 
     # ---------- settings: Languages page ----------
@@ -386,6 +389,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} terms — all active.",
     "glossary.terms.counter.used": "{total} of {cap} terms used · {remaining} more available.",
+    "glossary.terms.quick_limit": "Quick dictation (ElevenLabs) takes only the first {limit} terms: {count} of your {total} are left out of its recognition hints. Local replacement still covers all of them.",
+    "glossary.terms.quick_limit.tooltip": "Not sent to quick dictation:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs rejects terms longer than {chars} characters, so quick dictation skips: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} of {total} terms active — the rest are saved but inactive. "
         "Pro activates all of them (up to {pro_cap})."
@@ -547,6 +553,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Catch the key",
     "hotkeycapture.listening": "Press a key…",
     "hotkeycapture.tooltip": "Click, then press the key you want — it fills this field.",
+    "hotkeycapture.clear": "Clear — this action gets no key",
 
     # ---------- history kinds (Activity Feed) ----------
     # Display labels only. The kind strings they are keyed by
@@ -583,6 +590,7 @@ STRINGS: dict[str, str] = {
     # {provider} is the provider's display name ("OpenAI"/"Groq").
     "error.transcribe.title": "Speech was not transcribed",
     "error.postprocess.title": "Text pasted without correction",
+    "error.realtime_fallback.title": "Quick dictation transcribed the usual way",
     "error.api.quota": "{provider}: API credits exhausted — check your account balance",
     "error.api.auth": "{provider}: API key rejected — check it in Settings",
     "error.api.rate": "{provider}: rate limit reached — try again in a minute",

@@ -75,11 +75,23 @@ CLOUD_BACKEND_LABELS = {"openai": "OpenAI", "groq": "Groq", "gemini": "Gemini"}
 # before the UI language is known, and the tray menu that renders it is rebuilt
 # on every change. Resolving the label here would freeze it in the boot locale.
 HOTKEY_ACTIONS = {
-    "transcribe": {"label_key": "tray.action.transcribe", "config_key": "HOTKEY_TRANSCRIBE", "default": "F9"},
+    "transcribe": {"label_key": "tray.action.transcribe", "config_key": "HOTKEY_TRANSCRIBE", "default": "F8"},
     "translate":  {"label_key": "tray.action.translate",  "config_key": "HOTKEY_TRANSLATE",  "default": "F10"},
     "custom":     {"label_key": "tray.action.custom",     "config_key": "HOTKEY_CUSTOM",     "default": "F11"},
-    "quick":      {"label_key": "tray.action.quick",      "config_key": "HOTKEY_QUICK",      "default": "F8"},
+    "quick":      {"label_key": "tray.action.quick",      "config_key": "HOTKEY_QUICK",      "default": "F9"},
 }
+
+
+def resolve_hotkey(config, action_id):
+  """The key bound to `action_id`; "" means the action is deliberately unbound.
+
+  An empty value on file is the user's choice (Settings lets an action go
+  without a key), so only a key that is missing altogether falls back to the
+  default.
+  """
+  spec = HOTKEY_ACTIONS[action_id]
+  value = config.get(spec["config_key"])
+  return spec["default"] if value is None else value.strip()
 
 # Whisper-family models commonly hallucinate these phrases on silent/noisy
 # input. Compared lowercase with trailing punctuation stripped.
@@ -410,20 +422,15 @@ class AudioWriter:
     self._session_source = "batch"
 
     self.activation_mode = config.get("ACTIVATION_MODE", 'keyboard')  # or 'mouse'
-    self.activation_key = config.get("ACTIVATION_KEY", 'F9')  # legacy; mouse-mode + migration only
+    self.activation_key = config.get("ACTIVATION_KEY", 'F8')  # legacy; mouse-mode + migration only
     self.mouse_activation_button = config.get("MOUSE_ACTIVATION_BUTTON", 'middle')  # 'left'|'middle'|'right'
     self.double_tap_opens_window = (
         config.get("DOUBLE_TAP_OPENS_WINDOW", "true") or "true"
     ).lower() == "true"
 
-    # Per-action hotkeys. For "transcribe" we fall back to the legacy
-    # ACTIVATION_KEY so a user who customised it keeps their key.
-    self.hotkeys = {}
-    for aid, spec in HOTKEY_ACTIONS.items():
-      value = config.get(spec["config_key"])
-      if not value and aid == "transcribe":
-        value = config.get("ACTIVATION_KEY")
-      self.hotkeys[aid] = value or spec["default"]
+    # Per-action hotkeys; "" = unbound. (A customised legacy ACTIVATION_KEY is
+    # carried into HOTKEY_TRANSCRIBE by Config._migrate_hotkeys.)
+    self.hotkeys = {aid: resolve_hotkey(config, aid) for aid in HOTKEY_ACTIONS}
     # Hard-capture (swallow) hotkeys via a low-level keyboard hook.
     self.suppress_hotkeys = (
         config.get("HOTKEYS_SUPPRESS", "true") or "true"
@@ -744,16 +751,13 @@ class AudioWriter:
     """
     config = self.config
     self.activation_mode = config.get("ACTIVATION_MODE", 'keyboard')
-    self.activation_key = config.get("ACTIVATION_KEY", 'F9')
+    self.activation_key = config.get("ACTIVATION_KEY", 'F8')
     self.mouse_activation_button = config.get("MOUSE_ACTIVATION_BUTTON", 'middle')
     self.double_tap_opens_window = (
         config.get("DOUBLE_TAP_OPENS_WINDOW", "true") or "true"
     ).lower() == "true"
-    for aid, spec in HOTKEY_ACTIONS.items():
-      value = config.get(spec["config_key"])
-      if not value and aid == "transcribe":
-        value = config.get("ACTIVATION_KEY")
-      self.hotkeys[aid] = value or spec["default"]
+    for aid in HOTKEY_ACTIONS:
+      self.hotkeys[aid] = resolve_hotkey(config, aid)
     self.suppress_hotkeys = (
         config.get("HOTKEYS_SUPPRESS", "true") or "true"
     ).lower() == "true"
@@ -881,6 +885,13 @@ class AudioWriter:
     if spec is None:
       logger.error(f"Unknown hotkey action: {action_id}")
       return
+    # A key belongs to one action: taking it from another leaves that one
+    # unbound (same rule as "Catch the key" in Settings).
+    for other_id, other_key in self.hotkeys.items():
+      if other_id != action_id and other_key and other_key.lower() == new_key.lower():
+        self.hotkeys[other_id] = ""
+        self.config.set(HOTKEY_ACTIONS[other_id]["config_key"], "")
+        logger.info(f"Key {new_key} moved from '{other_id}' to '{action_id}'")
     self.hotkeys[action_id] = new_key
     self.config.set(spec["config_key"], new_key)
     if action_id == "transcribe":
@@ -1366,9 +1377,11 @@ class AudioWriter:
       )
     except Exception as e:
       logger.warning(f"Realtime session failed, replaying audio via batch chain: {e}")
-      if _current():
-        self._notify_api_error("transcribe", e, provider="ElevenLabs")
       text = self._transcribe_frames_batch(frames)
+      # Told only once the replay worked: the text did arrive, just the slow
+      # way. A failed replay reports itself ("not transcribed") instead.
+      if text and _current():
+        self._notify_api_error("realtime_fallback", e, provider="ElevenLabs")
 
     text = self._scrub_glossary_echo(text or "")
     if not text.strip():
@@ -1669,7 +1682,7 @@ class AudioWriter:
   def _normalize_to_primary(self, raw):
     """Grammar-correct the transcript and ensure it ends up in PRIMARY language.
 
-    This is the F9 (default) action. It guarantees the output language without
+    This is the F8 (default) action. It guarantees the output language without
     over-correcting mixed-language speech: foreign words, brand/product names,
     proper nouns, technical terms, code, and URLs that are embedded in
     otherwise-primary text are kept verbatim — only prose that is wholly in
@@ -1962,7 +1975,7 @@ Text to process:
     else:
       # Closing key wins: the hotkey that triggers the stop determines the
       # post-processing mode, even if recording was started with a different
-      # one. Lets the user start dictating with F9 and finish with F10 to get
+      # one. Lets the user start dictating with F8 and finish with F10 to get
       # the translate result without a separate round-trip.
       if self.active_action != self._pending_action:
         logger.debug(
@@ -2048,7 +2061,10 @@ Text to process:
       if self.activation_hooks:
         return
       for aid in HOTKEY_ACTIONS:
-        key = self.hotkeys[aid]
+        key = self.hotkeys.get(aid, "")
+        if not key:
+          logger.info(f"Hotkey for {aid}: not assigned")
+          continue
         try:
           # suppress=True swallows BOTH key edges so the focused app never sees
           # it; trigger_on_release fires the callback once per tap (matching the

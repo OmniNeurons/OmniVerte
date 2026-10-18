@@ -45,6 +45,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "激活按键",
     "tray.keys.change": "更改（按一个键）",
     "tray.hotkey.item": "{action}：{key}",
+    "tray.hotkey.none": "未设置",
     "tray.action.transcribe": "转写",
     "tray.action.translate": "转写并翻译",
     "tray.action.custom": "转写并改写",
@@ -94,6 +95,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "先听写，再按下方所选风格改写并粘贴。点击「捕获按键」以指定按键。",
     "general.hotkey.quick": "快速听写",
     "general.hotkey.quick.hint": "停止说话后立即粘贴原始文本，不做 AI 校正或改写。若在「转写」页面设置了 ElevenLabs 密钥，则边说边实时转写。点击「捕获按键」以指定按键。",
+    "general.hotkey.none": "未设置",
 
     "general.stylepair.name": "自定义",
     "general.stylepair.hint": "按 {key} 会以此风格改写你的听写内容。「自定义」使用你在「自定义风格」页设置的提示词。",
@@ -119,13 +121,14 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "随 Windows 启动",
     "general.behaviour.autostart.hint": "登录 Windows 时自动启动 Omni Verte。",
 
-    # Action names interpolated into general.error.hotkey_empty; kept as their
+    # Action names interpolated into general.hotkey.released; kept as their
     # own keys so the error can name each action naturally.
     "general.action.transcribe": "转写",
     "general.action.translate": "翻译",
     "general.action.custom": "自定义风格",
     "general.action.quick": "快速听写",
-    "general.error.hotkey_empty": "选择键盘模式时，{action}快捷键不能为空。",
+    "general.hotkey.released": "{key} 已移到此处，{action}快捷键现已清空。",
+    "general.error.hotkey_none_assigned": "请至少分配一个快捷键，或切换到鼠标模式。",
     "general.error.hotkey_duplicate": "每个操作都需要不同的快捷键 — 当前有两个相同。",
 
     # ---------- settings: Languages page ----------
@@ -342,6 +345,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} 个术语 — 全部生效。",
     "glossary.terms.counter.used": "已使用 {total}/{cap} 个术语 · 还可添加 {remaining} 个。",
+    "glossary.terms.quick_limit": "快速听写（ElevenLabs）只采用前 {limit} 个术语：你的 {total} 个中有 {count} 个不会进入其识别提示。本地替换仍对全部术语生效。",
+    "glossary.terms.quick_limit.tooltip": "未发送到快速听写的术语：",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs 不接受超过 {chars} 个字符的术语，因此快速听写会跳过：{terms}。",
     "glossary.terms.counter.over_free": (
         "{cap}/{total} 个术语生效 — 其余已保存但未启用。"
         "Pro 会全部启用（最多 {pro_cap} 个）。"
@@ -478,6 +484,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "捕获按键",
     "hotkeycapture.listening": "请按一个键…",
     "hotkeycapture.tooltip": "点击后按下你想用的键 — 它会填入此字段。",
+    "hotkeycapture.clear": "清除——此操作将不设快捷键",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "转写",
@@ -499,6 +506,7 @@ STRINGS: dict[str, str] = {
     # 并带醒目的“!!! ⚠ … ⚠ !!!”边框，以免被误当作听写文本。
     "error.transcribe.title": "语音未能转写",
     "error.postprocess.title": "文本已粘贴，但未经校正",
+    "error.realtime_fallback.title": "快速听写已改用常规方式识别",
     "error.api.quota": "{provider}：API 额度已用完 — 请检查账户余额",
     "error.api.auth": "{provider}：API 密钥被拒绝 — 请在设置中检查",
     "error.api.rate": "{provider}：请求已达上限 — 请一分钟后重试",

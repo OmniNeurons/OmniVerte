@@ -236,3 +236,56 @@ def test_classify_api_error(kind, expected):
     err = er.ElevenLabsApiError("x", kind=kind)
     assert classify_api_error(err) == expected
     assert classify_api_error(CloudApiError("ElevenLabs", err)) == expected
+
+
+def test_long_keyterms_are_skipped_without_costing_a_slot():
+    long_term = "x" * (er.MAX_KEYTERM_CHARS + 1)
+    terms = [long_term] + [f"t{i}" for i in range(er.MAX_KEYTERMS)]
+    sent, too_long = er.usable_keyterms(terms)
+    assert too_long == [long_term]
+    assert sent == [f"t{i}" for i in range(er.MAX_KEYTERMS)]
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(er.build_url(keyterms=terms)).query)
+    assert long_term not in q["keyterms"]
+    assert len(q["keyterms"]) == er.MAX_KEYTERMS
+
+
+def test_network_failure_on_connect_is_retried_once():
+    ws = _FakeWs(on_commit=lambda w: w.push(
+        {"message_type": "committed_transcript", "text": "ok"}))
+    calls = []
+
+    def flaky(url, key):
+        calls.append(1)
+        if len(calls) == 1:
+            raise OSError("timed out")
+        return ws
+
+    s = er.RealtimeSession("key", "wss://x", connect=flaky)
+    s.start()
+    s.send_pcm(b"\x00" * 100)                       # buffered across the retry
+    assert s.finish(timeout=2) == "ok"
+    assert len(calls) == 2
+    assert _audio(ws.sent) == b"\x00" * 100
+
+
+def test_http_rejection_on_connect_is_not_retried():
+    calls = []
+
+    def reject(url, key):
+        calls.append(1)
+        raise websocket.WebSocketBadStatusException("bad", 401)
+
+    s = er.RealtimeSession("key", "wss://x", connect=reject)
+    s.start()
+    with pytest.raises(er.ElevenLabsApiError):
+        s.finish(timeout=1)
+    assert len(calls) == 1
+
+
+def test_user_message_for_realtime_fallback_says_text_still_arrived():
+    from i18n import t
+    from services.api_errors import user_message
+
+    msg = user_message("realtime_fallback", "network", "ElevenLabs")
+    assert t("error.realtime_fallback.title") in msg
+    assert "ElevenLabs" in msg

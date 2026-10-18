@@ -47,6 +47,7 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Touches d'activation",
     "tray.keys.change": "Modifier (appuyez sur une touche)",
     "tray.hotkey.item": "{action} : {key}",
+    "tray.hotkey.none": "non attribué",
     "tray.action.transcribe": "Transcrire",
     "tray.action.translate": "Transcrire et traduire",
     "tray.action.custom": "Transcrire et réécrire",
@@ -96,6 +97,7 @@ STRINGS: dict[str, str] = {
     "general.hotkey.custom.hint": "Dictez, puis réécrivez dans le style choisi ci-dessous et collez. Cliquez sur « Attraper la touche » pour définir une touche.",
     "general.hotkey.quick": "Dictée rapide",
     "general.hotkey.quick.hint": "Colle le texte brut dès que vous arrêtez de parler, sans correction ni réécriture par l’IA. Transcrit en direct via ElevenLabs si sa clé est renseignée sur la page Transcription. Cliquez sur « Attraper la touche » pour définir une touche.",
+    "general.hotkey.none": "Non attribué",
 
     "general.stylepair.name": "Personnalisé",
     "general.stylepair.hint": "Appuyer sur {key} réécrit votre dictée dans ce style. « Personnalisé » utilise votre instruction de la page Style personnalisé.",
@@ -121,14 +123,15 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Lancer au démarrage de Windows",
     "general.behaviour.autostart.hint": "Démarrer Omni Verte automatiquement à votre connexion à Windows.",
 
-    # Interpolés dans general.error.hotkey_empty. Le français forme
+    # Interpolés dans general.hotkey.released. Le français forme
     # « Le raccourci de transcription… » — d'où « de … », pour lire naturellement
     # dans ce cadre ; ce sont des clés distinctes, pas les libellés de lignes.
     "general.action.transcribe": "de transcription",
     "general.action.translate": "de traduction",
     "general.action.custom": "de style personnalisé",
     "general.action.quick": "de dictée rapide",
-    "general.error.hotkey_empty": "Le raccourci {action} ne peut pas être vide lorsque le mode clavier est sélectionné.",
+    "general.hotkey.released": "La touche {key} a été déplacée ici ; le raccourci {action} est désormais vide.",
+    "general.error.hotkey_none_assigned": "Attribuez au moins un raccourci ou passez en mode souris.",
     "general.error.hotkey_duplicate": "Chaque action a besoin d'un raccourci distinct — deux sont actuellement identiques.",
 
     # ---------- settings: Languages page ----------
@@ -353,6 +356,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} termes — tous actifs.",
     "glossary.terms.counter.used": "{total} termes sur {cap} utilisés · {remaining} encore disponibles.",
+    "glossary.terms.quick_limit": "La dictée rapide (ElevenLabs) ne prend que les {limit} premiers termes : {count} de vos {total} sont exclus de ses indications de reconnaissance. Le remplacement local les couvre toujours tous.",
+    "glossary.terms.quick_limit.tooltip": "Non envoyés à la dictée rapide :",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs refuse les termes de plus de {chars} caractères, la dictée rapide ignore donc : {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} termes sur {total} actifs — le reste est enregistré mais inactif. "
         "Pro les active tous (jusqu'à {pro_cap})."
@@ -491,6 +497,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Attraper la touche",
     "hotkeycapture.listening": "Appuyez sur une touche…",
     "hotkeycapture.tooltip": "Cliquez, puis appuyez sur la touche voulue — elle remplit ce champ.",
+    "hotkeycapture.clear": "Effacer : cette action n'aura pas de raccourci",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "Transcription",
@@ -515,6 +522,7 @@ STRINGS: dict[str, str] = {
     # ne puissent jamais passer pour du texte dicté.
     "error.transcribe.title": "La parole n'a pas été transcrite",
     "error.postprocess.title": "Texte collé sans correction",
+    "error.realtime_fallback.title": "Dictée rapide transcrite par la voie habituelle",
     "error.api.quota": "{provider} : crédits API épuisés — vérifiez le solde de votre compte",
     "error.api.auth": "{provider} : clé API refusée — vérifiez-la dans les paramètres",
     "error.api.rate": "{provider} : limite de requêtes atteinte — réessayez dans une minute",

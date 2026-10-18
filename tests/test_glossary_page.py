@@ -166,3 +166,50 @@ def test_validate_blocks_malformed_replacements(page):
 
     page.repl_edit.setPlainText("good => fix")
     assert page.validate() is None
+
+
+class _Unlimited:
+    def limit(self, _name):
+        return -1
+
+
+def test_quick_dictation_limit_names_the_terms_left_out(page, monkeypatch):
+    import licensing
+    from ui.settings_pages.glossary_page import QUICK_KEYTERMS_LIMIT
+
+    monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page.enable_switch.setChecked(True)
+    page.asr_switch.setChecked(True)
+    names = [f"Name{i}" for i in range(QUICK_KEYTERMS_LIMIT)]
+    page.names_edit.setPlainText("\n".join(names))
+    page.services_edit.setPlainText("Kubernetes\nPostgreSQL")
+    page.repl_edit.setPlainText("редис => Redis")
+
+    assert not page.quick_limit_label.isHidden()
+    assert "3" in page.quick_limit_label.text()
+    assert page.quick_limit_label.toolTip().endswith("Kubernetes, PostgreSQL, Redis")
+
+    page.asr_switch.setChecked(False)               # no layer B → no keyterms sent
+    assert page.quick_limit_label.isHidden()
+
+
+def test_quick_dictation_limit_hidden_within_limit(page, monkeypatch):
+    import licensing
+
+    monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page.enable_switch.setChecked(True)
+    page.asr_switch.setChecked(True)
+    page.names_edit.setPlainText("Acme\nKubernetes")
+    assert page.quick_limit_label.isHidden()
+
+
+def test_quick_dictation_warns_about_terms_too_long_for_elevenlabs(page, monkeypatch):
+    import licensing
+
+    monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page.enable_switch.setChecked(True)
+    page.asr_switch.setChecked(True)
+    page.services_edit.setPlainText("Kubernetes\nбалансировщик нагрузки")
+    assert not page.quick_limit_label.isHidden()
+    assert "балансировщик нагрузки" in page.quick_limit_label.text()
+    assert "Kubernetes" not in page.quick_limit_label.text()
