@@ -49,6 +49,7 @@ STRINGS: dict[str, str] = {
     "tray.action.transcribe": "Transkribieren",
     "tray.action.translate": "Transkribieren und übersetzen",
     "tray.action.custom": "Transkribieren und umschreiben",
+    "tray.action.quick": "Schnelles Diktat (ohne KI)",
     "tray.suppress.on": "Harter Abfang: AN (Tasten werden verschluckt)",
     "tray.suppress.off": "Harter Abfang: AUS (Tasten gehen durch)",
     "tray.mouse_button": "Maustaste zur Aktivierung: {button}",
@@ -92,6 +93,8 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "Diktieren, dann vor dem Einfügen in die Zweitsprache übersetzen. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
     "general.hotkey.custom": "Transkribieren und in eigenem Stil umschreiben",
     "general.hotkey.custom.hint": "Diktieren, dann im unten gewählten Stil umschreiben und einfügen. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
+    "general.hotkey.quick": "Schnelles Diktat",
+    "general.hotkey.quick.hint": "Fügt den Rohtext ein, sobald Sie aufhören zu sprechen – ohne KI-Korrektur oder Umschreiben. Transkribiert live über ElevenLabs, wenn dessen Schlüssel auf der Seite „Transkription“ hinterlegt ist. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
 
     "general.stylepair.name": "Eigener Stil",
     "general.stylepair.hint": "{key} schreibt Ihr Diktat in diesem Stil um. „Eigener“ verwendet Ihren Prompt von der Seite „Eigener Stil“.",
@@ -123,6 +126,7 @@ STRINGS: dict[str, str] = {
     "general.action.transcribe": "zum Transkribieren",
     "general.action.translate": "zum Übersetzen",
     "general.action.custom": "für den eigenen Stil",
+    "general.action.quick": "für schnelles Diktat",
     "general.error.hotkey_empty": "Die Taste {action} darf nicht leer sein, wenn der Tastaturmodus gewählt ist.",
     "general.error.hotkey_duplicate": "Jede Aktion braucht eine eigene Taste — derzeit sind zwei gleich.",
 
@@ -203,6 +207,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. „Get API key“ → „Create API key“",
     "transcription.keys.gemini.help.step3": "3. Kopieren und hier einfügen",
     "transcription.keys.gemini.help.link": "Google AI Studio öffnen",
+    "transcription.quick.title": "Schnelles Diktat (ElevenLabs in Echtzeit)",
+    "transcription.quick.hint": "Wird nur von der Taste für schnelles Diktat genutzt: Die Sprache wird live beim Sprechen transkribiert und direkt nach dem Stopp eingefügt, ohne KI-Korrektur. Ohne Schlüssel nutzt diese Taste die Backends oben.",
+    "transcription.keys.elevenlabs.label": "ElevenLabs-Schlüssel",
+    "transcription.keys.elevenlabs.placeholder": "ElevenLabs-API-Schlüssel eingeben",
+    "transcription.keys.elevenlabs.help.title": "ElevenLabs-API-Schlüssel erstellen",
+    "transcription.keys.elevenlabs.help.step1": "1. Bei elevenlabs.io anmelden",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key (Speech to Text erlauben)",
+    "transcription.keys.elevenlabs.help.step3": "3. Kopieren und hier einfügen",
+    "transcription.keys.elevenlabs.help.link": "ElevenLabs öffnen",
 
     "transcription.models.title": "Modell pro Engine",
     "transcription.models.hint": "Wird verwendet, wenn diese Engine aktiv ist.",
@@ -566,6 +579,7 @@ STRINGS: dict[str, str] = {
     # Anführungszeichen um {style}: dort kann ein vom Nutzer erfundener Stilname
     # eingesetzt werden — eine grammatische Angleichung ist unmöglich.
     "main.hint.keyboard.custom": "{key} drücken, um zu diktieren, zu transkribieren und den Text im Stil „{style}“ zurückzugeben.",
+    "main.hint.keyboard.quick": "{key} drücken für schnelles Diktat ohne KI-Verarbeitung.",
     "main.hint.style.casual": "locker",
     "main.hint.style.professional": "sachlich",
     "main.hint.style.custom": "eigenem",

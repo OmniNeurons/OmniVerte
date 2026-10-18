@@ -27,7 +27,9 @@ APP_NAME = "OmniVerte"
 KEYRING_SERVICE = "OmniVerte"
 
 # Keys treated as secrets — stored only in keyring, never in config.env.
-SECRET_KEYS = frozenset({"OPEN_AI_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY"})
+SECRET_KEYS = frozenset({
+    "OPEN_AI_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY", "ELEVENLABS_API_KEY",
+})
 
 # Bounds for LLM_MAX_TOKENS (see `Config.llm_max_tokens`). The ceiling is
 # gpt-4o-mini's maximum output size. Duplicated here rather than imported from
@@ -47,6 +49,9 @@ DEFAULTS: dict[str, str] = {
     "HOTKEY_TRANSCRIBE": "F9",
     "HOTKEY_TRANSLATE": "F10",
     "HOTKEY_CUSTOM": "F11",
+    # Quick dictation: ElevenLabs realtime streaming (when ELEVENLABS_API_KEY
+    # is set), no LLM pass — the raw transcript is pasted the moment speech ends.
+    "HOTKEY_QUICK": "F8",
     # Which rewrite style the custom hotkey applies: casual | professional |
     # custom. On a fresh install (no config yet) F11 defaults to the
     # "professional" preset — a useful out-of-the-box rewrite that needs no

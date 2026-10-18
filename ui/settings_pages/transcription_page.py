@@ -105,6 +105,7 @@ ENHANCE_CHOICES = [
 OPENAI_KEYS_URL = "https://platform.openai.com/api-keys"
 GROQ_KEYS_URL = "https://console.groq.com/keys"
 GEMINI_KEYS_URL = "https://aistudio.google.com/apikey"
+ELEVENLABS_KEYS_URL = "https://elevenlabs.io/app/settings/api-keys"
 
 
 def _backend_info(backend_id: str) -> tuple[str, str]:
@@ -141,6 +142,15 @@ def _gemini_help_steps() -> list[str]:
         t("transcription.keys.gemini.help.step1"),
         t("transcription.keys.gemini.help.step2"),
         t("transcription.keys.gemini.help.step3"),
+    ]
+
+
+def _elevenlabs_help_steps() -> list[str]:
+    """Steps for the ElevenLabs key help bubble. See `_openai_help_steps`."""
+    return [
+        t("transcription.keys.elevenlabs.help.step1"),
+        t("transcription.keys.elevenlabs.help.step2"),
+        t("transcription.keys.elevenlabs.help.step3"),
     ]
 
 
@@ -283,6 +293,35 @@ class TranscriptionPage(BasePage):
         self._openai_loaded_mask: Optional[str] = None
         self._groq_loaded_mask: Optional[str] = None
         self._gemini_loaded_mask: Optional[str] = None
+
+        # --- Quick mode (ElevenLabs realtime) ---
+        # Its own card, not a row in the keys card above: ElevenLabs is not a
+        # member of the priority chain — it serves only the quick hotkey.
+        card, body = make_section_card(
+            t("transcription.quick.title"),
+            t("transcription.quick.hint"),
+        )
+        self.elevenlabs_key_edit = self._build_password_edit(
+            t("transcription.keys.elevenlabs.placeholder")
+        )
+        body.addWidget(
+            make_form_row(
+                t("transcription.keys.elevenlabs.label"),
+                self.elevenlabs_key_edit,
+                label_trailing=make_help_button(
+                    t("transcription.keys.elevenlabs.help.title"),
+                    _elevenlabs_help_steps(),
+                    t("transcription.keys.elevenlabs.help.link"),
+                    ELEVENLABS_KEYS_URL,
+                ),
+                trailing=self._key_trailing(
+                    self._build_key_hint(""), ELEVENLABS_KEYS_URL
+                ),
+                stretch_widget=True,
+            )
+        )
+        content_layout.addWidget(card)
+        self._elevenlabs_loaded_mask: Optional[str] = None
 
         # --- Per-backend models ---
         card, body = make_section_card(
@@ -453,6 +492,13 @@ class TranscriptionPage(BasePage):
             lambda: config.get_secret("GEMINI_API_KEY") or ""
         )
 
+        has_elevenlabs = config.has_secret("ELEVENLABS_API_KEY")
+        self._elevenlabs_loaded_mask = MASKED_PLACEHOLDER if has_elevenlabs else None
+        self.elevenlabs_key_edit.setText(self._elevenlabs_loaded_mask or "")
+        self.elevenlabs_key_edit.setRealKeyFetcher(
+            lambda: config.get_secret("ELEVENLABS_API_KEY") or ""
+        )
+
         # Model selectors
         for backend_id, combo in self.model_combos.items():
             current = config.get(f"MODEL_{backend_id.upper()}")
@@ -536,6 +582,12 @@ class TranscriptionPage(BasePage):
             key="GEMINI_API_KEY",
             field_text=self.gemini_key_edit.text(),
             loaded_mask=self._gemini_loaded_mask,
+        )
+        self._apply_secret(
+            config,
+            key="ELEVENLABS_API_KEY",
+            field_text=self.elevenlabs_key_edit.text(),
+            loaded_mask=self._elevenlabs_loaded_mask,
         )
 
         for backend_id, combo in self.model_combos.items():

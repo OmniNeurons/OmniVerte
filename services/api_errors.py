@@ -20,6 +20,7 @@ try:
 except ImportError:  # pragma: no cover - openai is a hard runtime dep
     openai = None
 
+from services.elevenlabs_realtime import ElevenLabsApiError
 from services.gemini_transcribe import GeminiApiError
 
 
@@ -81,6 +82,10 @@ def classify_api_error(exc: BaseException) -> str:
             if exc.status == 402:
                 return "quota"
         return "unknown"
+
+    # The quick-mode realtime client already classifies on the wire.
+    if isinstance(exc, ElevenLabsApiError):
+        return exc.kind if exc.kind in ("quota", "auth", "rate", "network") else "unknown"
 
     # The other two providers go through the openai SDK (Groq is OpenAI-compatible).
     if openai is not None:

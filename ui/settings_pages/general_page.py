@@ -136,6 +136,16 @@ class GeneralPage(BasePage):
             align_right=True,
         )
 
+        self.hotkey_quick_edit = LineEdit()
+        self.hotkey_quick_edit.setPlaceholderText("F8")
+        self.hotkey_quick_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
+        quick_row = make_form_row(
+            t("general.hotkey.quick"),
+            make_capture_field(self.hotkey_quick_edit),
+            hint=t("general.hotkey.quick.hint"),
+            align_right=True,
+        )
+
         self.hotkey_translate_edit = LineEdit()
         self.hotkey_translate_edit.setPlaceholderText("F10")
         self.hotkey_translate_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
@@ -177,7 +187,8 @@ class GeneralPage(BasePage):
         # so disabling it on a mode switch also greys out the labels + hints,
         # not just the controls.
         self.keyboard_sub = _subsection(
-            transcribe_row, translate_row, custom_row, custom_style_row, suppress_row,
+            transcribe_row, quick_row, translate_row, custom_row, custom_style_row,
+            suppress_row,
         )
         body.addWidget(self.keyboard_sub)
 
@@ -319,6 +330,7 @@ class GeneralPage(BasePage):
         self.hotkey_edit.setText(config.get("HOTKEY_TRANSCRIBE") or config.get("ACTIVATION_KEY") or "F9")
         self.hotkey_translate_edit.setText(config.get("HOTKEY_TRANSLATE") or "F10")
         self.hotkey_custom_edit.setText(config.get("HOTKEY_CUSTOM") or "F11")
+        self.hotkey_quick_edit.setText(config.get("HOTKEY_QUICK") or "F8")
 
         current_style = (config.get("HOTKEY_CUSTOM_STYLE") or "custom").lower()
         for i, (_, value) in enumerate(CUSTOM_STYLE_CHOICES):
@@ -358,6 +370,7 @@ class GeneralPage(BasePage):
         config.set("ACTIVATION_KEY", hotkey)  # keep legacy key in sync
         config.set("HOTKEY_TRANSLATE", self.hotkey_translate_edit.text().strip() or "F10")
         config.set("HOTKEY_CUSTOM", self.hotkey_custom_edit.text().strip() or "F11")
+        config.set("HOTKEY_QUICK", self.hotkey_quick_edit.text().strip() or "F8")
         _, style_val = CUSTOM_STYLE_CHOICES[self.custom_style_combo.currentIndex()]
         config.set("HOTKEY_CUSTOM_STYLE", style_val)
         config.set("HOTKEYS_SUPPRESS", "true" if self.suppress_switch.isChecked() else "false")
@@ -382,6 +395,7 @@ class GeneralPage(BasePage):
             ("general.action.transcribe", self.hotkey_edit),
             ("general.action.translate", self.hotkey_translate_edit),
             ("general.action.custom", self.hotkey_custom_edit),
+            ("general.action.quick", self.hotkey_quick_edit),
         ]
         keys = [(name_key, edit.text().strip()) for name_key, edit in fields]
         for name_key, key in keys:

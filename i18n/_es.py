@@ -49,6 +49,7 @@ STRINGS: dict[str, str] = {
     "tray.action.transcribe": "Transcribir",
     "tray.action.translate": "Transcribir y traducir",
     "tray.action.custom": "Transcribir y reescribir",
+    "tray.action.quick": "Dictado rápido (sin IA)",
     "tray.suppress.on": "Captura estricta: ACTIVADA (las teclas se absorben)",
     "tray.suppress.off": "Captura estricta: DESACTIVADA (pasan de largo)",
     "tray.mouse_button": "Botón del ratón para activar: {button}",
@@ -93,6 +94,8 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "Dicte y luego traduzca al idioma secundario antes de pegar. Pulse «Capturar la tecla» para asignar una tecla.",
     "general.hotkey.custom": "Transcribir y reescribir en estilo personalizado",
     "general.hotkey.custom.hint": "Dicte y luego reescriba en el estilo elegido abajo y pegue. Pulse «Capturar la tecla» para asignar una tecla.",
+    "general.hotkey.quick": "Dictado rápido",
+    "general.hotkey.quick.hint": "Pega el texto en bruto en cuanto deja de hablar, sin corrección ni reescritura por IA. Transcribe en directo con ElevenLabs si su clave está configurada en la página Transcripción. Pulse «Capturar la tecla» para asignar una tecla.",
 
     "general.stylepair.name": "Personalizado",
     "general.stylepair.hint": "Al pulsar {key} se reescribe lo dictado en este estilo. «Personalizado» usa su instrucción de la página Estilo personalizado.",
@@ -123,6 +126,7 @@ STRINGS: dict[str, str] = {
     "general.action.transcribe": "transcripción",
     "general.action.translate": "traducción",
     "general.action.custom": "estilo personalizado",
+    "general.action.quick": "dictado rápido",
     "general.error.hotkey_empty": "La tecla de {action} no puede estar vacía cuando está seleccionado el modo teclado.",
     "general.error.hotkey_duplicate": "Cada acción necesita una tecla distinta — ahora hay dos iguales.",
 
@@ -208,6 +212,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Cópiela y péguela aquí",
     "transcription.keys.gemini.help.link": "Abrir Google AI Studio",
+    "transcription.quick.title": "Dictado rápido (ElevenLabs en tiempo real)",
+    "transcription.quick.hint": "Solo lo usa la tecla de dictado rápido: la voz se transcribe en directo mientras habla y se pega justo al parar, sin corrección por IA. Sin clave, esa tecla usa los backends de arriba.",
+    "transcription.keys.elevenlabs.label": "Clave de ElevenLabs",
+    "transcription.keys.elevenlabs.placeholder": "Introduzca la clave API de ElevenLabs",
+    "transcription.keys.elevenlabs.help.title": "Cómo obtener una clave API de ElevenLabs",
+    "transcription.keys.elevenlabs.help.step1": "1. Inicie sesión en elevenlabs.io",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key (permita Speech to Text)",
+    "transcription.keys.elevenlabs.help.step3": "3. Cópiela y péguela aquí",
+    "transcription.keys.elevenlabs.help.link": "Abrir ElevenLabs",
 
     "transcription.models.title": "Modelo por motor",
     "transcription.models.hint": "Se usa cuando ese motor está activo.",
@@ -555,6 +568,7 @@ STRINGS: dict[str, str] = {
     # Comillas alrededor de {style}: ahí puede ir un nombre de estilo inventado
     # por el usuario, imposible de concordar con la frase.
     "main.hint.keyboard.custom": "Pulse {key} para dictar, transcribir y devolver el texto en estilo «{style}».",
+    "main.hint.keyboard.quick": "Pulse {key} para un dictado rápido sin procesamiento de IA.",
     "main.hint.style.casual": "informal",
     "main.hint.style.professional": "profesional",
     "main.hint.style.custom": "personalizado",

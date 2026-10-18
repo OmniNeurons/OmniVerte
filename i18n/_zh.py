@@ -48,6 +48,7 @@ STRINGS: dict[str, str] = {
     "tray.action.transcribe": "转写",
     "tray.action.translate": "转写并翻译",
     "tray.action.custom": "转写并改写",
+    "tray.action.quick": "快速听写（无 AI）",
     "tray.suppress.on": "强制捕获：开（按键被拦截）",
     "tray.suppress.off": "强制捕获：关（按键透传）",
     "tray.mouse_button": "激活用鼠标键：{button}",
@@ -91,6 +92,8 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "先听写，再翻译为副语言后粘贴。点击「捕获按键」以指定按键。",
     "general.hotkey.custom": "转写并按自定义风格改写",
     "general.hotkey.custom.hint": "先听写，再按下方所选风格改写并粘贴。点击「捕获按键」以指定按键。",
+    "general.hotkey.quick": "快速听写",
+    "general.hotkey.quick.hint": "停止说话后立即粘贴原始文本，不做 AI 校正或改写。若在「转写」页面设置了 ElevenLabs 密钥，则边说边实时转写。点击「捕获按键」以指定按键。",
 
     "general.stylepair.name": "自定义",
     "general.stylepair.hint": "按 {key} 会以此风格改写你的听写内容。「自定义」使用你在「自定义风格」页设置的提示词。",
@@ -121,6 +124,7 @@ STRINGS: dict[str, str] = {
     "general.action.transcribe": "转写",
     "general.action.translate": "翻译",
     "general.action.custom": "自定义风格",
+    "general.action.quick": "快速听写",
     "general.error.hotkey_empty": "选择键盘模式时，{action}快捷键不能为空。",
     "general.error.hotkey_duplicate": "每个操作都需要不同的快捷键 — 当前有两个相同。",
 
@@ -201,6 +205,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. 「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. 复制它并粘贴到这里",
     "transcription.keys.gemini.help.link": "打开 Google AI Studio",
+    "transcription.quick.title": "快速听写（ElevenLabs 实时）",
+    "transcription.quick.hint": "仅供快速听写快捷键使用：说话时实时转写，停止后立即粘贴，不做 AI 校正。未设置密钥时，该快捷键使用上方的后端。",
+    "transcription.keys.elevenlabs.label": "ElevenLabs 密钥",
+    "transcription.keys.elevenlabs.placeholder": "输入 ElevenLabs API 密钥",
+    "transcription.keys.elevenlabs.help.title": "获取 ElevenLabs API 密钥",
+    "transcription.keys.elevenlabs.help.step1": "1. 登录 elevenlabs.io",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key（允许 Speech to Text）",
+    "transcription.keys.elevenlabs.help.step3": "3. 复制它并粘贴到这里",
+    "transcription.keys.elevenlabs.help.link": "打开 ElevenLabs",
 
     "transcription.models.title": "每个引擎的模型",
     "transcription.models.hint": "在该引擎处于活动状态时使用。",
@@ -536,6 +549,7 @@ STRINGS: dict[str, str] = {
     "main.hint.keyboard.translate": "按 {key} 即可听写、转写并翻译。",
     # Quotes around {style}: it may hold a user-invented style name.
     "main.hint.keyboard.custom": "按 {key} 即可听写、转写并以「{style}」风格返回。",
+    "main.hint.keyboard.quick": "按 {key} 即可快速听写，不经 AI 处理。",
     "main.hint.style.casual": "随意",
     "main.hint.style.professional": "专业",
     "main.hint.style.custom": "自定义",

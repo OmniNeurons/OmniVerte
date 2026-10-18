@@ -54,6 +54,7 @@ STRINGS: dict[str, str] = {
     "tray.action.transcribe": "Transcribe",
     "tray.action.translate": "Transcribe + translate",
     "tray.action.custom": "Transcribe + style",
+    "tray.action.quick": "Quick dictation (no AI)",
     "tray.suppress.on": "Hard-capture: ON (keys swallowed)",
     "tray.suppress.off": "Hard-capture: OFF (pass-through)",
     "tray.mouse_button": "Mouse activation button: {button}",
@@ -101,6 +102,8 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "Dictate, then translate to the secondary language before pasting. Click “Catch the key” to grab a key.",
     "general.hotkey.custom": "Transcribe + rewrite custom style",
     "general.hotkey.custom.hint": "Dictate, then rewrite using the style chosen below and paste. Click “Catch the key” to grab a key.",
+    "general.hotkey.quick": "Quick dictation",
+    "general.hotkey.quick.hint": "Paste the raw transcript the moment you stop talking — no AI correction or rewrite. Streams live through ElevenLabs when its key is set on the Transcription page. Click “Catch the key” to grab a key.",
 
     # The `[F11] Custom → [ style ▾ ]` panel. {key} is the live hotkey, so the
     # copy stays right after a rebind.
@@ -137,6 +140,7 @@ STRINGS: dict[str, str] = {
     "general.action.transcribe": "Transcribe",
     "general.action.translate": "Translate",
     "general.action.custom": "Custom-style",
+    "general.action.quick": "Quick dictation",
     "general.error.hotkey_empty": "{action} hotkey can't be empty when keyboard mode is selected.",
     "general.error.hotkey_duplicate": "Each action needs a distinct hotkey — two are currently the same.",
 
@@ -222,6 +226,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. Get API key → Create API key",
     "transcription.keys.gemini.help.step3": "3. Copy it and paste it here",
     "transcription.keys.gemini.help.link": "Open Google AI Studio",
+    "transcription.quick.title": "Quick dictation (ElevenLabs realtime)",
+    "transcription.quick.hint": "Used only by the quick-dictation hotkey: speech is transcribed live while you talk and pasted right after you stop, without AI correction. Without a key, that hotkey uses the backends above.",
+    "transcription.keys.elevenlabs.label": "ElevenLabs key",
+    "transcription.keys.elevenlabs.placeholder": "Enter ElevenLabs API key",
+    "transcription.keys.elevenlabs.help.title": "Getting an ElevenLabs API key",
+    "transcription.keys.elevenlabs.help.step1": "1. Sign in at elevenlabs.io",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key (allow Speech to Text)",
+    "transcription.keys.elevenlabs.help.step3": "3. Copy it and paste it here",
+    "transcription.keys.elevenlabs.help.link": "Open ElevenLabs",
 
     "transcription.models.title": "Model per backend",
     "transcription.models.hint": "Used when that backend is active.",
@@ -647,6 +660,7 @@ STRINGS: dict[str, str] = {
     "main.hint.keyboard.transcribe": "Press {key} to dictate and transcribe.",
     "main.hint.keyboard.translate": "Press {key} to dictate, transcribe, and translate.",
     "main.hint.keyboard.custom": "Press {key} to dictate, transcribe, and return in {style} style.",
+    "main.hint.keyboard.quick": "Press {key} for quick dictation without AI processing.",
     # `{style}` above: the two built-in styles, or — when the custom hotkey is
     # set to "custom" — the user's own CUSTOM_STYLE_NAME, verbatim. Separate
     # from `general.style.*`, which names the same three in a dropdown: this is

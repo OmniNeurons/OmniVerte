@@ -138,3 +138,50 @@ def test_double_tap_after_pending_stop_cancels_timer_and_stops(writer, clock, ti
     writer.ui_bridge.show_window_requested.emit.assert_called_once()
     writer.stop_recording.assert_called_once()
     assert writer._pending_stop_timer is None
+
+
+# ---------- quick hotkey: realtime source, no double-tap window ----------
+
+def test_quick_with_key_starts_realtime_session(writer):
+    writer.elevenlabs_api_key = "k"
+    writer._pending_action = "quick"
+    writer.toggle_recording()
+    assert writer._session_source == "realtime"
+    writer.start_recording.assert_called_once()
+
+
+def test_quick_without_key_falls_back_to_batch(writer):
+    writer.elevenlabs_api_key = None
+    writer._pending_action = "quick"
+    writer.toggle_recording()
+    assert writer._session_source == "batch"
+    assert writer.active_action == "quick"     # still no LLM pass
+
+
+def test_other_actions_stay_batch_even_with_key(writer):
+    writer.elevenlabs_api_key = "k"
+    writer._pending_action = "transcribe"
+    writer.toggle_recording()
+    assert writer._session_source == "batch"
+
+
+def test_realtime_stop_skips_the_double_tap_window(writer, clock, timers, monkeypatch):
+    started = []
+
+    class _Thread:
+        def __init__(self, target, daemon=False):
+            self.target = target
+
+        def start(self):
+            started.append(self.target)
+
+    monkeypatch.setattr(aw.threading, "Thread", _Thread)
+    writer._session_source = "realtime"
+    writer.is_recording = True
+    writer.active_action = "quick"
+    writer._pending_action = "translate"
+    clock["now"] += 5
+    writer.toggle_recording()
+    assert timers == []                         # no 300ms deferral
+    assert started == [writer._deferred_stop]   # stop runs at once, off-hook
+    assert writer.active_action == "translate"  # closing key still wins

@@ -50,6 +50,7 @@ STRINGS: dict[str, str] = {
     "tray.action.transcribe": "文字起こし",
     "tray.action.translate": "文字起こし + 翻訳",
     "tray.action.custom": "文字起こし + スタイル変換",
+    "tray.action.quick": "クイック口述（AIなし）",
     "tray.suppress.on": "強制キャプチャ: オン(キーを遮断)",
     "tray.suppress.off": "強制キャプチャ: オフ(キーを通過)",
     "tray.mouse_button": "起動用マウスボタン: {button}",
@@ -92,6 +93,8 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "口述すると、副言語に翻訳してから貼り付けます。「キーを取得」をクリックしてキーを割り当てます。",
     "general.hotkey.custom": "文字起こし + カスタムスタイルに書き換え",
     "general.hotkey.custom.hint": "口述すると、下で選んだスタイルに書き換えて貼り付けます。「キーを取得」をクリックしてキーを割り当てます。",
+    "general.hotkey.quick": "クイック口述",
+    "general.hotkey.quick.hint": "話し終えた瞬間に未加工のテキストを貼り付けます。AIによる校正や書き換えはありません。「文字起こし」ページでElevenLabsのキーを設定すると、話しながらリアルタイムで文字起こしします。「キーを取得」をクリックしてキーを割り当てます。",
 
     "general.stylepair.name": "カスタム",
     "general.stylepair.hint": "{key}を押すと、口述内容をこのスタイルに書き換えます。「カスタム」は「カスタムスタイル」ページのプロンプトを使います。",
@@ -123,6 +126,7 @@ STRINGS: dict[str, str] = {
     "general.action.transcribe": "文字起こし",
     "general.action.translate": "翻訳",
     "general.action.custom": "カスタムスタイル",
+    "general.action.quick": "クイック口述",
     "general.error.hotkey_empty": "キーボードモードを選択した場合、{action}のショートカットキーを空にはできません。",
     "general.error.hotkey_duplicate": "各アクションには別々のショートカットキーが必要です — 現在2つが重複しています。",
 
@@ -205,6 +209,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2.「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. コピーしてここに貼り付け",
     "transcription.keys.gemini.help.link": "Google AI Studioを開く",
+    "transcription.quick.title": "クイック口述（ElevenLabs リアルタイム）",
+    "transcription.quick.hint": "クイック口述のショートカット専用です。話している間にリアルタイムで文字起こしし、停止直後にAI校正なしで貼り付けます。キーがない場合、このショートカットは上のバックエンドを使います。",
+    "transcription.keys.elevenlabs.label": "ElevenLabsキー",
+    "transcription.keys.elevenlabs.placeholder": "ElevenLabs APIキーを入力",
+    "transcription.keys.elevenlabs.help.title": "ElevenLabs APIキーの取得方法",
+    "transcription.keys.elevenlabs.help.step1": "1. elevenlabs.io にサインイン",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key（Speech to Text を許可）",
+    "transcription.keys.elevenlabs.help.step3": "3. コピーしてここに貼り付け",
+    "transcription.keys.elevenlabs.help.link": "ElevenLabsを開く",
 
     "transcription.models.title": "エンジンごとのモデル",
     "transcription.models.hint": "そのエンジンが有効なときに使われます。",
@@ -550,6 +563,7 @@ STRINGS: dict[str, str] = {
     "main.hint.keyboard.transcribe": "{key}を押して口述・文字起こし。",
     "main.hint.keyboard.translate": "{key}を押して口述・文字起こし・翻訳。",
     "main.hint.keyboard.custom": "{key}を押して口述・文字起こしし、{style}スタイルで返します。",
+    "main.hint.keyboard.quick": "{key}を押してAI処理なしのクイック口述。",
     # {style} above: the two built-in styles or the user's own name, verbatim.
     "main.hint.style.casual": "カジュアル",
     "main.hint.style.professional": "ビジネス",

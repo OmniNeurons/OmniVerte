@@ -1170,8 +1170,10 @@ class MainWindow(FramelessWindow):
         transcribe = self._config.get("HOTKEY_TRANSCRIBE") or self._config.get("ACTIVATION_KEY") or "F9"
         translate = self._config.get("HOTKEY_TRANSLATE") or "F10"
         custom = self._config.get("HOTKEY_CUSTOM") or "F11"
+        quick = self._config.get("HOTKEY_QUICK") or "F8"
         return "\n".join((
             t("main.hint.keyboard.transcribe", key=transcribe),
+            t("main.hint.keyboard.quick", key=quick),
             t("main.hint.keyboard.translate", key=translate),
             t("main.hint.keyboard.custom", key=custom, style=self._custom_style_label()),
         ))

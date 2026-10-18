@@ -50,7 +50,7 @@ from services.transcription_models import (
     OPENAI_TRANSCRIPTION_MODELS,
 )
 from services.api_errors import CloudApiError, classify_api_error
-from services import gemini_transcribe
+from services import elevenlabs_realtime, gemini_transcribe
 from services.glossary import Glossary
 from services.audio_prep import (
     normalize_enhance_profile,
@@ -78,6 +78,7 @@ HOTKEY_ACTIONS = {
     "transcribe": {"label_key": "tray.action.transcribe", "config_key": "HOTKEY_TRANSCRIBE", "default": "F9"},
     "translate":  {"label_key": "tray.action.translate",  "config_key": "HOTKEY_TRANSLATE",  "default": "F10"},
     "custom":     {"label_key": "tray.action.custom",     "config_key": "HOTKEY_CUSTOM",     "default": "F11"},
+    "quick":      {"label_key": "tray.action.quick",      "config_key": "HOTKEY_QUICK",      "default": "F8"},
 }
 
 # Whisper-family models commonly hallucinate these phrases on silent/noisy
@@ -296,6 +297,12 @@ class AudioWriter:
   Handles both keyboard and mouse activation for recording control.
   """
 
+  # Quick-mode state, also set in __init__/_build_cloud_clients. Class-level
+  # defaults keep partially-built instances (tests, early hotkeys) on the
+  # ordinary batch path.
+  _session_source = "batch"
+  elevenlabs_api_key = None
+
   def __init__(self, config, ui_bridge, history_manager):
     """
     Initialize the AudioWriter.
@@ -396,6 +403,11 @@ class AudioWriter:
     self.overlap_duration = OVERLAP_DURATION  # Overlap in seconds
     self.mouse_hook = None
     self.transcribed_segments = []
+    # Where this session's transcript comes from, fixed by the key that STARTED
+    # it: "realtime" (quick hotkey + ElevenLabs key: PCM streamed over a
+    # WebSocket while speaking) or "batch" (the 20s-segment backend chain).
+    # The key that STOPS the session still picks the post-processing.
+    self._session_source = "batch"
 
     self.activation_mode = config.get("ACTIVATION_MODE", 'keyboard')  # or 'mouse'
     self.activation_key = config.get("ACTIVATION_KEY", 'F9')  # legacy; mouse-mode + migration only
@@ -464,6 +476,9 @@ class AudioWriter:
     # Interactions API directly, so there is no client object to build; the key
     # itself is the "client" (None = no credentials, same contract as above).
     self.gemini_api_key = self.config.get_secret("GEMINI_API_KEY") or None
+    # ElevenLabs serves only the quick hotkey's realtime session — it is not a
+    # member of the backend chain (see realtime_transcribe).
+    self.elevenlabs_api_key = self.config.get_secret("ELEVENLABS_API_KEY") or None
 
   def _backend_has_creds(self, backend: str) -> bool:
     if backend == "local":
@@ -947,7 +962,8 @@ class AudioWriter:
     # failed) since init now runs in the background. Cloud backends need no local
     # model, so they're never blocked here. Re-assert the model state (force, to
     # bypass the dedup) so the user sees WHY the hotkey did nothing.
-    if self.transcription_backend == "local" and self._model_state != "ready":
+    realtime = self._session_source == "realtime"
+    if not realtime and self.transcription_backend == "local" and self._model_state != "ready":
       logger.info(f"Recording blocked: local model not ready ({self._model_state})")
       self.ui_bridge.safe_emit_model_state(self._model_state, force=True)
       return
@@ -994,7 +1010,8 @@ class AudioWriter:
       self._session_gen += 1
       self.streaming = True
       self.transcription_thread = threading.Thread(
-          target=self.streaming_transcribe, args=(self._session_gen,)
+          target=self.realtime_transcribe if realtime else self.streaming_transcribe,
+          args=(self._session_gen,),
       )
       self.transcription_thread.start()
 
@@ -1306,6 +1323,91 @@ class AudioWriter:
         break
 
     logger.info("Streaming transcription completed.")
+
+  def realtime_transcribe(self, session_gen=None):
+    """Quick-hotkey counterpart of streaming_transcribe: stream PCM to
+    ElevenLabs Scribe v2 Realtime while the user speaks.
+
+    The server commits segments on pauses, so at stop only the short tail is
+    left to finalize — the transcript is ready almost the moment speech ends.
+    A local copy of every frame is kept: if the session fails (no network,
+    bad key, quota, session limit) the audio is replayed through the ordinary
+    batch chain, so a failure costs latency, never the words. The result lands
+    in transcribed_segments like a single batch segment — stop_recording's
+    join/process path is shared.
+    """
+    def _current():
+      return session_gen is None or session_gen == self._session_gen
+
+    logger.info(f"Transcribing via ElevenLabs realtime ({elevenlabs_realtime.MODEL_ID})")
+    session = elevenlabs_realtime.RealtimeSession(
+        self.elevenlabs_api_key, self._realtime_url()
+    )
+    session.start()
+    frames = []
+    while True:
+      try:
+        data = self.audio_queue.get(timeout=0.05)
+      except queue.Empty:
+        if not self.streaming and self.audio_queue.empty():
+          break
+        continue
+      frames.append(data)
+      session.send_pcm(data.tobytes())
+
+    if _current():
+      self.ui_bridge.safe_emit_status("processing")
+    try:
+      finish_started = time.monotonic()
+      text = session.finish()
+      logger.info(
+          f"ElevenLabs realtime transcript ({time.monotonic() - finish_started:.2f}s "
+          f"after stop): {text!r}"
+      )
+    except Exception as e:
+      logger.warning(f"Realtime session failed, replaying audio via batch chain: {e}")
+      if _current():
+        self._notify_api_error("transcribe", e, provider="ElevenLabs")
+      text = self._transcribe_frames_batch(frames)
+
+    text = self._scrub_glossary_echo(text or "")
+    if not text.strip():
+      logger.info("Realtime session produced no text.")
+    elif not _current():
+      logger.info("Realtime transcript dropped (stale session — newer recording started).")
+    else:
+      self.transcribed_segments.append(text)
+    logger.info("Realtime transcription completed.")
+
+  def _realtime_url(self):
+    """Session URL: PRIMARY (+SECONDARY for code-switching) and layer B."""
+    from services.text_operations import LANGUAGE_TO_WHISPER_CODE
+    secondary = LANGUAGE_TO_WHISPER_CODE.get(self.config.get("SECONDARY_LANGUAGE") or "")
+    keyterms = None
+    if self._glossary_asr_active():
+      keyterms = self.glossary.canonical_terms() or None
+    return elevenlabs_realtime.build_url(
+        language=self._whisper_language_hint(),
+        secondary_languages=[secondary] if secondary else None,
+        keyterms=keyterms,
+    )
+
+  def _transcribe_frames_batch(self, frames):
+    """Fallback for a failed realtime session: one WAV through the chain.
+
+    Returns "" (never raises) when there is no audio or the chain fails too;
+    the chain's own failure is reported like any other transcription error.
+    """
+    if not frames:
+      return ""
+    path = os.path.join(_TEMP_DIR, "temp_realtime_fallback.wav")
+    try:
+      self._write_transcription_wav(path, np.concatenate(frames, axis=0))
+      return self._transcribe_audio_file(path)
+    except Exception as e:
+      logger.error(f"Batch fallback for realtime session failed: {e}")
+      self._notify_api_error("transcribe", e)
+      return ""
 
   def _cloud_fallback_order(self):
     """
@@ -1632,12 +1734,16 @@ Text to process:
     # front (before the client check / LLM call) so the canonical forms survive
     # even with no client or a failed correction — both of those fall back to
     # `raw`. translate/custom never get layer C (they keep the source meaning).
-    if action == "transcribe" and self._glossary_fuzzy_active():
+    if action in ("transcribe", "quick") and self._glossary_fuzzy_active():
       raw = self.glossary.apply_replacements(
           raw,
           threshold=self._glossary_fuzzy_threshold(),
           max_terms=self._glossary_fuzzy_max_terms(),
       )
+
+    # Quick: speed over polish — layer C above is the only post-processing.
+    if action == "quick":
+      return raw
 
     if not self.client:
       logger.info(f"No OpenAI client — pasting raw transcript (action='{action}')")
@@ -1839,7 +1945,19 @@ Text to process:
       # Lock the action for this session at start. Pressing a *different*
       # hotkey while recording won't change it — it just stops the session.
       self.active_action = self._pending_action
-      logger.debug(f"Recording started in '{self.active_action}' mode")
+      self._session_source = (
+          "realtime"
+          if self.active_action == "quick" and self.elevenlabs_api_key
+          else "batch"
+      )
+      if self.active_action == "quick" and self._session_source == "batch":
+        logger.info(
+            "Quick dictation without ELEVENLABS_API_KEY: using the batch chain"
+        )
+      logger.debug(
+          f"Recording started in '{self.active_action}' mode "
+          f"(source: {self._session_source})"
+      )
       self.start_recording()
     else:
       # Closing key wins: the hotkey that triggers the stop determines the
@@ -1852,6 +1970,12 @@ Text to process:
             f"{self.active_action} -> {self._pending_action}"
         )
         self.active_action = self._pending_action
+      # Realtime sessions stop at once: the whole point is zero wait, and the
+      # 300ms double-tap window would be the single largest delay left. Still
+      # off the hook thread — stop_recording joins the session thread.
+      if self._session_source == "realtime":
+        threading.Thread(target=self._deferred_stop, daemon=True).start()
+        return
       # Defer the stop to give a possible double-tap a chance to land.
       if self._pending_stop_timer is not None:
         self._pending_stop_timer.cancel()
