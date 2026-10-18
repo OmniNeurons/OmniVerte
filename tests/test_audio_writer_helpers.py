@@ -859,3 +859,105 @@ def test_change_transcription_model_unknown_is_noop(monkeypatch):
 
     assert "BACKEND_PRIORITY" not in w.config.sets  # priority untouched
     assert reinit == []  # no background reload
+
+
+# ---------- quick hotkey: no LLM, layer C only ----------
+
+class _ExplodingClient:
+    def __getattr__(self, name):
+        raise AssertionError("quick mode must not call the LLM")
+
+
+def test_quick_runs_layer_c_and_skips_llm():
+    w = _writer_with_fuzzy(_FUZZY_ON, "quick", client=_ExplodingClient())
+    w._normalize_to_primary = lambda raw: pytest.fail("no normalize in quick")
+    assert w._apply_action_transform("hello") == "CANON hello"
+    assert w._apply_calls == ["hello"]
+
+
+def test_quick_without_glossary_pastes_raw():
+    flags = {**_FUZZY_ON, "GLOSSARY_FUZZY_REPLACE": "false"}
+    w = _writer_with_fuzzy(flags, "quick", client=_ExplodingClient())
+    assert w._apply_action_transform("hello") == "hello"
+
+
+# ---------- realtime session thread ----------
+
+class _FakeSession:
+    def __init__(self, result=None, error=None):
+        self.sent = b""
+        self.result = result
+        self.error = error
+
+    def start(self):
+        pass
+
+    def send_pcm(self, pcm):
+        self.sent += pcm
+
+    def finish(self):
+        if self.error:
+            raise self.error
+        return self.result
+
+
+def _realtime_writer(monkeypatch, session):
+    from services import elevenlabs_realtime
+
+    monkeypatch.setattr(
+        elevenlabs_realtime, "RealtimeSession", lambda key, url: session
+    )
+    w = _bare_writer()
+    w.elevenlabs_api_key = "k"
+    w._realtime_url = lambda: "wss://x"
+    w._session_gen = 1
+    w.streaming = False
+    w.transcribed_segments = []
+    w.ui_bridge = SimpleNamespace(safe_emit_status=lambda s: None)
+    w._scrub_glossary_echo = lambda text: text
+    w.notified = []
+    w._notify_api_error = lambda ctx, exc, provider=None: w.notified.append((ctx, provider))
+    w.audio_queue = aw.queue.Queue()
+    w.audio_queue.put(np.array([[1], [2]], dtype=np.int16))
+    w.audio_queue.put(np.array([[3]], dtype=np.int16))
+    return w
+
+
+def test_realtime_thread_streams_pcm_and_stores_transcript(monkeypatch):
+    session = _FakeSession(result="git status")
+    w = _realtime_writer(monkeypatch, session)
+    w._transcribe_frames_batch = lambda frames: pytest.fail("no fallback on success")
+    w.realtime_transcribe(session_gen=1)
+    assert session.sent == np.array([1, 2, 3], dtype=np.int16).tobytes()
+    assert w.transcribed_segments == ["git status"]
+    assert w.notified == []
+
+
+def test_realtime_failure_replays_audio_through_batch_chain(monkeypatch):
+    from services.elevenlabs_realtime import ElevenLabsApiError
+
+    session = _FakeSession(error=ElevenLabsApiError("down", kind="network"))
+    w = _realtime_writer(monkeypatch, session)
+    replayed = []
+    w._transcribe_frames_batch = lambda frames: replayed.append(frames) or "from batch"
+    w.realtime_transcribe(session_gen=1)
+    assert len(replayed[0]) == 2                # every captured frame replayed
+    assert w.transcribed_segments == ["from batch"]
+    assert w.notified == [("realtime_fallback", "ElevenLabs")]
+
+
+def test_realtime_failure_with_failed_replay_leaves_the_notice_to_the_chain(monkeypatch):
+    from services.elevenlabs_realtime import ElevenLabsApiError
+
+    session = _FakeSession(error=ElevenLabsApiError("down", kind="network"))
+    w = _realtime_writer(monkeypatch, session)
+    w._transcribe_frames_batch = lambda frames: ""   # chain failed (reports itself)
+    w.realtime_transcribe(session_gen=1)
+    assert w.notified == []
+
+
+def test_realtime_result_from_stale_session_is_dropped(monkeypatch):
+    w = _realtime_writer(monkeypatch, _FakeSession(result="late"))
+    w._session_gen = 2                          # a newer recording started
+    w.realtime_transcribe(session_gen=1)
+    assert w.transcribed_segments == []

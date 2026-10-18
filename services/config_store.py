@@ -27,7 +27,9 @@ APP_NAME = "OmniVerte"
 KEYRING_SERVICE = "OmniVerte"
 
 # Keys treated as secrets — stored only in keyring, never in config.env.
-SECRET_KEYS = frozenset({"OPEN_AI_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY"})
+SECRET_KEYS = frozenset({
+    "OPEN_AI_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY", "ELEVENLABS_API_KEY",
+})
 
 # Bounds for LLM_MAX_TOKENS (see `Config.llm_max_tokens`). The ceiling is
 # gpt-4o-mini's maximum output size. Duplicated here rather than imported from
@@ -38,15 +40,19 @@ LLM_MAX_TOKENS_MAX = 16000
 
 # Fallback values for non-secret settings.
 DEFAULTS: dict[str, str] = {
-    "ACTIVATION_KEY": "F9",
+    "ACTIVATION_KEY": "F8",
     "ACTIVATION_MODE": "keyboard",
     "MOUSE_ACTIVATION_BUTTON": "middle",
     # Per-action global hotkeys (keyboard mode). Each is hard-captured
     # (suppressed) so the focused app never sees the keypress — see
     # HOTKEYS_SUPPRESS. HOTKEY_TRANSCRIBE supersedes the legacy ACTIVATION_KEY.
-    "HOTKEY_TRANSCRIBE": "F9",
+    "HOTKEY_TRANSCRIBE": "F8",
     "HOTKEY_TRANSLATE": "F10",
     "HOTKEY_CUSTOM": "F11",
+    # Quick dictation: ElevenLabs realtime streaming (when ELEVENLABS_API_KEY
+    # is set), no LLM pass — the raw transcript is pasted the moment speech ends.
+    # Fresh installs only; an upgrade gets a free key via _migrate_quick_hotkey.
+    "HOTKEY_QUICK": "F9",
     # Which rewrite style the custom hotkey applies: casual | professional |
     # custom. On a fresh install (no config yet) F11 defaults to the
     # "professional" preset — a useful out-of-the-box rewrite that needs no
@@ -154,6 +160,7 @@ class Config:
         # Must run before defaults are applied — they inspect which keys the
         # user actually has on file.
         self._migrate_hotkeys()
+        self._migrate_quick_hotkey()
         self._migrate_ui_language()
 
         for k, v in DEFAULTS.items():
@@ -166,7 +173,7 @@ class Config:
 
         Older versions had a single ACTIVATION_KEY. The per-action design keys
         transcription off HOTKEY_TRANSCRIBE; if a user customised ACTIVATION_KEY
-        (e.g. to F8) we copy it so their key isn't silently reset to the F9
+        (e.g. to F7) we copy it so their key isn't silently reset to the
         default. Only fires when HOTKEY_TRANSCRIBE isn't already on file.
         """
         if "HOTKEY_TRANSCRIBE" not in self._values:
@@ -174,6 +181,23 @@ class Config:
             if legacy:
                 self._values["HOTKEY_TRANSCRIBE"] = legacy
                 logger.info(f"Migrated legacy ACTIVATION_KEY={legacy} → HOTKEY_TRANSCRIBE")
+
+    def _migrate_quick_hotkey(self) -> None:
+        """One-shot: give an upgrading user's new quick action a free key.
+
+        Its default (F9) was the transcribe default before the two swapped,
+        so on an existing install F9 is usually taken already. Take F9, else
+        F8, else leave the action unbound ("") — never steal a key the user
+        is already pressing for something else.
+        """
+        if "HOTKEY_QUICK" in self._values:
+            return
+        taken = {
+            (self._values.get(k) or DEFAULTS[k]).strip().lower()
+            for k in ("HOTKEY_TRANSCRIBE", "HOTKEY_TRANSLATE", "HOTKEY_CUSTOM")
+        }
+        free = [k for k in (DEFAULTS["HOTKEY_QUICK"], "F8") if k.lower() not in taken]
+        self._values["HOTKEY_QUICK"] = free[0] if free else ""
 
     def _migrate_ui_language(self) -> None:
         """One-shot: pin existing installs to English so an update never

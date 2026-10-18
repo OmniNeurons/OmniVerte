@@ -21,11 +21,12 @@ from __future__ import annotations
 import logging
 import re
 import threading
+import weakref
 
 from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QWidget
 
-from qfluentwidgets import FluentIcon as FIF, LineEdit, PushButton
+from qfluentwidgets import FluentIcon as FIF, LineEdit, PushButton, ToolButton
 
 import keyboard  # same lib the tray uses to capture the next keypress
 
@@ -91,10 +92,19 @@ class _KeyCaptureController(QObject):
     _captured = Signal(str)
     _active: "_KeyCaptureController | None" = None
 
-    def __init__(self, edit: LineEdit, button: PushButton, parent: QWidget) -> None:
+    def __init__(self, edit: LineEdit, button: PushButton, parent: QWidget,
+                 on_captured=None) -> None:
         super().__init__(parent)
         self._edit = edit
         self._button = button
+        # Weakly: the callback is usually a bound method of the page that owns
+        # this row, and a strong ref closes a page↔controller cycle that the
+        # garbage collector then tears down in an order Qt crashes on.
+        self._on_captured_cb = (
+            weakref.WeakMethod(on_captured) if hasattr(on_captured, "__self__")
+            else (lambda cb=on_captured: cb) if on_captured is not None
+            else None
+        )
         self._captured.connect(self._on_captured)
         button.clicked.connect(self._start)
 
@@ -132,7 +142,12 @@ class _KeyCaptureController(QObject):
             return
         _KeyCaptureController._active = None
         if key:
-            self._edit.setText(normalize_hotkey(key))
+            key = normalize_hotkey(key)
+            # Let the page free this key elsewhere before the edit takes it.
+            callback = self._on_captured_cb() if self._on_captured_cb else None
+            if callback is not None:
+                callback(self._edit, key)
+            self._edit.setText(key)
         self._button.setText(t(_CATCH_KEY))
 
     def _disarm(self) -> None:
@@ -142,13 +157,15 @@ class _KeyCaptureController(QObject):
         self._button.setText(t(_CATCH_KEY))
 
 
-def make_capture_field(edit: LineEdit) -> QWidget:
-    """Return a `[ edit | Catch the key ]` container for a hotkey field.
+def make_capture_field(edit: LineEdit, on_captured=None) -> QWidget:
+    """Return a `[ edit | Catch the key | x ]` container for a hotkey field.
 
     `edit` stays the source of truth (the caller keeps its reference for
     load/apply/validate); this only adds a button that captures the next
-    keypress into it. Drop the returned widget into `make_form_row` in place of
-    the bare edit.
+    keypress into it, and one that clears it (an empty field = no key).
+    `on_captured(edit, key)`, if given, runs just before a captured key lands —
+    the page uses it to take the key away from another action. Drop the
+    returned widget into `make_form_row` in place of the bare edit.
     """
     box = QWidget()
     layout = QHBoxLayout(box)
@@ -161,10 +178,17 @@ def make_capture_field(edit: LineEdit) -> QWidget:
     button.setCursor(Qt.PointingHandCursor)
     button.setToolTip(t("hotkeycapture.tooltip"))
 
+    clear_button = ToolButton(FIF.CLOSE)
+    clear_button.setCursor(Qt.PointingHandCursor)
+    clear_button.setToolTip(t("hotkeycapture.clear"))
+    clear_button.clicked.connect(edit.clear)
+
     layout.addWidget(edit, alignment=Qt.AlignVCenter)
     layout.addWidget(button, alignment=Qt.AlignVCenter)
+    layout.addWidget(clear_button, alignment=Qt.AlignVCenter)
 
     # Parent the controller to the container so it lives as long as the row and
     # isn't garbage-collected out from under the button's clicked signal.
-    box._capture_controller = _KeyCaptureController(edit, button, box)
+    box._capture_controller = _KeyCaptureController(edit, button, box, on_captured)
+    box._clear_button = clear_button
     return box

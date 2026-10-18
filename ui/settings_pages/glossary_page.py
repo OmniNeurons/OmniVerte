@@ -46,6 +46,11 @@ from qfluentwidgets import (
 
 from i18n import t
 from services.config_store import Config
+from services.elevenlabs_realtime import (
+    MAX_KEYTERM_CHARS as QUICK_KEYTERM_CHARS,
+    MAX_KEYTERMS as QUICK_KEYTERMS_LIMIT,
+    usable_keyterms,
+)
 from services.glossary import Glossary
 from services.text_operations import LANGUAGE_TO_WHISPER_CODE
 from ui import style
@@ -331,6 +336,15 @@ class GlossaryPage(BasePage):
         self.term_counter_label.setWordWrap(True)
         body.addWidget(self.term_counter_label)
 
+        # Quick dictation (ElevenLabs) takes at most QUICK_KEYTERMS_LIMIT bias
+        # terms; shown only when the list is longer, naming what is left out.
+        self.quick_limit_label = QLabel("")
+        self.quick_limit_label.setObjectName("termCounter")
+        self.quick_limit_label.setProperty("warn", True)
+        self.quick_limit_label.setWordWrap(True)
+        self.quick_limit_label.setVisible(False)
+        body.addWidget(self.quick_limit_label)
+
         self.pivot = SegmentedWidget()
         self.stack = QStackedWidget()
 
@@ -344,6 +358,9 @@ class GlossaryPage(BasePage):
         self.names_edit.textChanged.connect(self._update_term_counter)
         self.services_edit.textChanged.connect(self._update_term_counter)
         self.repl_edit.textChanged.connect(self._update_term_counter)
+        # The quick-dictation limit only bites while layer B is on.
+        self.enable_switch.checkedChanged.connect(self._update_quick_limit)
+        self.asr_switch.checkedChanged.connect(self._update_quick_limit)
 
         # Per-box dim flags (indexed by raw line/block number) + a highlighter on
         # each editor that fades the over-cap lines. _recompute_dim_flags() fills
@@ -776,6 +793,56 @@ class GlossaryPage(BasePage):
         # Fade the lines that fall outside the active cap (shares one recompute
         # path with the counter so the two never disagree).
         self._recompute_dim_flags()
+        self._update_quick_limit()
+
+    def _typed_bias_terms(self) -> list[str]:
+        """The editors' terms in Glossary.canonical_terms order — names, then
+        services, then canonicals of replacements — i.e. what layer B sends."""
+        from licensing import get_entitlement
+
+        terms = _dedup(
+            _lines_to_list(self.names_edit.toPlainText())
+            + _lines_to_list(self.services_edit.toPlainText())
+        )
+        seen = {term.casefold() for term in terms}
+        reps, _ = parse_replacement_lines(self.repl_edit.toPlainText())
+        for rep in reps:
+            if rep["canonical"].casefold() not in seen:
+                seen.add(rep["canonical"].casefold())
+                terms.append(rep["canonical"])
+        cap = get_entitlement().limit("glossary_terms")
+        return terms if cap < 0 else terms[:cap]
+
+    def _update_quick_limit(self, *_) -> None:
+        """Warn when quick dictation would drop terms: past its keyterm cap, or
+        longer than the server accepts. Mirrors usable_keyterms exactly."""
+        active = self.enable_switch.isChecked() and self.asr_switch.isChecked()
+        terms = self._typed_bias_terms() if active else []
+        sent, too_long = usable_keyterms(terms)
+        too_long_keys = {term.casefold() for term in too_long}
+        over_cap = [
+            term for term in terms if term.casefold() not in too_long_keys
+        ][len(sent):]
+        lines = []
+        if over_cap:
+            lines.append(t(
+                "glossary.terms.quick_limit",
+                limit=QUICK_KEYTERMS_LIMIT,
+                total=len(terms),
+                count=len(over_cap),
+            ))
+        if too_long:
+            lines.append(t(
+                "glossary.terms.quick_limit.too_long",
+                chars=QUICK_KEYTERM_CHARS,
+                terms=", ".join(too_long),
+            ))
+        self.quick_limit_label.setVisible(bool(lines))
+        self.quick_limit_label.setText("\n".join(lines))
+        self.quick_limit_label.setToolTip(
+            t("glossary.terms.quick_limit.tooltip") + "\n" + ", ".join(over_cap)
+            if over_cap else ""
+        )
 
     def _refresh_pack_status(self) -> None:
         """Enable the pack buttons on the Pro gate (Feature.GLOSSARY) and say why.

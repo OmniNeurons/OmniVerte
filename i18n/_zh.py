@@ -45,9 +45,11 @@ STRINGS: dict[str, str] = {
     "tray.keys": "激活按键",
     "tray.keys.change": "更改（按一个键）",
     "tray.hotkey.item": "{action}：{key}",
+    "tray.hotkey.none": "未设置",
     "tray.action.transcribe": "转写",
     "tray.action.translate": "转写并翻译",
     "tray.action.custom": "转写并改写",
+    "tray.action.quick": "快速听写（无 AI）",
     "tray.suppress.on": "强制捕获：开（按键被拦截）",
     "tray.suppress.off": "强制捕获：关（按键透传）",
     "tray.mouse_button": "激活用鼠标键：{button}",
@@ -91,6 +93,9 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "先听写，再翻译为副语言后粘贴。点击「捕获按键」以指定按键。",
     "general.hotkey.custom": "转写并按自定义风格改写",
     "general.hotkey.custom.hint": "先听写，再按下方所选风格改写并粘贴。点击「捕获按键」以指定按键。",
+    "general.hotkey.quick": "快速听写",
+    "general.hotkey.quick.hint": "停止说话后立即粘贴原始文本，不做 AI 校正或改写。若在「转写」页面设置了 ElevenLabs 密钥，则边说边实时转写。点击「捕获按键」以指定按键。",
+    "general.hotkey.none": "未设置",
 
     "general.stylepair.name": "自定义",
     "general.stylepair.hint": "按 {key} 会以此风格改写你的听写内容。「自定义」使用你在「自定义风格」页设置的提示词。",
@@ -116,12 +121,14 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "随 Windows 启动",
     "general.behaviour.autostart.hint": "登录 Windows 时自动启动 Omni Verte。",
 
-    # Action names interpolated into general.error.hotkey_empty; kept as their
+    # Action names interpolated into general.hotkey.released; kept as their
     # own keys so the error can name each action naturally.
     "general.action.transcribe": "转写",
     "general.action.translate": "翻译",
     "general.action.custom": "自定义风格",
-    "general.error.hotkey_empty": "选择键盘模式时，{action}快捷键不能为空。",
+    "general.action.quick": "快速听写",
+    "general.hotkey.released": "{key} 已移到此处，{action}快捷键现已清空。",
+    "general.error.hotkey_none_assigned": "请至少分配一个快捷键，或切换到鼠标模式。",
     "general.error.hotkey_duplicate": "每个操作都需要不同的快捷键 — 当前有两个相同。",
 
     # ---------- settings: Languages page ----------
@@ -201,6 +208,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. 「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. 复制它并粘贴到这里",
     "transcription.keys.gemini.help.link": "打开 Google AI Studio",
+    "transcription.quick.title": "快速听写（ElevenLabs 实时）",
+    "transcription.quick.hint": "仅供快速听写快捷键使用：说话时实时转写，停止后立即粘贴，不做 AI 校正。未设置密钥时，该快捷键使用上方的后端。",
+    "transcription.keys.elevenlabs.label": "ElevenLabs 密钥",
+    "transcription.keys.elevenlabs.placeholder": "输入 ElevenLabs API 密钥",
+    "transcription.keys.elevenlabs.help.title": "获取 ElevenLabs API 密钥",
+    "transcription.keys.elevenlabs.help.step1": "1. 登录 elevenlabs.io",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key（允许 Speech to Text）",
+    "transcription.keys.elevenlabs.help.step3": "3. 复制它并粘贴到这里",
+    "transcription.keys.elevenlabs.help.link": "打开 ElevenLabs",
 
     "transcription.models.title": "每个引擎的模型",
     "transcription.models.hint": "在该引擎处于活动状态时使用。",
@@ -329,6 +345,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} 个术语 — 全部生效。",
     "glossary.terms.counter.used": "已使用 {total}/{cap} 个术语 · 还可添加 {remaining} 个。",
+    "glossary.terms.quick_limit": "快速听写（ElevenLabs）只采用前 {limit} 个术语：你的 {total} 个中有 {count} 个不会进入其识别提示。本地替换仍对全部术语生效。",
+    "glossary.terms.quick_limit.tooltip": "未发送到快速听写的术语：",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs 不接受超过 {chars} 个字符的术语，因此快速听写会跳过：{terms}。",
     "glossary.terms.counter.over_free": (
         "{cap}/{total} 个术语生效 — 其余已保存但未启用。"
         "Pro 会全部启用（最多 {pro_cap} 个）。"
@@ -465,6 +484,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "捕获按键",
     "hotkeycapture.listening": "请按一个键…",
     "hotkeycapture.tooltip": "点击后按下你想用的键 — 它会填入此字段。",
+    "hotkeycapture.clear": "清除——此操作将不设快捷键",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "转写",
@@ -486,6 +506,7 @@ STRINGS: dict[str, str] = {
     # 并带醒目的“!!! ⚠ … ⚠ !!!”边框，以免被误当作听写文本。
     "error.transcribe.title": "语音未能转写",
     "error.postprocess.title": "文本已粘贴，但未经校正",
+    "error.realtime_fallback.title": "快速听写已改用常规方式识别",
     "error.api.quota": "{provider}：API 额度已用完 — 请检查账户余额",
     "error.api.auth": "{provider}：API 密钥被拒绝 — 请在设置中检查",
     "error.api.rate": "{provider}：请求已达上限 — 请一分钟后重试",
@@ -536,6 +557,7 @@ STRINGS: dict[str, str] = {
     "main.hint.keyboard.translate": "按 {key} 即可听写、转写并翻译。",
     # Quotes around {style}: it may hold a user-invented style name.
     "main.hint.keyboard.custom": "按 {key} 即可听写、转写并以「{style}」风格返回。",
+    "main.hint.keyboard.quick": "按 {key} 即可快速听写，不经 AI 处理。",
     "main.hint.style.casual": "随意",
     "main.hint.style.professional": "专业",
     "main.hint.style.custom": "自定义",

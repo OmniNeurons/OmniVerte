@@ -131,3 +131,32 @@ def test_second_catch_moves_the_armed_slot(qapp, monkeypatch):
     assert _KeyCaptureController._active is ctrl_b
     ctrl_b._disarm()
     assert _KeyCaptureController._active is None
+
+
+def test_on_captured_runs_before_the_key_lands(qapp):
+    from qfluentwidgets import LineEdit
+
+    from ui.hotkey_capture import _KeyCaptureController, make_capture_field
+
+    seen = []
+    edit = LineEdit()
+    box = make_capture_field(edit, on_captured=lambda e, k: seen.append((e, k, e.text())))
+    ctrl = box._capture_controller
+
+    _KeyCaptureController._active = ctrl
+    ctrl._on_captured("f9")
+
+    assert seen == [(edit, "F9", "")]   # normalised, and before setText
+    assert edit.text() == "F9"
+
+
+def test_clear_button_empties_the_field(qapp):
+    from qfluentwidgets import LineEdit
+
+    from ui.hotkey_capture import make_capture_field
+
+    edit = LineEdit()
+    edit.setText("F8")
+    box = make_capture_field(edit)
+    box._clear_button.click()
+    assert edit.text() == ""

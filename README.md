@@ -42,18 +42,27 @@ reviewing and re-processing what you dictated.
 
 ## Features
 
-- **Hotkey dictation with per-action keys.** Three independent global hotkeys,
+- **Hotkey dictation with per-action keys.** Four independent global hotkeys,
   each captures speech and then applies a different transform:
-  - `F9` — **Transcribe**: grammar-correct and normalize to your primary language.
+  - `F8` — **Transcribe**: grammar-correct and normalize to your primary language.
+  - `F9` — **Quick dictation**: no AI pass — the raw transcript is pasted the
+    moment you stop talking. With an ElevenLabs key it streams live through
+    **Scribe v2 Realtime** (speech is transcribed *while* you talk, so the text
+    is ready almost instantly); without one it uses the normal backend chain,
+    just skipping the LLM. Built for short commands — coding, prompting agents.
   - `F10` — **Transcribe + Translate**: force-translate into your secondary language.
   - `F11` — **Transcribe + Custom style**: rewrite using your own saved prompt.
 
   The transform is decided by the key that **stops** the take, not the one
-  that starts it — so you can begin dictating with `F9`, decide mid-sentence
+  that starts it — so you can begin dictating with `F8`, decide mid-sentence
   you'd rather have the result in your secondary language, and just press
-  `F10` to finish.
+  `F10` to finish. (The key that *starts* the take decides only where the
+  transcript comes from: `F9` = live streaming, the others = the backend chain.)
 
-  Keys are rebindable. By default they are *hard-captured* (swallowed so the
+  Keys are rebindable, and any action can be left without a key (clear its
+  field) — an unused action then intercepts nothing. Catching a key that
+  another action already holds moves it: the other action is left unbound.
+  By default keys are *hard-captured* (swallowed so the
   focused app never sees the keypress); this can be switched to pass-through.
   A **mouse-button** activation mode is also available.
 
@@ -124,6 +133,14 @@ reviewing and re-processing what you dictated.
 - *(Optional)* A **Groq** API key — only for the Groq transcription backend.
 - *(Optional)* A **Gemini** API key ([Google AI Studio](https://aistudio.google.com/apikey)) —
   only for the Gemini transcription backend.
+- *(Optional)* An **ElevenLabs** API key ([ElevenLabs](https://elevenlabs.io/app/settings/api-keys)) —
+  only for live streaming on the quick-dictation hotkey (`F9`). The app calls a
+  single endpoint (`/v1/speech-to-text/realtime`), so create a **restricted**
+  key with only **Speech to Text** enabled and every other permission (Text to
+  Speech, Voices, Models, History, Dubbing, Agents, User/Workspace, …) off. An
+  optional monthly limit on the key caps spend. A key missing Speech to Text
+  fails with an auth error: the app shows a key toast and still transcribes the
+  take through the normal backend chain.
 - *(Optional)* An NVIDIA GPU with CUDA for fast local transcription. CUDA is
   detected via CTranslate2 (faster-whisper's backend); **torch is not required**.
 - Some setups need the app to run **as administrator** for global keyboard
@@ -191,7 +208,8 @@ offline Local backend. After setup it starts straight into the tray.
 - **Audio** is buffered to short-lived WAV files in your OS temp directory while
   transcribing, then overwritten on the next take. With a cloud backend, that
   audio is sent to OpenAI/Groq/Gemini for transcription; with the local backend
-  it never leaves your machine.
+  it never leaves your machine. The quick-dictation hotkey with an ElevenLabs
+  key streams audio to ElevenLabs while you speak.
 
 ---
 
@@ -260,9 +278,9 @@ server revocation drops you back to Free.
 
 ## Usage
 
-1. **Dictate** — press any action hotkey (`F9`/`F10`/`F11` by default) to
+1. **Dictate** — press any action hotkey (`F8`/`F9`/`F10`/`F11` by default) to
    start. Press *any* of them again to stop; the key you press to stop decides
-   how the text is processed (e.g. start with `F9`, finish with `F10` to get
+   how the text is processed (e.g. start with `F8`, finish with `F10` to get
    the translation instead of plain transcription). The result is pasted into
    the window that had focus when you started.
 2. **Translate / rewrite** — open the main window (double-tap the hotkey, or

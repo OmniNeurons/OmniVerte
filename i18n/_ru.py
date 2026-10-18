@@ -45,9 +45,11 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Клавиши активации",
     "tray.keys.change": "Изменить (нажмите клавишу)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "не назначена",
     "tray.action.transcribe": "Расшифровать",
     "tray.action.translate": "Расшифровать и перевести",
     "tray.action.custom": "Расшифровать и переписать",
+    "tray.action.quick": "Быстрая диктовка (без ИИ)",
     "tray.suppress.on": "Жёсткий перехват: ВКЛ (клавиши поглощаются)",
     "tray.suppress.off": "Жёсткий перехват: ВЫКЛ (проходят насквозь)",
     "tray.mouse_button": "Кнопка мыши для активации: {button}",
@@ -92,6 +94,9 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "Продиктовать, затем перевести на дополнительный язык и вставить. Нажмите «Задать», чтобы задать клавишу.",
     "general.hotkey.custom": "Транскрибировать и переписать в кастомный стиль",
     "general.hotkey.custom.hint": "Продиктовать, затем переписать в выбранном стиле и вставить. Нажмите «Задать», чтобы задать клавишу.",
+    "general.hotkey.quick": "Быстрая диктовка",
+    "general.hotkey.quick.hint": "Вставить текст сразу, как только вы замолчите, — без ИИ-коррекции и переписывания. Распознаёт на лету через ElevenLabs, если ключ задан на странице «Транскрипция». Нажмите «Задать», чтобы задать клавишу.",
+    "general.hotkey.none": "Не назначена",
 
     "general.stylepair.name": "Кастомный стиль",
     "general.stylepair.hint": "Нажатие {key} переписывает продиктованное в этом стиле. «Кастомный» использует ваш промпт со страницы «Кастомный стиль».",
@@ -117,13 +122,15 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Запускать вместе с Windows",
     "general.behaviour.autostart.hint": "Запускать Omni Verte автоматически при входе в Windows.",
 
-    # Подставляются в general.error.hotkey_empty в родительном падеже:
-    # «Клавиша расшифровки не может быть пустой…». Поэтому это отдельные
+    # Подставляются в general.hotkey.released в родительном падеже:
+    # «…снята с расшифровки». Поэтому это отдельные
     # ключи, а не переиспользование подписей строк.
     "general.action.transcribe": "расшифровки",
     "general.action.translate": "перевода",
     "general.action.custom": "своего стиля",
-    "general.error.hotkey_empty": "Клавиша {action} не может быть пустой, когда выбран режим клавиатуры.",
+    "general.action.quick": "быстрой диктовки",
+    "general.hotkey.released": "Клавиша {key} перенесена сюда и снята с {action}.",
+    "general.error.hotkey_none_assigned": "Назначьте хотя бы одну клавишу или переключитесь на режим мыши.",
     "general.error.hotkey_duplicate": "У каждого действия должна быть своя клавиша — сейчас две совпадают.",
 
     # ---------- settings: Languages page ----------
@@ -207,6 +214,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. Откройте «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Скопируйте его и вставьте сюда",
     "transcription.keys.gemini.help.link": "Открыть Google AI Studio",
+    "transcription.quick.title": "Быстрая диктовка (ElevenLabs в реальном времени)",
+    "transcription.quick.hint": "Используется только клавишей быстрой диктовки: речь распознаётся прямо во время разговора и вставляется сразу после остановки, без ИИ-коррекции. Без ключа эта клавиша работает через бэкенды выше.",
+    "transcription.keys.elevenlabs.label": "Ключ ElevenLabs",
+    "transcription.keys.elevenlabs.placeholder": "Введите ключ API ElevenLabs",
+    "transcription.keys.elevenlabs.help.title": "Как создать ключ API ElevenLabs",
+    "transcription.keys.elevenlabs.help.step1": "1. Войдите на elevenlabs.io",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key (разрешите Speech to Text)",
+    "transcription.keys.elevenlabs.help.step3": "3. Скопируйте его и вставьте сюда",
+    "transcription.keys.elevenlabs.help.link": "Открыть ElevenLabs",
 
     "transcription.models.title": "Модель распознавания аудио для каждого движка",
     "transcription.models.hint": "Используется, когда активен этот движок.",
@@ -338,6 +354,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "Терминов: {total} — все активны.",
     "glossary.terms.counter.used": "Использовано терминов: {total} из {cap} · доступно ещё {remaining}.",
+    "glossary.terms.quick_limit": "Быстрая диктовка (ElevenLabs) учитывает только первые {limit} терминов: {count} из ваших {total} не попадут в её подсказки распознаванию. Локальная замена по-прежнему работает для всех.",
+    "glossary.terms.quick_limit.tooltip": "Не попадут в быструю диктовку:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs не принимает термины длиннее {chars} символов, поэтому быстрая диктовка пропустит: {terms}.",
     "glossary.terms.counter.over_free": (
         "Активны {cap} из {total} терминов — остальные сохранены, но не "
         "используются. Pro активирует все (до {pro_cap})."
@@ -486,6 +505,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Задать",
     "hotkeycapture.listening": "Нажмите клавишу…",
     "hotkeycapture.tooltip": "Нажмите кнопку, затем — нужную клавишу: она подставится в это поле.",
+    "hotkeycapture.clear": "Очистить — у действия не будет клавиши",
 
     # ---------- history kinds (Activity Feed) ----------
     # Nouns throughout, matching English's register: these are labels on a feed
@@ -514,6 +534,7 @@ STRINGS: dict[str, str] = {
     # принять за надиктованный текст и случайно отправить в чат.
     "error.transcribe.title": "Речь не расшифрована",
     "error.postprocess.title": "Текст вставлен без коррекции",
+    "error.realtime_fallback.title": "Быстрая диктовка распознана обычным способом",
     "error.api.quota": "{provider}: закончились кредиты API — проверьте баланс аккаунта",
     "error.api.auth": "{provider}: ключ API отклонён — проверьте его в настройках",
     "error.api.rate": "{provider}: превышен лимит запросов — попробуйте через минуту",
@@ -568,6 +589,7 @@ STRINGS: dict[str, str] = {
     # Кавычки вокруг {style}: туда может подставиться название стиля,
     # придуманное пользователем, — согласовать его с «стиле» невозможно.
     "main.hint.keyboard.custom": "Нажмите {key}, чтобы продиктовать, расшифровать и вернуть текст в стиле «{style}».",
+    "main.hint.keyboard.quick": "Нажмите {key} для быстрой диктовки без обработки ИИ.",
     "main.hint.style.casual": "Неформальный",
     "main.hint.style.professional": "Деловой",
     "main.hint.style.custom": "Кастомный",

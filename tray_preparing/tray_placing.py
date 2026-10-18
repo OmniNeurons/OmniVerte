@@ -197,7 +197,7 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
         # new keypress and rebinds just that action.
         hotkey_items = []
         for aid, spec in HOTKEY_ACTIONS.items():
-            cur = audio_writer.hotkeys.get(aid, spec["default"])
+            cur = audio_writer.hotkeys.get(aid) or t("tray.hotkey.none")
             hotkey_items.append(pystray.MenuItem(
                 t("tray.hotkey.item", action=t(spec["label_key"]), key=cur),
                 pystray.Menu(pystray.MenuItem(

@@ -6,6 +6,34 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.34] - 2026-10-19
+
+### Added
+- Quick dictation hotkey (`F9` by default): no AI pass, the raw transcript is
+  pasted the moment you stop talking. With an ElevenLabs key (Settings →
+  Transcription) speech streams live through Scribe v2 Realtime, so the text
+  is ready almost instantly; without one, or if the live session fails, the
+  take goes through the normal backend chain. A failed live session retries
+  its connection once and, if the normal chain delivers, says so instead of
+  reporting the speech as lost.
+- Any hotkey action can now be left without a key — clear its field and that
+  action intercepts nothing.
+- The Glossary page warns when quick dictation would leave terms out
+  (ElevenLabs takes at most 50 terms of up to 20 characters) and names them.
+
+### Changed
+- Default hotkeys: Transcribe moves to `F8`, quick dictation takes `F9`.
+  Existing installs keep their keys; quick dictation gets a free key.
+- Catching a key in Settings that another action already holds moves it to
+  the new action instead of failing as a duplicate.
+- Profession glossary packs (Legal, Medical, IT, Finance, Sales, all eight
+  languages) now carry only vocabulary speech recognition gets wrong — jargon,
+  rare terms, abbreviations, Latin tool names — not everyday words the
+  recognizer already knows.
+- Translate renders mixed text entirely in the other language of the pair,
+  judged by its dominant language, instead of translating only the foreign
+  words.
+
 ## [1.1.32] - 2026-09-25
 
 ### Added

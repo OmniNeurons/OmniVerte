@@ -343,7 +343,7 @@ def test_import_uses_the_selected_locale(page):
 
     lines = page.services_edit.toPlainText().splitlines()
     assert lines == _pack("legal").content("ru").terms
-    assert "исковое заявление" in lines
+    assert "цессия" in lines
     assert "affidavit" not in lines
 
 

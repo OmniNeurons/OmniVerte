@@ -7,7 +7,9 @@ from services.config_store import Config
 
 def test_defaults_applied(appdata):
     c = Config()
-    assert c.get("ACTIVATION_KEY") == "F9"
+    assert c.get("ACTIVATION_KEY") == "F8"
+    assert c.get("HOTKEY_TRANSCRIBE") == "F8"
+    assert c.get("HOTKEY_QUICK") == "F9"
     assert c.get("THEME") == "light"
     assert c.get("BACKEND_PRIORITY") == "openai,groq,gemini,local"
     assert c.backend_priority == ["openai", "groq", "gemini", "local"]
@@ -77,6 +79,30 @@ def test_migrate_legacy_activation_key_into_hotkey(appdata):
     (cfg_dir / "config.env").write_text('ACTIVATION_KEY="F8"\n', encoding="utf-8")
     # No HOTKEY_TRANSCRIBE on file → the customised legacy key is carried over.
     assert Config().get("HOTKEY_TRANSCRIBE") == "F8"
+
+
+def _write_config(appdata, text):
+    cfg_dir = appdata / "OmniVerte"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    (cfg_dir / "config.env").write_text(text, encoding="utf-8")
+
+
+def test_upgrade_quick_hotkey_avoids_the_old_transcribe_default(appdata):
+    # Pre-swap install: transcribe on F9 → quick takes F8 instead of colliding.
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F9"\n')
+    c = Config()
+    assert c.get("HOTKEY_TRANSCRIBE") == "F9"
+    assert c.get("HOTKEY_QUICK") == "F8"
+
+
+def test_upgrade_quick_hotkey_unbound_when_f9_and_f8_are_taken(appdata):
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F9"\nHOTKEY_TRANSLATE="F8"\n')
+    assert Config().get("HOTKEY_QUICK") == ""
+
+
+def test_quick_hotkey_on_file_is_left_alone(appdata):
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F9"\nHOTKEY_QUICK="F8"\n')
+    assert Config().get("HOTKEY_QUICK") == "F8"
 
 
 def test_migrate_preferred_language(appdata):

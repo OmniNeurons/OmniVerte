@@ -11,6 +11,9 @@ scipy==1.15.2
 numpy==2.1.2
 faster-whisper==1.1.1
 rapidfuzz==3.14.5
+# Quick-dictation hotkey: ElevenLabs realtime STT over a WebSocket (sync,
+# thread-based — matches the app's threading model).
+websocket-client==1.8.0
 pystray==0.19.5
 Pillow==11.0.0
 keyring==25.7.0

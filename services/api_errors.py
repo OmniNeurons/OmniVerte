@@ -20,6 +20,7 @@ try:
 except ImportError:  # pragma: no cover - openai is a hard runtime dep
     openai = None
 
+from services.elevenlabs_realtime import ElevenLabsApiError
 from services.gemini_transcribe import GeminiApiError
 
 
@@ -50,6 +51,8 @@ _KIND_KEYS = {
 _CONTEXT_KEYS = {
     "transcribe":  "error.transcribe.title",
     "postprocess": "error.postprocess.title",
+    # Quick dictation lost ElevenLabs but the batch chain still delivered.
+    "realtime_fallback": "error.realtime_fallback.title",
 }
 
 # Body/error codes OpenAI (and Groq, same wire format) use for "no money left",
@@ -81,6 +84,10 @@ def classify_api_error(exc: BaseException) -> str:
             if exc.status == 402:
                 return "quota"
         return "unknown"
+
+    # The quick-mode realtime client already classifies on the wire.
+    if isinstance(exc, ElevenLabsApiError):
+        return exc.kind if exc.kind in ("quota", "auth", "rate", "network") else "unknown"
 
     # The other two providers go through the openai SDK (Groq is OpenAI-compatible).
     if openai is not None:
@@ -124,8 +131,9 @@ def frame_alert(text: str) -> str:
 def user_message(context: str, kind: str, provider: str) -> str:
     """Localized, framed alert for one API failure.
 
-    ``context`` — "transcribe" (no text was produced) or "postprocess" (raw
-    text was pasted without correction); ``kind`` — a classify_api_error()
+    ``context`` — "transcribe" (no text was produced), "postprocess" (raw
+    text was pasted without correction) or "realtime_fallback" (quick
+    dictation fell back to the batch chain, text pasted); ``kind`` — a classify_api_error()
     result; ``provider`` — display label ("OpenAI", "Groq"). Unknown values
     degrade to the "unknown"/"transcribe" strings rather than raising: this
     runs inside signal handlers where an exception is a crash.

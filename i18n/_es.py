@@ -46,9 +46,11 @@ STRINGS: dict[str, str] = {
     "tray.keys": "Teclas de activación",
     "tray.keys.change": "Cambiar (pulse una tecla)",
     "tray.hotkey.item": "{action}: {key}",
+    "tray.hotkey.none": "sin asignar",
     "tray.action.transcribe": "Transcribir",
     "tray.action.translate": "Transcribir y traducir",
     "tray.action.custom": "Transcribir y reescribir",
+    "tray.action.quick": "Dictado rápido (sin IA)",
     "tray.suppress.on": "Captura estricta: ACTIVADA (las teclas se absorben)",
     "tray.suppress.off": "Captura estricta: DESACTIVADA (pasan de largo)",
     "tray.mouse_button": "Botón del ratón para activar: {button}",
@@ -93,6 +95,9 @@ STRINGS: dict[str, str] = {
     "general.hotkey.translate.hint": "Dicte y luego traduzca al idioma secundario antes de pegar. Pulse «Capturar la tecla» para asignar una tecla.",
     "general.hotkey.custom": "Transcribir y reescribir en estilo personalizado",
     "general.hotkey.custom.hint": "Dicte y luego reescriba en el estilo elegido abajo y pegue. Pulse «Capturar la tecla» para asignar una tecla.",
+    "general.hotkey.quick": "Dictado rápido",
+    "general.hotkey.quick.hint": "Pega el texto en bruto en cuanto deja de hablar, sin corrección ni reescritura por IA. Transcribe en directo con ElevenLabs si su clave está configurada en la página Transcripción. Pulse «Capturar la tecla» para asignar una tecla.",
+    "general.hotkey.none": "Sin asignar",
 
     "general.stylepair.name": "Personalizado",
     "general.stylepair.hint": "Al pulsar {key} se reescribe lo dictado en este estilo. «Personalizado» usa su instrucción de la página Estilo personalizado.",
@@ -118,12 +123,14 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart": "Iniciar al arrancar Windows",
     "general.behaviour.autostart.hint": "Iniciar Omni Verte automáticamente al iniciar sesión en Windows.",
 
-    # Se interpolan en general.error.hotkey_empty: «La tecla de transcripción no
+    # Se interpolan en general.hotkey.released: «La tecla de transcripción no
     # puede estar vacía…». Por eso son claves aparte y no las etiquetas de fila.
     "general.action.transcribe": "transcripción",
     "general.action.translate": "traducción",
     "general.action.custom": "estilo personalizado",
-    "general.error.hotkey_empty": "La tecla de {action} no puede estar vacía cuando está seleccionado el modo teclado.",
+    "general.action.quick": "dictado rápido",
+    "general.hotkey.released": "La tecla {key} se movió aquí; la tecla de {action} quedó vacía.",
+    "general.error.hotkey_none_assigned": "Asigne al menos una tecla o cambie al modo ratón.",
     "general.error.hotkey_duplicate": "Cada acción necesita una tecla distinta — ahora hay dos iguales.",
 
     # ---------- settings: Languages page ----------
@@ -208,6 +215,15 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Cópiela y péguela aquí",
     "transcription.keys.gemini.help.link": "Abrir Google AI Studio",
+    "transcription.quick.title": "Dictado rápido (ElevenLabs en tiempo real)",
+    "transcription.quick.hint": "Solo lo usa la tecla de dictado rápido: la voz se transcribe en directo mientras habla y se pega justo al parar, sin corrección por IA. Sin clave, esa tecla usa los backends de arriba.",
+    "transcription.keys.elevenlabs.label": "Clave de ElevenLabs",
+    "transcription.keys.elevenlabs.placeholder": "Introduzca la clave API de ElevenLabs",
+    "transcription.keys.elevenlabs.help.title": "Cómo obtener una clave API de ElevenLabs",
+    "transcription.keys.elevenlabs.help.step1": "1. Inicie sesión en elevenlabs.io",
+    "transcription.keys.elevenlabs.help.step2": "2. Settings → API Keys → Create API key (permita Speech to Text)",
+    "transcription.keys.elevenlabs.help.step3": "3. Cópiela y péguela aquí",
+    "transcription.keys.elevenlabs.help.link": "Abrir ElevenLabs",
 
     "transcription.models.title": "Modelo por motor",
     "transcription.models.hint": "Se usa cuando ese motor está activo.",
@@ -340,6 +356,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} términos — todos activos.",
     "glossary.terms.counter.used": "{total} de {cap} términos usados · quedan {remaining} disponibles.",
+    "glossary.terms.quick_limit": "El dictado rápido (ElevenLabs) solo usa los primeros {limit} términos: {count} de sus {total} quedan fuera de sus pistas de reconocimiento. El reemplazo local sigue cubriéndolos todos.",
+    "glossary.terms.quick_limit.tooltip": "No se envían al dictado rápido:",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs rechaza términos de más de {chars} caracteres, así que el dictado rápido omite: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} de {total} términos activos — el resto están guardados pero "
         "inactivos. Pro los activa todos (hasta {pro_cap})."
@@ -477,6 +496,7 @@ STRINGS: dict[str, str] = {
     "hotkeycapture.catch": "Capturar la tecla",
     "hotkeycapture.listening": "Pulse una tecla…",
     "hotkeycapture.tooltip": "Pulse el botón y luego la tecla que quiera — se rellena este campo.",
+    "hotkeycapture.clear": "Borrar: esta acción no tendrá tecla",
 
     # ---------- history kinds (Activity Feed) ----------
     "history.kind.transcription": "Transcripción",
@@ -501,6 +521,7 @@ STRINGS: dict[str, str] = {
     # nunca se confundan con texto dictado.
     "error.transcribe.title": "La voz no se transcribió",
     "error.postprocess.title": "Texto pegado sin corrección",
+    "error.realtime_fallback.title": "Dictado rápido transcrito por la vía habitual",
     "error.api.quota": "{provider}: créditos de la API agotados — revise el saldo de su cuenta",
     "error.api.auth": "{provider}: clave de API rechazada — revísela en Ajustes",
     "error.api.rate": "{provider}: límite de peticiones alcanzado — inténtelo en un minuto",
@@ -555,6 +576,7 @@ STRINGS: dict[str, str] = {
     # Comillas alrededor de {style}: ahí puede ir un nombre de estilo inventado
     # por el usuario, imposible de concordar con la frase.
     "main.hint.keyboard.custom": "Pulse {key} para dictar, transcribir y devolver el texto en estilo «{style}».",
+    "main.hint.keyboard.quick": "Pulse {key} para un dictado rápido sin procesamiento de IA.",
     "main.hint.style.casual": "informal",
     "main.hint.style.professional": "profesional",
     "main.hint.style.custom": "personalizado",
