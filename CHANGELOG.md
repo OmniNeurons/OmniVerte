@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.35] - 2026-10-19
+
+### Added
+- Quick dictation can drop filler words and cut-off false starts
+  ("um", "uh", half-spoken words). Settings → Transcription → Quick
+  dictation → "Remove filler words"; on by default.
+
+### Fixed
+- Long dictations on the regular keys no longer repeat a word or phrase
+  where two audio segments meet: the overlap check could be misled by a
+  coincidental word match nearby and leave the duplicate in.
+
 ## [1.1.34] - 2026-10-19
 
 ### Added
