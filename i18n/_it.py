@@ -213,6 +213,8 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.link": "Apri Google AI Studio",
     "transcription.quick.title": "Dettatura rapida (ElevenLabs in tempo reale)",
     "transcription.quick.hint": "Usato solo dal tasto di dettatura rapida: il parlato viene trascritto in diretta mentre parli e incollato subito dopo lo stop, senza correzione IA. Senza chiave, quel tasto usa i backend qui sopra.",
+    "transcription.quick.clean.label": "Rimuovi intercalari",
+    "transcription.quick.clean.hint": "ElevenLabs elimina «ehm», «cioè» e le parole troncate dal testo.",
     "transcription.keys.elevenlabs.label": "Chiave ElevenLabs",
     "transcription.keys.elevenlabs.placeholder": "Inserisci la chiave API di ElevenLabs",
     "transcription.keys.elevenlabs.help.title": "Come ottenere una chiave API ElevenLabs",

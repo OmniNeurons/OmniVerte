@@ -107,16 +107,20 @@ class ElevenLabsApiError(RuntimeError):
 
 def build_url(language: str | None = None,
               secondary_languages: list[str] | None = None,
-              keyterms: list[str] | None = None) -> str:
+              keyterms: list[str] | None = None,
+              no_verbatim: bool = True) -> str:
     """Session URL with query parameters (pure — unit-testable).
 
     ``language`` / ``secondary_languages`` are ISO 639-1 codes (the Whisper
     short codes the app already uses); empty means auto-detect.
+    ``no_verbatim`` strips fillers and false starts ("э-э-э", "пр-- к-- были
+    продажи") server-side: the quick key has no LLM pass to clean them up.
     """
     params: list[tuple[str, str]] = [
         ("model_id", MODEL_ID),
         ("audio_format", f"pcm_{SAMPLE_RATE}"),
         ("commit_strategy", "vad"),
+        ("no_verbatim", "true" if no_verbatim else "false"),
     ]
     if language:
         params.append(("language_code", language))
@@ -326,6 +330,9 @@ class RealtimeSession:
         mtype = msg.get("message_type", "")
         with self._lock:
             if mtype == "session_started":
+                config = msg.get("config") or {}
+                logger.info(f"ElevenLabs realtime: session started "
+                            f"(no_verbatim={config.get('no_verbatim')})")
                 self._started.set()
                 self._flush_locked(final=False)
             elif mtype == "partial_transcript":

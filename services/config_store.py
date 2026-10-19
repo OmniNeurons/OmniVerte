@@ -53,6 +53,9 @@ DEFAULTS: dict[str, str] = {
     # is set), no LLM pass — the raw transcript is pasted the moment speech ends.
     # Fresh installs only; an upgrade gets a free key via _migrate_quick_hotkey.
     "HOTKEY_QUICK": "F9",
+    # ElevenLabs `no_verbatim`: the server drops fillers and false starts
+    # ("э-э-э", "пр-- к--"), the cleanup the LLM pass does on the other keys.
+    "QUICK_CLEAN_FILLERS": "true",
     # Which rewrite style the custom hotkey applies: casual | professional |
     # custom. On a fresh install (no config yet) F11 defaults to the
     # "professional" preset — a useful out-of-the-box rewrite that needs no

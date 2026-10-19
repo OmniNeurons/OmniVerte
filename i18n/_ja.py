@@ -214,6 +214,8 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.link": "Google AI Studioを開く",
     "transcription.quick.title": "クイック口述（ElevenLabs リアルタイム）",
     "transcription.quick.hint": "クイック口述のショートカット専用です。話している間にリアルタイムで文字起こしし、停止直後にAI校正なしで貼り付けます。キーがない場合、このショートカットは上のバックエンドを使います。",
+    "transcription.quick.clean.label": "フィラーを除去",
+    "transcription.quick.clean.hint": "ElevenLabs が「えー」「あのー」などのフィラーや言いかけの語をテキストから取り除きます。",
     "transcription.keys.elevenlabs.label": "ElevenLabsキー",
     "transcription.keys.elevenlabs.placeholder": "ElevenLabs APIキーを入力",
     "transcription.keys.elevenlabs.help.title": "ElevenLabs APIキーの取得方法",

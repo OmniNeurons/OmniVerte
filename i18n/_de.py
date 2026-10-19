@@ -212,6 +212,8 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.link": "Google AI Studio öffnen",
     "transcription.quick.title": "Schnelles Diktat (ElevenLabs in Echtzeit)",
     "transcription.quick.hint": "Wird nur von der Taste für schnelles Diktat genutzt: Die Sprache wird live beim Sprechen transkribiert und direkt nach dem Stopp eingefügt, ohne KI-Korrektur. Ohne Schlüssel nutzt diese Taste die Backends oben.",
+    "transcription.quick.clean.label": "Füllwörter entfernen",
+    "transcription.quick.clean.hint": "ElevenLabs entfernt „äh“, „ähm“ und abgebrochene Wortanfänge aus dem Text.",
     "transcription.keys.elevenlabs.label": "ElevenLabs-Schlüssel",
     "transcription.keys.elevenlabs.placeholder": "ElevenLabs-API-Schlüssel eingeben",
     "transcription.keys.elevenlabs.help.title": "ElevenLabs-API-Schlüssel erstellen",

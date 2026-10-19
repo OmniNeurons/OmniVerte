@@ -216,6 +216,8 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.link": "Открыть Google AI Studio",
     "transcription.quick.title": "Быстрая диктовка (ElevenLabs в реальном времени)",
     "transcription.quick.hint": "Используется только клавишей быстрой диктовки: речь распознаётся прямо во время разговора и вставляется сразу после остановки, без ИИ-коррекции. Без ключа эта клавиша работает через бэкенды выше.",
+    "transcription.quick.clean.label": "Убирать слова-паразиты",
+    "transcription.quick.clean.hint": "ElevenLabs вырезает «э-э-э», «ну-у» и оборванные начала слов из текста.",
     "transcription.keys.elevenlabs.label": "Ключ ElevenLabs",
     "transcription.keys.elevenlabs.placeholder": "Введите ключ API ElevenLabs",
     "transcription.keys.elevenlabs.help.title": "Как создать ключ API ElevenLabs",

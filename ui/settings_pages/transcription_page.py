@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 from qfluentwidgets import (
     ComboBox,
     PasswordLineEdit,
+    SwitchButton,
 )
 
 from i18n import t
@@ -320,6 +321,15 @@ class TranscriptionPage(BasePage):
                 stretch_widget=True,
             )
         )
+        self.quick_clean_switch = SwitchButton()
+        self.quick_clean_switch.setOnText(t("common.on"))
+        self.quick_clean_switch.setOffText(t("common.off"))
+        body.addWidget(make_form_row(
+            t("transcription.quick.clean.label"),
+            self.quick_clean_switch,
+            hint=t("transcription.quick.clean.hint"),
+            align_right=True,
+        ))
         content_layout.addWidget(card)
         self._elevenlabs_loaded_mask: Optional[str] = None
 
@@ -498,6 +508,9 @@ class TranscriptionPage(BasePage):
         self.elevenlabs_key_edit.setRealKeyFetcher(
             lambda: config.get_secret("ELEVENLABS_API_KEY") or ""
         )
+        self.quick_clean_switch.setChecked(
+            (config.get("QUICK_CLEAN_FILLERS") or "true").strip().lower() == "true"
+        )
 
         # Model selectors
         for backend_id, combo in self.model_combos.items():
@@ -588,6 +601,10 @@ class TranscriptionPage(BasePage):
             key="ELEVENLABS_API_KEY",
             field_text=self.elevenlabs_key_edit.text(),
             loaded_mask=self._elevenlabs_loaded_mask,
+        )
+        config.set(
+            "QUICK_CLEAN_FILLERS",
+            "true" if self.quick_clean_switch.isChecked() else "false",
         )
 
         for backend_id, combo in self.model_combos.items():

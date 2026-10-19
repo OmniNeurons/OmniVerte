@@ -80,6 +80,7 @@ def test_build_url_carries_languages_and_keyterms():
     assert q["model_id"] == ["scribe_v2_realtime"]
     assert q["audio_format"] == ["pcm_16000"]
     assert q["commit_strategy"] == ["vad"]
+    assert q["no_verbatim"] == ["true"]             # no LLM pass to drop fillers
     assert q["language_code"] == ["ru"]
     assert q["secondary_languages"] == ["en"]       # primary + blanks dropped
     assert q["keyterms"] == ["Acme", "merge request"]
@@ -289,3 +290,8 @@ def test_user_message_for_realtime_fallback_says_text_still_arrived():
     msg = user_message("realtime_fallback", "network", "ElevenLabs")
     assert t("error.realtime_fallback.title") in msg
     assert "ElevenLabs" in msg
+
+
+def test_build_url_no_verbatim_can_be_switched_off():
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(er.build_url(no_verbatim=False)).query)
+    assert q["no_verbatim"] == ["false"]

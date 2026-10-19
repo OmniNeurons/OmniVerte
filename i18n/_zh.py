@@ -210,6 +210,8 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.link": "打开 Google AI Studio",
     "transcription.quick.title": "快速听写（ElevenLabs 实时）",
     "transcription.quick.hint": "仅供快速听写快捷键使用：说话时实时转写，停止后立即粘贴，不做 AI 校正。未设置密钥时，该快捷键使用上方的后端。",
+    "transcription.quick.clean.label": "去除口头禅",
+    "transcription.quick.clean.hint": "ElevenLabs 会从文本中去掉“嗯”“呃”等填充词和说了一半的词。",
     "transcription.keys.elevenlabs.label": "ElevenLabs 密钥",
     "transcription.keys.elevenlabs.placeholder": "输入 ElevenLabs API 密钥",
     "transcription.keys.elevenlabs.help.title": "获取 ElevenLabs API 密钥",

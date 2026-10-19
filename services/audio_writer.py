@@ -247,34 +247,47 @@ def _overlap_word_count(prev: str, nxt: str) -> tuple[int, int]:
       next_norm[i] = final
       fuzzy_idx.add(i)
 
-  matcher = difflib.SequenceMatcher(None, prev_norm, next_norm, autojunk=False)
-  blocks = [b for b in matcher.get_matching_blocks() if b.size > 0]
-  if not blocks:
+  # The overlap must include prev's final word (TRAIL_SLACK = 0: it is prev's
+  # last ~1s of audio), so pin that word to each of its occurrences in nxt's
+  # head and align only what lies before both. A single global alignment of the
+  # two windows cannot do this: difflib's blocks never cross, so a coincidental
+  # earlier match ("…и поэтому модель" / "модель сама … не было" — "было")
+  # claimed the alignment and the real seam word, crossing it, was dropped —
+  # leaving "модель… модель" in the paste. Of the occurrences that pass the
+  # guards, the best-corroborated one wins (a seam repeating its own last word,
+  # "…либо на промпт, либо на" / "либо на промпт, либо на …", must cut at the
+  # second "на"); a tie goes to the smaller, conservative cut. An exact anchor
+  # outranks a fuzzy one ("…сервер телефон?" / "сервер телефон, или в
+  # телефоне" — "телефоне" would eat "или в").
+  best = None
+  for j, w in enumerate(next_norm):
+    if w != final:
+      continue
+    cut_words = j + 1  # words of nxt's head to drop
+    matcher = difflib.SequenceMatcher(None, prev_norm[:-1], next_norm[:j], autojunk=False)
+    blocks = [b for b in matcher.get_matching_blocks() if b.size > 0]
+    first_b = min([b.b for b in blocks] + [j])
+    if first_b > _SEAM_HEAD_SLACK:
+      continue
+    matched = 1 + sum(b.size for b in blocks)
+    if matched / cut_words < _SEAM_MATCH_FRAC:
+      continue
+    # An uncorroborated fuzzy rewrite may drop ITSELF and nothing more. With no
+    # exact word backing the seam, a near-miss sitting past nxt's first word is
+    # as easily two different words as one word twice, and cutting to it
+    # swallows the real speech in front ("…А здесь нужно" / "подсвечивать
+    # нужный набор" — "нужно"~"нужный" ate "подсвечивать"). Replaying the log's
+    # 447 real multi-segment joins, this is the only place the fallback
+    # overreached.
+    if matched == 1 and cut_words > 1 and j in fuzzy_idx:
+      continue
+    rank = (j not in fuzzy_idx, matched)
+    if best is None or rank > best[0]:
+      best = (rank, j)
+  if best is None:
     return 0, 0
-
-  # Anchor = the matched run reaching FURTHEST into prev's tail; the overlap must
-  # include prev's final words, since it is prev's last ~1s of audio.
-  anchor = max(blocks, key=lambda b: b.a + b.size)
-  if anchor.a + anchor.size < len(prev_tail) - _SEAM_TRAIL_SLACK:
-    return 0, 0
-  if min(b.b for b in blocks) > _SEAM_HEAD_SLACK:
-    return 0, 0
-
-  cut_words = anchor.b + anchor.size  # words of nxt's head to drop
-  matched = sum(b.size for b in blocks if b.b < cut_words)
-  if cut_words <= 0 or matched / cut_words < _SEAM_MATCH_FRAC:
-    return 0, 0
-
-  # An uncorroborated fuzzy rewrite may drop ITSELF and nothing more. With no
-  # exact word backing the seam, a near-miss sitting past nxt's first word is as
-  # easily two different words as one word twice, and cutting to it swallows the
-  # real speech in front ("…А здесь нужно" / "подсвечивать нужный набор" —
-  # "нужно"~"нужный" ate "подсвечивать"). Replaying the log's 447 real
-  # multi-segment joins, this is the only place the fallback overreached.
-  if matched == 1 and cut_words > 1 and (cut_words - 1) in fuzzy_idx:
-    return 0, 0
-
-  return cut_words, next_head[cut_words - 1][2]
+  j = best[1]
+  return j + 1, next_head[j][2]
 
 
 def _dedup_overlap_join(segments) -> str:
@@ -1403,6 +1416,7 @@ class AudioWriter:
         language=self._whisper_language_hint(),
         secondary_languages=[secondary] if secondary else None,
         keyterms=keyterms,
+        no_verbatim=self._flag_on("QUICK_CLEAN_FILLERS"),
     )
 
   def _transcribe_frames_batch(self, frames):

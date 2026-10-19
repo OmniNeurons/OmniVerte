@@ -280,6 +280,50 @@ def test_overlap_join_fuzzy_hit_with_exact_corroboration_still_cuts_run():
     )
 
 
+def test_overlap_join_coincidental_earlier_match_does_not_hide_the_seam():
+    # From the log: "было" sits in both windows, before the seam on prev's side
+    # but after it on nxt's. A global alignment took it and dropped the real
+    # seam word, which crosses it — the paste read "модель... модель сама".
+    segments = [
+        "Или дело в том, что мы эту ситуацию выявили до того, как было "
+        "добавлено расписание, и поэтому модель...",
+        "модель сама подобрала урок чтения, потому что не было ориентира на "
+        "конечный список уроков.",
+    ]
+    assert aw._dedup_overlap_join(segments).count("модель") == 1
+
+
+@pytest.mark.parametrize("prev, nxt, k", [
+    # "если сегодня" (2 words) outscored the seam's "будет вчера" in difflib.
+    ("То есть, если сегодня вторник, тогда будет вчера.",
+     "Будет вчера и завтра. Если сегодня понедельник, то пятница.", 2),
+    ("главным героем девочку, то возникает диссонанс.",
+     "диссонанс. То есть у нас есть отдельные рисунки.", 1),
+])
+def test_overlap_word_count_pins_prev_final_word(prev, nxt, k):
+    assert aw._overlap_word_count(prev, nxt)[0] == k
+
+
+def test_overlap_join_seam_repeating_its_last_word_cuts_the_whole_run():
+    # "на" occurs twice in nxt's head; the first is better-matched by less.
+    segments = [
+        "то ставить стоп либо на промпт, либо на",
+        "либо на промпт, либо на ключевые кадры.",
+    ]
+    assert aw._dedup_overlap_join(segments) == (
+        "то ставить стоп либо на промпт, либо на ключевые кадры."
+    )
+
+
+def test_overlap_join_exact_anchor_outranks_fuzzy_one():
+    # "телефоне"~"телефон" scores more corroboration but would eat "или в".
+    segments = [
+        "Это телефон ждет сервер или сервер телефон?",
+        "сервер телефон, или в телефоне какая-то фигня.",
+    ]
+    assert "или в телефоне" in aw._dedup_overlap_join(segments)
+
+
 def test_seam_words_alike_is_position_blind_not_a_homophone_test():
     # Guards the documented contract: this predicate is only sound because it is
     # asked about prev's final word. It deliberately accepts near-homophones
@@ -899,6 +943,18 @@ class _FakeSession:
         if self.error:
             raise self.error
         return self.result
+
+
+@pytest.mark.parametrize("flag, expected", [("true", "true"), ("false", "false")])
+def test_realtime_url_follows_quick_clean_fillers(flag, expected):
+    import urllib.parse
+
+    w = _bare_writer()
+    w.config = SimpleNamespace(get=lambda k, d=None: {"QUICK_CLEAN_FILLERS": flag}.get(k, d))
+    w._glossary_asr_active = lambda: False
+    w._whisper_language_hint = lambda: "ru"
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(w._realtime_url()).query)
+    assert q["no_verbatim"] == [expected]
 
 
 def _realtime_writer(monkeypatch, session):

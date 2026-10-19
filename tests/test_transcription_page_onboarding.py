@@ -51,3 +51,21 @@ def test_typing_hides_only_that_fields_hint(page):
 
     assert page.openai_hint.isVisible() is False
     assert page.groq_hint.isVisible() is True
+
+
+# ---------- quick dictation: filler cleanup switch ----------
+
+def test_quick_clean_switch_defaults_on_and_round_trips(page, appdata, monkeypatch):
+    from services.config_store import Config
+    from ui.settings_pages import transcription_page
+
+    monkeypatch.setattr(transcription_page, "list_input_devices", lambda: [])
+    page.load_from(Config())
+    assert page.quick_clean_switch.isChecked()       # fresh install: on
+
+    page.quick_clean_switch.setChecked(False)
+    page.apply_to(Config())
+    assert Config().get("QUICK_CLEAN_FILLERS") == "false"
+
+    page.load_from(Config())
+    assert not page.quick_clean_switch.isChecked()
