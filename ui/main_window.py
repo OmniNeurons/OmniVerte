@@ -31,7 +31,6 @@ from PySide6.QtCore import (
     QMimeData,
     QObject,
     QRunnable,
-    QSize,
     Qt,
     QThreadPool,
     Signal,
@@ -852,11 +851,10 @@ class MainWindow(FramelessWindow):
 
         # Always enabled. Pro opens Glossary on the term editor; Free gets the
         # Pro dialog. Not gated on an API key — adding a term is a settings hop.
-        # ~10% larger than the 16px gear and theme icons. Strokes in
-        # AddTermIcon are thinner so the weight still matches them.
+        # Default 16px icon size, like the gear and theme icons: AddTermIcon is
+        # drawn on that pixel grid, and any other size blurs its strokes.
         self.add_term_btn = TransparentToolButton(AddTermIcon())
         self.add_term_btn.setFixedSize(34, 34)
-        self.add_term_btn.setIconSize(QSize(18, 18))
         self.add_term_btn.setCursor(Qt.PointingHandCursor)
         self._tr(self.add_term_btn, "main.tooltip.add_term", setter="setToolTip")
         self.add_term_btn.clicked.connect(self._on_add_term)

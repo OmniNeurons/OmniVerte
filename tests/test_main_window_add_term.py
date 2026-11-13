@@ -36,49 +36,36 @@ def window(qapp, appdata):
     win.deleteLater()
 
 
-def test_add_term_plus_stays_open_at_header_size(qapp):
+def test_add_term_icon_is_crisp_and_its_plus_stands_clear(qapp):
     """Stock DictionaryAdd's vertical bar closes at 16px and reads as a minus.
 
-    Composited on white, a real plus is a bright run of at least three pixels
-    both across and down inside the corner badge.
+    AddTermIcon at the header's 16px: the plus is a solid five-pixel cross,
+    every stroke covers whole pixels (no grey half-pixel smear), and a gap
+    separates the plus from the page outline.
     """
     from PySide6.QtCore import QRectF
     from PySide6.QtGui import QColor, QImage, QPainter
 
     from ui.icons import AddTermIcon
 
-    # Header draws this glyph at 18px, a tenth larger than the gear.
-    size = 18
-    icon = QImage(size, size, QImage.Format_ARGB32_Premultiplied)
-    icon.fill(QColor(0, 0, 0, 0))
-    painter = QPainter(icon)
-    AddTermIcon().render(painter, QRectF(0, 0, size, size))
-    painter.end()
-
+    size = 16
     image = QImage(size, size, QImage.Format_ARGB32_Premultiplied)
     image.fill(QColor("white"))
     painter = QPainter(image)
-    painter.drawImage(0, 0, icon)
+    AddTermIcon().render(painter, QRectF(0, 0, size, size), fill="#000000")
     painter.end()
 
-    def longest_bright_run(values) -> int:
-        best = current = 0
-        for value in values:
-            current = current + 1 if value >= 220 else 0
-            best = max(best, current)
-        return best
+    def dark(x, y) -> bool:
+        return image.pixelColor(x, y).red() < 60
 
-    def red(x, y) -> int:
-        return image.pixelColor(x, y).red()
-
-    horizontal = max(
-        longest_bright_run([red(x, y) for x in range(10, size)]) for y in range(10, size)
-    )
-    vertical = max(
-        longest_bright_run([red(x, y) for y in range(9, size)]) for x in range(10, size)
-    )
-    assert horizontal >= 3
-    assert vertical >= 3
+    # Plus centred on pixel (12, 12): arms 10..14 both ways.
+    assert all(dark(x, 12) for x in range(10, 15))
+    assert all(dark(12, y) for y in range(10, 15))
+    # Page edges and text lines are full-strength pixels.
+    assert all(dark(2, y) for y in range(4, 9))
+    assert all(dark(x, 4) for x in range(5, 9))
+    # The cut-out: page outline pixels next to the plus are gone.
+    assert not dark(11, 11) and not dark(11, 9) and not dark(9, 14)
 
 
 def test_add_term_sits_between_the_license_chip_and_the_theme_button(window, qapp):
