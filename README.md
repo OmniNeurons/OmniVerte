@@ -42,22 +42,30 @@ reviewing and re-processing what you dictated.
 
 ## Features
 
-- **Hotkey dictation with per-action keys.** Four independent global hotkeys,
+- **Hotkey dictation with per-action keys.** Three independent global hotkeys,
   each captures speech and then applies a different transform:
-  - `F8` — **Transcribe**: grammar-correct and normalize to your primary language.
-  - `F9` — **Quick dictation**: no AI pass — the raw transcript is pasted the
-    moment you stop talking. With an ElevenLabs key it streams live through
-    **Scribe v2 Realtime** (speech is transcribed *while* you talk, so the text
-    is ready almost instantly); without one it uses the normal backend chain,
-    just skipping the LLM. Built for short commands — coding, prompting agents.
-  - `F10` — **Transcribe + Translate**: force-translate into your secondary language.
-  - `F11` — **Transcribe + Custom style**: rewrite using your own saved prompt.
+  - `F9` — **Quick dictation**: the text is pasted the moment you stop
+    talking, starting with a capital letter and with filler sounds ("um",
+    "uh") removed. Optionally an AI pass fixes grammar and typos
+    (Settings → Transcription → *Correct text with AI*, off by default —
+    most useful with local Whisper).
+  - `F10` — **Translate**: force-translate into your secondary language.
+  - `F11` — **Custom style**: rewrite using the style you picked (casual,
+    professional, or your own saved prompt).
+
+  **Live recognition.** With a Gemini key, all three keys stream your speech
+  to **Gemini 3.5 Transcribe Live** *while* you talk, so the text is ready
+  about half a second after you stop (in a blind comparison on real
+  dictations it made about three times fewer errors than ElevenLabs Scribe).
+  Without a Gemini key, an ElevenLabs key streams through **Scribe v2
+  Realtime** instead; with neither, the take goes through the backend chain
+  below. If a live session fails, the recorded audio is replayed through the
+  backend chain — a failure costs time, never your words.
 
   The transform is decided by the key that **stops** the take, not the one
-  that starts it — so you can begin dictating with `F8`, decide mid-sentence
+  that starts it — so you can begin dictating with `F9`, decide mid-sentence
   you'd rather have the result in your secondary language, and just press
-  `F10` to finish. (The key that *starts* the take decides only where the
-  transcript comes from: `F9` = live streaming, the others = the backend chain.)
+  `F10` to finish.
 
   Keys are rebindable, and any action can be left without a key (clear its
   field) — an unused action then intercepts nothing. Catching a key that
@@ -72,7 +80,8 @@ reviewing and re-processing what you dictated.
   Local, and the moment you add a cloud key that backend takes over:
   - **Local** — [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on
     CPU or CUDA (`tiny` … `large-v3`). Fully offline.
-  - **OpenAI** — `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, `whisper-1`.
+  - **OpenAI** — `gpt-transcribe` (default), `gpt-4o-mini-transcribe`,
+    `gpt-4o-transcribe` (OpenAI retires both on 2027-02-26), `whisper-1`.
   - **Groq** — `whisper-large-v3-turbo`, `whisper-large-v3`, `distil-whisper-large-v3-en`.
   - **Gemini** — `gemini-3.5-transcribe` (Google's dedicated ASR model with
     first-class custom-vocabulary biasing; the corporate glossary rides it
@@ -131,10 +140,11 @@ reviewing and re-processing what you dictated.
 - *(Optional)* An **OpenAI** API key — required for any AI text operation
   (grammar/translate/rewrite) and for the OpenAI transcription backend.
 - *(Optional)* A **Groq** API key — only for the Groq transcription backend.
-- *(Optional)* A **Gemini** API key ([Google AI Studio](https://aistudio.google.com/apikey)) —
-  only for the Gemini transcription backend.
+- *(Optional, recommended)* A **Gemini** API key ([Google AI Studio](https://aistudio.google.com/apikey)) —
+  for live recognition on the dictation, translate and custom-style keys, and
+  for the Gemini transcription backend.
 - *(Optional)* An **ElevenLabs** API key ([ElevenLabs](https://elevenlabs.io/app/settings/api-keys)) —
-  only for live streaming on the quick-dictation hotkey (`F9`). The app calls a
+  live recognition when there is no Gemini key. The app calls a
   single endpoint (`/v1/speech-to-text/realtime`), so create a **restricted**
   key with only **Speech to Text** enabled and every other permission (Text to
   Speech, Voices, Models, History, Dubbing, Agents, User/Workspace, …) off. An
@@ -208,8 +218,9 @@ offline Local backend. After setup it starts straight into the tray.
 - **Audio** is buffered to short-lived WAV files in your OS temp directory while
   transcribing, then overwritten on the next take. With a cloud backend, that
   audio is sent to OpenAI/Groq/Gemini for transcription; with the local backend
-  it never leaves your machine. The quick-dictation hotkey with an ElevenLabs
-  key streams audio to ElevenLabs while you speak.
+  it never leaves your machine. With a Gemini (or ElevenLabs) key, the
+  dictation, translate and custom-style keys stream audio to Gemini (or
+  ElevenLabs) while you speak.
 
 ---
 
@@ -224,11 +235,13 @@ as before.
 It works on three independently-toggleable layers, all fed from one list:
 
 1. **ASR bias** — nudges the speech recogniser toward your terms (cloud `prompt`,
-   local `hotwords`, Gemini's native `custom_vocabulary`).
-2. **LLM correction** — adds your terms to the grammar-correction prompt, and
-   (separately toggleable) to translate/rewrite.
+   local `hotwords`, Gemini's native `custom_vocabulary` — live recognition
+   takes up to 100 terms on Gemini, 50 terms of up to 20 characters on
+   ElevenLabs; the Glossary page warns about the ones left out).
+2. **LLM correction** — adds your terms to the prompt of dictation's AI
+   correction, and (separately toggleable) to translate/rewrite.
 3. **Fuzzy replace** — deterministically snaps near-miss words to the canonical
-   form on the plain transcribe action.
+   form in dictation.
 
 Edit it in **Settings → Glossary**. One-click **profession packs** (Legal,
 Medical, IT, Finance, Sales — in every UI language) seed domain vocabulary into
@@ -253,7 +266,7 @@ python -m services.glossary --preview "зет тюнинг"   # dry-run the repl
 ## Free vs Pro
 
 Omni Verte runs **free, fully offline, with nothing to activate** — the core
-dictate → transcribe → paste loop, all three backends, the AI text operations,
+dictate → transcribe → paste loop, all four backends, live recognition, the AI text operations,
 and the multilingual UI are all in the Free tier. A few power features are gated
 to **Pro**:
 
@@ -278,10 +291,10 @@ server revocation drops you back to Free.
 
 ## Usage
 
-1. **Dictate** — press any action hotkey (`F8`/`F9`/`F10`/`F11` by default) to
+1. **Dictate** — press any action hotkey (`F9`/`F10`/`F11` by default) to
    start. Press *any* of them again to stop; the key you press to stop decides
-   how the text is processed (e.g. start with `F8`, finish with `F10` to get
-   the translation instead of plain transcription). The result is pasted into
+   how the text is processed (e.g. start with `F9`, finish with `F10` to get
+   the translation instead of plain dictation). The result is pasted into
    the window that had focus when you started.
 2. **Translate / rewrite** — open the main window (double-tap the hotkey, or
    tray → *Show window*), then use the Translate pill or the
@@ -335,6 +348,12 @@ Windows runner, and attaches them to a new Release.
 OmniVerte.py              # entry point: mutex, logging, Qt loop, wiring
 services/
   audio_writer.py         # recording, streaming transcription, backends, hotkeys, paste
+  gemini_live.py          # live recognition: Gemini 3.5 Transcribe Live (WebSocket)
+  elevenlabs_realtime.py  # live recognition: ElevenLabs Scribe v2 Realtime (WebSocket)
+  gemini_transcribe.py    # Gemini batch transcription backend
+  glossary.py             # corporate glossary: ASR bias, LLM block, fuzzy replace
+  audio_prep.py           # light audio prep + input-device helpers
+  api_errors.py           # provider errors -> user-facing toasts
   config_store.py         # settings (config.env) + secrets (keyring) + migrations
   text_operations.py      # OpenAI translate / fix / rewrite helpers
   transcription_models.py # model-name constants (import-light)
@@ -351,6 +370,7 @@ ui/
   rec_indicator.py        # floating live-mic pill / status indicator
   taskbar_overlay.py      # Win32 taskbar overlay icon
   style.py                # theme palettes + QSS
+  icons.py                # custom header glyphs (add-term)
 i18n/                     # UI string catalog, one module per language (8 locales)
 licensing/                # capability-based Free/Pro gating + online activation
 ```
