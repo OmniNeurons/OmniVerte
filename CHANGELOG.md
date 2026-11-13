@@ -6,6 +6,33 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.36] - 2026-11-13
+
+### Added
+- Quick dictation, translate and custom style now recognize speech live
+  through Gemini 3.5 Transcribe Live while you talk, so the text is ready
+  about half a second after you stop. It uses your Gemini key; without one,
+  ElevenLabs is used if its key is set, otherwise the regular backends. In
+  a blind comparison on real dictations it made about three times fewer
+  errors than ElevenLabs.
+- Settings → Transcription → "Dictation text" → "Correct text with AI":
+  an optional gpt-4o-mini pass over dictated text (grammar, typos, primary
+  language). Off by default; most useful with local Whisper.
+
+### Changed
+- One dictation key: the separate "Transcribe + paste" action is gone, and
+  quick dictation (`F9`) covers it. The mouse button starts dictation too.
+  If you had a key of your own on the old action and dictation had none,
+  dictation takes it over.
+- Dictated text always starts with a capital letter, and filler sounds
+  ("um", "uh", "äh", "euh") are removed whichever service recognized it.
+- The Glossary page warns about the term limit of the live service you
+  actually use (Gemini: 100 terms; ElevenLabs: 50 terms of up to 20
+  characters).
+- The default OpenAI transcription model is now `gpt-transcribe`; OpenAI
+  retires the `gpt-4o-*-transcribe` models on 2027-02-26.
+- A cleaner, lighter "Add term" icon in the window header.
+
 ## [1.1.35] - 2026-10-19
 
 ### Added
