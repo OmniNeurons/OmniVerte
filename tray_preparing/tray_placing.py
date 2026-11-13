@@ -319,7 +319,7 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
         logger.info(f"Activation mode changed to: {audio_writer.activation_mode}")
         update_menu()
         
-    def change_activation_key(action_id="transcribe"):
+    def change_activation_key(action_id="quick"):
         """
         Starts listening for a new key for `action_id` in a separate thread.
         Updates the menu after a short delay.

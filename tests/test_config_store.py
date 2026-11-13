@@ -7,9 +7,10 @@ from services.config_store import Config
 
 def test_defaults_applied(appdata):
     c = Config()
-    assert c.get("ACTIVATION_KEY") == "F8"
-    assert c.get("HOTKEY_TRANSCRIBE") == "F8"
+    assert c.get("ACTIVATION_KEY") is None          # the transcribe action is gone
+    assert c.get("HOTKEY_TRANSCRIBE") is None
     assert c.get("HOTKEY_QUICK") == "F9"
+    assert c.get("DICTATION_AI_CORRECTION") == "false"
     assert c.get("THEME") == "light"
     assert c.get("BACKEND_PRIORITY") == "openai,groq,gemini,local"
     assert c.backend_priority == ["openai", "groq", "gemini", "local"]
@@ -73,36 +74,55 @@ def test_onboarding_flag(appdata):
     assert Config().onboarding_done() is True
 
 
-def test_migrate_legacy_activation_key_into_hotkey(appdata):
-    cfg_dir = appdata / "OmniVerte"
-    cfg_dir.mkdir(parents=True, exist_ok=True)
-    (cfg_dir / "config.env").write_text('ACTIVATION_KEY="F8"\n', encoding="utf-8")
-    # No HOTKEY_TRANSCRIBE on file → the customised legacy key is carried over.
-    assert Config().get("HOTKEY_TRANSCRIBE") == "F8"
-
-
 def _write_config(appdata, text):
     cfg_dir = appdata / "OmniVerte"
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "config.env").write_text(text, encoding="utf-8")
 
 
-def test_upgrade_quick_hotkey_avoids_the_old_transcribe_default(appdata):
-    # Pre-swap install: transcribe on F9 → quick takes F8 instead of colliding.
+def _on_file(appdata):
+    return (appdata / "OmniVerte" / "config.env").read_text(encoding="utf-8")
+
+
+def test_pre_quick_install_keeps_its_dictation_key(appdata):
+    # Before the quick action existed, transcribe on F9 was the dictation key.
     _write_config(appdata, 'HOTKEY_TRANSCRIBE="F9"\n')
     c = Config()
-    assert c.get("HOTKEY_TRANSCRIBE") == "F9"
-    assert c.get("HOTKEY_QUICK") == "F8"
+    assert c.get("HOTKEY_QUICK") == "F9"
+    assert c.get("HOTKEY_TRANSCRIBE") is None
 
 
-def test_upgrade_quick_hotkey_unbound_when_f9_and_f8_are_taken(appdata):
-    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F9"\nHOTKEY_TRANSLATE="F8"\n')
+def test_single_key_era_activation_key_becomes_dictation(appdata):
+    _write_config(appdata, 'ACTIVATION_KEY="F7"\n')
+    assert Config().get("HOTKEY_QUICK") == "F7"
+
+
+def test_pre_quick_install_never_steals_a_translate_key(appdata):
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F10"\nHOTKEY_TRANSLATE="F10"\n')
     assert Config().get("HOTKEY_QUICK") == ""
 
 
-def test_quick_hotkey_on_file_is_left_alone(appdata):
-    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F9"\nHOTKEY_QUICK="F8"\n')
-    assert Config().get("HOTKEY_QUICK") == "F8"
+def test_stock_f8_transcribe_is_dropped_when_dictation_has_a_key(appdata):
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F8"\nHOTKEY_QUICK="F9"\n')
+    c = Config()
+    assert c.get("HOTKEY_QUICK") == "F9"
+    assert c.get("HOTKEY_TRANSCRIBE") is None
+
+
+def test_unbound_dictation_takes_the_transcribe_key(appdata):
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F7"\nHOTKEY_QUICK=""\n')
+    assert Config().get("HOTKEY_QUICK") == "F7"
+
+
+def test_retired_keys_leave_the_file_on_next_write(appdata):
+    _write_config(appdata, 'HOTKEY_TRANSCRIBE="F8"\nACTIVATION_KEY="F8"\n'
+                           'TRANSCRIBE_HOTKEY_RETIRED="true"\nHOTKEY_QUICK="F9"\n')
+    Config().set("THEME", "dark")
+    text = _on_file(appdata)
+    assert "HOTKEY_TRANSCRIBE" not in text
+    assert "ACTIVATION_KEY" not in text
+    assert "TRANSCRIBE_HOTKEY_RETIRED" not in text
+    assert Config().get("HOTKEY_QUICK") == "F9"
 
 
 def test_migrate_preferred_language(appdata):
@@ -184,3 +204,29 @@ def test_onboarding_does_not_clobber_an_explicit_ui_language(appdata):
         assert c.get("UI_LANGUAGE") == "en"
     finally:
         i18n.set_locale(before)
+
+
+import pytest  # noqa: E402
+
+from services.config_store import choose_quick_engine  # noqa: E402
+
+
+@pytest.mark.parametrize("pref, gemini, eleven, expected", [
+    (None, True, True, "gemini"),
+    ("elevenlabs", True, True, "elevenlabs"),
+    ("elevenlabs", True, False, "gemini"),
+    ("gemini", False, True, "elevenlabs"),
+    (" Bogus ", True, True, "gemini"),
+    ("gemini", False, False, None),
+])
+def test_choose_quick_engine(pref, gemini, eleven, expected):
+    assert choose_quick_engine(pref, gemini, eleven) == expected
+
+
+def test_config_quick_engine_reads_saved_keys(appdata):
+    c = Config()
+    assert c.quick_engine() is None
+    c.set_secret("ELEVENLABS_API_KEY", "e")
+    assert c.quick_engine() == "elevenlabs"
+    c.set_secret("GEMINI_API_KEY", "g")
+    assert c.quick_engine() == "gemini"

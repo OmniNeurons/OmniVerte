@@ -48,10 +48,9 @@ STRINGS: dict[str, str] = {
     "tray.keys.change": "Modifier (appuyez sur une touche)",
     "tray.hotkey.item": "{action} : {key}",
     "tray.hotkey.none": "non attribué",
-    "tray.action.transcribe": "Transcrire",
     "tray.action.translate": "Transcrire et traduire",
     "tray.action.custom": "Transcrire et réécrire",
-    "tray.action.quick": "Dictée rapide (sans IA)",
+    "tray.action.quick": "Dictée rapide",
     "tray.suppress.on": "Capture forcée : ACTIVÉE (touches interceptées)",
     "tray.suppress.off": "Capture forcée : DÉSACTIVÉE (touches transmises)",
     "tray.mouse_button": "Bouton de souris pour l'activation : {button}",
@@ -89,14 +88,12 @@ STRINGS: dict[str, str] = {
     "general.activation.mouse": "Bouton de souris",
 
     # « Attraper la touche » — la formule reprend le “Catch the key” anglais.
-    "general.hotkey.transcribe": "Transcrire et coller",
-    "general.hotkey.transcribe.hint": "Dictez, puis collez la transcription avec correction grammaticale et ponctuation. Cliquez sur « Attraper la touche » pour définir une touche.",
     "general.hotkey.translate": "Transcrire et traduire",
     "general.hotkey.translate.hint": "Dictez, puis traduisez vers la langue secondaire avant de coller. Cliquez sur « Attraper la touche » pour définir une touche.",
     "general.hotkey.custom": "Transcrire et réécrire dans un style personnalisé",
     "general.hotkey.custom.hint": "Dictez, puis réécrivez dans le style choisi ci-dessous et collez. Cliquez sur « Attraper la touche » pour définir une touche.",
     "general.hotkey.quick": "Dictée rapide",
-    "general.hotkey.quick.hint": "Colle le texte brut dès que vous arrêtez de parler, sans correction ni réécriture par l’IA. Transcrit en direct via ElevenLabs si sa clé est renseignée sur la page Transcription. Cliquez sur « Attraper la touche » pour définir une touche.",
+    "general.hotkey.quick.hint": "Colle le texte dès que vous arrêtez de parler. Transcrit en direct via Gemini ou ElevenLabs si une clé est renseignée sur la page Transcription ; la correction par l’IA s’y active aussi. Cliquez sur « Attraper la touche » pour définir une touche.",
     "general.hotkey.none": "Non attribué",
 
     "general.stylepair.name": "Personnalisé",
@@ -126,7 +123,6 @@ STRINGS: dict[str, str] = {
     # Interpolés dans general.hotkey.released. Le français forme
     # « Le raccourci de transcription… » — d'où « de … », pour lire naturellement
     # dans ce cadre ; ce sont des clés distinctes, pas les libellés de lignes.
-    "general.action.transcribe": "de transcription",
     "general.action.translate": "de traduction",
     "general.action.custom": "de style personnalisé",
     "general.action.quick": "de dictée rapide",
@@ -214,10 +210,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. « Get API key » → « Create API key »",
     "transcription.keys.gemini.help.step3": "3. Copiez-la et collez-la ici",
     "transcription.keys.gemini.help.link": "Ouvrir Google AI Studio",
-    "transcription.quick.title": "Dictée rapide (ElevenLabs en temps réel)",
-    "transcription.quick.hint": "Utilisé uniquement par le raccourci de dictée rapide : la parole est transcrite en direct pendant que vous parlez et collée dès l’arrêt, sans correction par l’IA. Sans clé, ce raccourci utilise les backends ci-dessus.",
+    "transcription.quick.title": "Reconnaissance en direct (Gemini Live, ElevenLabs)",
+    "transcription.quick.hint": "Les raccourcis de dictée rapide, de traduction et de style personnalisé transcrivent la parole en direct pendant que vous parlez : le texte est prêt dès l’arrêt. Gemini 3.5 Transcribe Live est utilisé si la clé Gemini ci-dessus est renseignée, sinon ElevenLabs. Sans aucune des deux clés, ces raccourcis utilisent les backends ci-dessus.",
     "transcription.quick.clean.label": "Supprimer les mots de remplissage",
-    "transcription.quick.clean.hint": "ElevenLabs retire « euh », « ben » et les faux départs coupés du texte.",
+    "transcription.quick.clean.hint": "Retire « euh » et les sons d’hésitation semblables du texte dicté. ElevenLabs retire aussi les faux départs coupés.",
+    "transcription.dictation.title": "Texte dicté",
+    "transcription.dictation.hint": "Ce qui arrive au texte de la dictée rapide (et de la dictée au bouton de la souris) avant le collage, quel que soit le service qui l’a reconnu.",
+    "transcription.dictation.ai.label": "Corriger le texte avec l’IA",
+    "transcription.dictation.ai.hint": "Après la reconnaissance, gpt-4o-mini corrige la grammaire et les fautes de frappe et ramène le texte dans votre langue principale. Nécessite une clé OpenAI et ajoute environ une seconde. Surtout utile avec Whisper en local ; Gemini Live renvoie déjà un texte fini.",
     "transcription.keys.elevenlabs.label": "Clé ElevenLabs",
     "transcription.keys.elevenlabs.placeholder": "Saisissez la clé API ElevenLabs",
     "transcription.keys.elevenlabs.help.title": "Obtenir une clé API ElevenLabs",
@@ -327,12 +327,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "Chaque couche utilise les mêmes termes ; activez ou désactivez-les individuellement.",
     "glossary.layers.asr": "Biais ASR",
     "glossary.layers.asr.hint": "Oriente la reconnaissance vocale vers vos termes (prompt dans le cloud / hotwords en local).",
-    "glossary.layers.correction": "Correction LLM (transcription)",
-    "glossary.layers.correction.hint": "Ajoute les termes au prompt de correction grammaticale de l'action de transcription par défaut.",
+    "glossary.layers.correction": "Correction LLM (dictée)",
+    "glossary.layers.correction.hint": "Ajoute les termes au prompt de correction grammaticale de la correction par l'IA de la dictée (page Transcription).",
     "glossary.layers.rewrite": "LLM en traduction et réécriture",
     "glossary.layers.rewrite.hint": "Ajoute les termes aux prompts de traduction/réécriture (boutons manuels + actions par raccourci).",
-    "glossary.layers.fuzzy": "Remplacement approché (transcription)",
-    "glossary.layers.fuzzy.hint": "Aligne de façon déterministe les mots presque corrects sur les termes canoniques, transcription seulement.",
+    "glossary.layers.fuzzy": "Remplacement approché (dictée)",
+    "glossary.layers.fuzzy.hint": "Aligne de façon déterministe les mots presque corrects sur les termes canoniques, dictée seulement.",
     "glossary.layers.threshold": "Seuil d'approximation",
     "glossary.layers.threshold.hint": "À quel point un mot doit être proche d'un terme pour déclencher le remplacement approché (70–100 ; plus élevé = plus strict).",
 
@@ -358,9 +358,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} termes — tous actifs.",
     "glossary.terms.counter.used": "{total} termes sur {cap} utilisés · {remaining} encore disponibles.",
-    "glossary.terms.quick_limit": "La dictée rapide (ElevenLabs) ne prend que les {limit} premiers termes : {count} de vos {total} sont exclus de ses indications de reconnaissance. Le remplacement local les couvre toujours tous.",
+    "glossary.terms.quick_limit": "La reconnaissance en direct ({engine}) ne prend que les {limit} premiers termes : {count} de vos {total} sont exclus de ses indications de reconnaissance. Le remplacement local les couvre toujours tous.",
     "glossary.terms.quick_limit.tooltip": "Non envoyés à la dictée rapide :",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs refuse les termes de plus de {chars} caractères, la dictée rapide ignore donc : {terms}.",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs refuse les termes de plus de {chars} caractères, la reconnaissance en direct ignore donc : {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} termes sur {total} actifs — le reste est enregistré mais inactif. "
         "Pro les active tous (jusqu'à {pro_cap})."
@@ -571,12 +571,11 @@ STRINGS: dict[str, str] = {
     "main.glossary_pro.title": "Les termes de transcription sont une fonction Pro",
     "main.glossary_pro.body": "Pro ouvre la liste des termes depuis ici et la porte à 200, plus des packs métiers prêts à l'emploi. L'offre gratuite comprend 5 termes — ajoutez-les dans Paramètres → Glossaire.",
 
-    "main.hint.keyboard.transcribe": "Appuyez sur {key} pour dicter et transcrire.",
     "main.hint.keyboard.translate": "Appuyez sur {key} pour dicter, transcrire et traduire.",
     # Guillemets autour de {style} : un nom de style inventé par l'utilisateur
     # peut s'y insérer — impossible de l'accorder dans la phrase.
     "main.hint.keyboard.custom": "Appuyez sur {key} pour dicter, transcrire et renvoyer le texte dans le style « {style} ».",
-    "main.hint.keyboard.quick": "Appuyez sur {key} pour une dictée rapide sans traitement par l’IA.",
+    "main.hint.keyboard.quick": "Appuyez sur {key} pour dicter.",
     "main.hint.style.casual": "décontracté",
     "main.hint.style.professional": "professionnel",
     "main.hint.style.custom": "personnalisé",

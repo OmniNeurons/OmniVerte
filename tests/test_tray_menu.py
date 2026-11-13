@@ -38,7 +38,7 @@ def audio_writer():
     """A stand-in in a known state: keyboard mode, middle button, local/cpu."""
     aw = MagicMock(name="audio_writer")
     aw.activation_mode = "keyboard"
-    aw.hotkeys = {"transcribe": "F9", "translate": "F10", "custom": "F11"}
+    aw.hotkeys = {"quick": "F9", "translate": "F10", "custom": "F11"}
     aw.suppress_hotkeys = True
     aw.mouse_activation_button = "middle"
     aw.whisper_model_name = "small"

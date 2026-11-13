@@ -10,7 +10,11 @@ adds ~2.5s to settings-window startup.
 from __future__ import annotations
 
 LOCAL_WHISPER_MODELS: tuple[str, ...] = ("tiny", "base", "small", "medium", "large-v3")
+# gpt-transcribe replaces the gpt-4o-*-transcribe pair, which OpenAI shuts
+# down on 2027-02-26 (deprecations page); it also scored fewer errors on real
+# dictation takes. The old ones stay listed until then for users who chose them.
 OPENAI_TRANSCRIPTION_MODELS: tuple[str, ...] = (
+    "gpt-transcribe",
     "gpt-4o-mini-transcribe",
     "gpt-4o-transcribe",
     "whisper-1",

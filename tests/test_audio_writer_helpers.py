@@ -607,20 +607,50 @@ def _writer_with_fuzzy(flags: dict, active_action: str, *, client):
     return w
 
 
-def test_layer_c_runs_for_transcribe_and_survives_no_client():
-    w = _writer_with_fuzzy(_FUZZY_ON, "transcribe", client=None)
+_AI_ON = {**_FUZZY_ON, "DICTATION_AI_CORRECTION": "true"}
+
+
+def test_layer_c_survives_ai_correction_without_client():
+    w = _writer_with_fuzzy(_AI_ON, "quick", client=None)
     out = w._apply_action_transform("hello")
     assert w._apply_calls == ["hello"]      # layer C ran
     assert out == "CANON hello"             # ...and survived the no-client return
 
 
-def test_layer_c_runs_before_normalize_for_transcribe():
-    w = _writer_with_fuzzy(_FUZZY_ON, "transcribe", client=object())
+def test_layer_c_runs_before_ai_correction():
+    w = _writer_with_fuzzy(_AI_ON, "quick", client=object())
     captured = {}
-    w._normalize_to_primary = lambda raw: captured.__setitem__("raw", raw) or "NORM"
+    w._normalize_to_primary = lambda raw: captured.__setitem__("raw", raw) or "norm"
     out = w._apply_action_transform("hello")
-    assert captured["raw"] == "CANON hello"  # normalize sees the C-corrected text
-    assert out == "NORM"
+    assert captured["raw"] == "CANON hello"  # correction sees the C-corrected text
+    assert out == "Norm"                     # ...and the capital comes last
+
+
+def test_ai_correction_is_off_by_default():
+    w = _writer_with_fuzzy(_FUZZY_ON, "quick", client=object())
+    w._normalize_to_primary = lambda raw: pytest.fail("AI correction is opt-in")
+    assert w._apply_action_transform("hello") == "CANON hello"
+
+
+def test_ai_correction_failure_pastes_the_cleaned_text_and_notifies():
+    flags = {**_AI_ON, "GLOSSARY_FUZZY_REPLACE": "false", "QUICK_CLEAN_FILLERS": "true"}
+    w = _writer_with_fuzzy(flags, "quick", client=object())
+    notified = []
+    w._notify_api_error = lambda ctx, e, provider=None: notified.append((ctx, provider))
+
+    def _boom(raw):
+        raise TimeoutError("watchdog")
+    w._normalize_to_primary = _boom
+    assert w._apply_action_transform("э-э, привет") == "Привет"
+    assert notified == [("postprocess", "OpenAI")]
+
+
+def test_dictation_strips_fillers_whatever_recognized_it():
+    flags = {"QUICK_CLEAN_FILLERS": "true"}
+    w = _writer_with_fuzzy(flags, "quick", client=None)
+    assert w._apply_action_transform("так, эм, работает") == "Так, работает"
+    w = _writer_with_fuzzy({"QUICK_CLEAN_FILLERS": "false"}, "quick", client=None)
+    assert w._apply_action_transform("так, эм, работает") == "Так, эм, работает"
 
 
 def test_layer_c_skipped_for_translate(monkeypatch):
@@ -646,10 +676,10 @@ def test_layer_c_skipped_for_custom(monkeypatch):
 
 def test_layer_c_not_run_when_flag_off():
     flags = {**_FUZZY_ON, "GLOSSARY_FUZZY_REPLACE": "false"}
-    w = _writer_with_fuzzy(flags, "transcribe", client=None)
+    w = _writer_with_fuzzy(flags, "quick", client=None)
     out = w._apply_action_transform("hello")
     assert w._apply_calls == []
-    assert out == "hello"
+    assert out == "Hello"
 
 
 # ---------- live transcription resync after a settings save ----------
@@ -917,12 +947,33 @@ def test_quick_runs_layer_c_and_skips_llm():
     w._normalize_to_primary = lambda raw: pytest.fail("no normalize in quick")
     assert w._apply_action_transform("hello") == "CANON hello"
     assert w._apply_calls == ["hello"]
+    # Layer C runs first, then the capital — on whatever it produced.
+    w = _writer_with_fuzzy({**_FUZZY_ON, "GLOSSARY_FUZZY_REPLACE": "false"}, "quick",
+                           client=_ExplodingClient())
+    assert w._apply_action_transform("после") == "После"
 
 
 def test_quick_without_glossary_pastes_raw():
     flags = {**_FUZZY_ON, "GLOSSARY_FUZZY_REPLACE": "false"}
     w = _writer_with_fuzzy(flags, "quick", client=_ExplodingClient())
-    assert w._apply_action_transform("hello") == "hello"
+    assert w._apply_action_transform("hello") == "Hello"
+
+
+@pytest.mark.parametrize("raw, out", [
+    ("после сохранения продолжай", "После сохранения продолжай"),
+    ("  «давай» так", "  «Давай» так"),
+    ("Уже с заглавной.", "Уже с заглавной."),
+    ("iPhone не трогаем", "iPhone не трогаем"),
+    ("2G включи", "2G включи"),
+    ("https://example.com открой", "https://example.com открой"),
+    ("www.example.com", "www.example.com"),
+    ("user@mail.ru напиши", "user@mail.ru напиши"),
+    ("ёлка", "Ёлка"),
+    ("", ""),
+    ("  ", "  "),
+])
+def test_capitalize_first(raw, out):
+    assert aw.capitalize_first(raw) == out
 
 
 # ---------- realtime session thread ----------
@@ -1017,3 +1068,66 @@ def test_realtime_result_from_stale_session_is_dropped(monkeypatch):
     w._session_gen = 2                          # a newer recording started
     w.realtime_transcribe(session_gen=1)
     assert w.transcribed_segments == []
+
+
+@pytest.mark.parametrize("pref, gemini, eleven, expected", [
+    (None, "g", "e", "gemini"),                 # default prefers Gemini
+    ("elevenlabs", "g", "e", "elevenlabs"),
+    ("elevenlabs", "g", None, "gemini"),        # preferred key missing → the other
+    ("gemini", None, "e", "elevenlabs"),
+    ("bogus", "g", "e", "gemini"),
+    ("gemini", None, None, None),               # no key → batch chain
+])
+def test_pick_quick_engine(pref, gemini, eleven, expected):
+    w = _bare_writer()
+    w.config = SimpleNamespace(get=lambda k, d=None: {"QUICK_ENGINE": pref}.get(k, d))
+    w.gemini_api_key, w.elevenlabs_api_key = gemini, eleven
+    assert w._pick_quick_engine() == expected
+
+
+def _gemini_writer(monkeypatch, session, clean_fillers="true"):
+    from services import gemini_live
+
+    opened = []
+    monkeypatch.setattr(
+        gemini_live, "LiveSession", lambda key, setup: opened.append((key, setup)) or session
+    )
+    w = _realtime_writer(monkeypatch, session)
+    w._quick_engine = "gemini"
+    w.gemini_api_key = "gk"
+    w._gemini_live_setup = lambda: {"model": "models/gemini-3.5-transcribe-live"}
+    w.config = SimpleNamespace(get=lambda k, d=None: {"QUICK_CLEAN_FILLERS": clean_fillers}.get(k, d))
+    w.opened = opened
+    return w
+
+
+def test_gemini_session_stores_the_transcript_as_heard(monkeypatch):
+    # Fillers are dictation's cleanup (_dictation_text), not the session's:
+    # translate/custom get the transcript as heard and their LLM tidies it.
+    session = _FakeSession(result="Три промпта, э-э, три стиля.")
+    w = _gemini_writer(monkeypatch, session, clean_fillers="true")
+    w.realtime_transcribe(session_gen=1)
+    assert w.opened == [("gk", {"model": "models/gemini-3.5-transcribe-live"})]
+    assert session.sent == np.array([1, 2, 3], dtype=np.int16).tobytes()
+    assert w.transcribed_segments == ["Три промпта, э-э, три стиля."]
+
+
+def test_gemini_failure_replays_through_batch_and_names_gemini(monkeypatch):
+    from services.gemini_transcribe import GeminiApiError
+
+    w = _gemini_writer(monkeypatch, _FakeSession(error=GeminiApiError("down")))
+    w._transcribe_frames_batch = lambda frames: "from batch"
+    w.realtime_transcribe(session_gen=1)
+    assert w.transcribed_segments == ["from batch"]
+    assert w.notified == [("realtime_fallback", "Gemini")]
+
+
+def test_gemini_live_setup_uses_languages_and_glossary():
+    w = _bare_writer()
+    w.config = SimpleNamespace(get=lambda k, d=None: {"SECONDARY_LANGUAGE": "English"}.get(k, d))
+    w._whisper_language_hint = lambda: "ru"
+    w._glossary_asr_active = lambda: True
+    w.glossary = SimpleNamespace(canonical_terms=lambda: ["OmniVerte"])
+    tr = w._gemini_live_setup()["inputAudioTranscription"]
+    assert tr["languageCodes"] == ["ru-RU", "en-US"]
+    assert tr["customVocabulary"] == ["OmniVerte"]

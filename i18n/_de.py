@@ -47,10 +47,9 @@ STRINGS: dict[str, str] = {
     "tray.keys.change": "Ändern (Taste drücken)",
     "tray.hotkey.item": "{action}: {key}",
     "tray.hotkey.none": "nicht belegt",
-    "tray.action.transcribe": "Transkribieren",
     "tray.action.translate": "Transkribieren und übersetzen",
     "tray.action.custom": "Transkribieren und umschreiben",
-    "tray.action.quick": "Schnelles Diktat (ohne KI)",
+    "tray.action.quick": "Schnelles Diktat",
     "tray.suppress.on": "Harter Abfang: AN (Tasten werden verschluckt)",
     "tray.suppress.off": "Harter Abfang: AUS (Tasten gehen durch)",
     "tray.mouse_button": "Maustaste zur Aktivierung: {button}",
@@ -88,14 +87,12 @@ STRINGS: dict[str, str] = {
     "general.activation.mouse": "Maustaste",
 
     # „Taste erfassen“ steht in Anführungszeichen, wie im englischen „Catch the key“.
-    "general.hotkey.transcribe": "Transkribieren und einfügen",
-    "general.hotkey.transcribe.hint": "Diktieren, dann die Transkription mit Grammatikkorrektur und Zeichensetzung einfügen. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
     "general.hotkey.translate": "Transkribieren und übersetzen",
     "general.hotkey.translate.hint": "Diktieren, dann vor dem Einfügen in die Zweitsprache übersetzen. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
     "general.hotkey.custom": "Transkribieren und in eigenem Stil umschreiben",
     "general.hotkey.custom.hint": "Diktieren, dann im unten gewählten Stil umschreiben und einfügen. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
     "general.hotkey.quick": "Schnelles Diktat",
-    "general.hotkey.quick.hint": "Fügt den Rohtext ein, sobald Sie aufhören zu sprechen – ohne KI-Korrektur oder Umschreiben. Transkribiert live über ElevenLabs, wenn dessen Schlüssel auf der Seite „Transkription“ hinterlegt ist. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
+    "general.hotkey.quick.hint": "Fügt den Text ein, sobald Sie aufhören zu sprechen. Transkribiert live über Gemini oder ElevenLabs, wenn ein Schlüssel auf der Seite „Transkription“ hinterlegt ist; dort lässt sich auch die KI-Korrektur einschalten. Klicken Sie auf „Taste erfassen“, um eine Taste zu belegen.",
     "general.hotkey.none": "Nicht belegt",
 
     "general.stylepair.name": "Eigener Stil",
@@ -125,7 +122,6 @@ STRINGS: dict[str, str] = {
     # Werden in general.hotkey.released eingesetzt; als Genitiv formuliert
     # („Taste zum Transkribieren“ wäre umständlich), daher eigene Schlüssel und
     # nicht die Zeilenbeschriftungen wiederverwendet.
-    "general.action.transcribe": "zum Transkribieren",
     "general.action.translate": "zum Übersetzen",
     "general.action.custom": "für den eigenen Stil",
     "general.action.quick": "für schnelles Diktat",
@@ -210,10 +206,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. „Get API key“ → „Create API key“",
     "transcription.keys.gemini.help.step3": "3. Kopieren und hier einfügen",
     "transcription.keys.gemini.help.link": "Google AI Studio öffnen",
-    "transcription.quick.title": "Schnelles Diktat (ElevenLabs in Echtzeit)",
-    "transcription.quick.hint": "Wird nur von der Taste für schnelles Diktat genutzt: Die Sprache wird live beim Sprechen transkribiert und direkt nach dem Stopp eingefügt, ohne KI-Korrektur. Ohne Schlüssel nutzt diese Taste die Backends oben.",
+    "transcription.quick.title": "Live-Erkennung (Gemini Live, ElevenLabs)",
+    "transcription.quick.hint": "Die Tasten für schnelles Diktat, Übersetzen und eigenen Stil transkribieren live beim Sprechen, sodass der Text direkt nach dem Stopp bereitsteht. Mit dem Gemini-Schlüssel oben wird Gemini 3.5 Transcribe Live genutzt, sonst ElevenLabs. Ohne beide Schlüssel nutzen diese Tasten die Backends oben.",
     "transcription.quick.clean.label": "Füllwörter entfernen",
-    "transcription.quick.clean.hint": "ElevenLabs entfernt „äh“, „ähm“ und abgebrochene Wortanfänge aus dem Text.",
+    "transcription.quick.clean.hint": "Entfernt „äh“, „ähm“ und ähnliche Verzögerungslaute aus dem diktierten Text. ElevenLabs entfernt zudem abgebrochene Wortanfänge.",
+    "transcription.dictation.title": "Diktattext",
+    "transcription.dictation.hint": "Was mit dem Text des schnellen Diktats (auch des Diktats per Maustaste) vor dem Einfügen geschieht – egal, welcher Dienst ihn erkannt hat.",
+    "transcription.dictation.ai.label": "Text mit KI korrigieren",
+    "transcription.dictation.ai.hint": "Nach der Erkennung korrigiert gpt-4o-mini Grammatik und Tippfehler und bringt den Text in Ihre Hauptsprache. Benötigt einen OpenAI-Schlüssel und dauert etwa eine Sekunde länger. Am nützlichsten mit lokalem Whisper; Gemini Live liefert bereits fertigen Text.",
     "transcription.keys.elevenlabs.label": "ElevenLabs-Schlüssel",
     "transcription.keys.elevenlabs.placeholder": "ElevenLabs-API-Schlüssel eingeben",
     "transcription.keys.elevenlabs.help.title": "ElevenLabs-API-Schlüssel erstellen",
@@ -324,12 +324,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "Jede Schicht nutzt dieselben Begriffe; einzelne Schichten lassen sich an- oder ausschalten.",
     "glossary.layers.asr": "ASR-Beeinflussung",
     "glossary.layers.asr.hint": "Lenkt die Spracherkennung zu Ihren Begriffen hin (Cloud-Prompt / lokale Hotwords).",
-    "glossary.layers.correction": "LLM-Korrektur (Transkribieren)",
-    "glossary.layers.correction.hint": "Die Begriffe dem Grammatikkorrektur-Prompt der Standard-Transkriptionsaktion hinzufügen.",
+    "glossary.layers.correction": "LLM-Korrektur (Diktat)",
+    "glossary.layers.correction.hint": "Die Begriffe dem Grammatikkorrektur-Prompt der KI-Korrektur des Diktats hinzufügen (Seite „Transkription“).",
     "glossary.layers.rewrite": "LLM beim Übersetzen und Umschreiben",
     "glossary.layers.rewrite.hint": "Die Begriffe den Übersetzungs-/Umschreib-Prompts hinzufügen (Schaltflächen und Tastenkürzel-Aktionen).",
-    "glossary.layers.fuzzy": "Unscharfe Ersetzung (Transkribieren)",
-    "glossary.layers.fuzzy.hint": "Rastet ähnliche Wörter deterministisch auf kanonische Begriffe ein, nur beim Transkribieren.",
+    "glossary.layers.fuzzy": "Unscharfe Ersetzung (Diktat)",
+    "glossary.layers.fuzzy.hint": "Rastet ähnliche Wörter deterministisch auf kanonische Begriffe ein, nur beim Diktat.",
     "glossary.layers.threshold": "Unschärfe-Schwelle",
     "glossary.layers.threshold.hint": "Wie nah ein Wort an einem Begriff sein muss, damit die unscharfe Ersetzung greift (70–100; höher = strenger).",
 
@@ -355,9 +355,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} Begriffe — alle aktiv.",
     "glossary.terms.counter.used": "{total} von {cap} Begriffen genutzt · {remaining} weitere verfügbar.",
-    "glossary.terms.quick_limit": "Schnelles Diktat (ElevenLabs) berücksichtigt nur die ersten {limit} Begriffe: {count} Ihrer {total} fehlen in seinen Erkennungshinweisen. Die lokale Ersetzung gilt weiterhin für alle.",
+    "glossary.terms.quick_limit": "Die Live-Erkennung ({engine}) berücksichtigt nur die ersten {limit} Begriffe: {count} Ihrer {total} fehlen in ihren Erkennungshinweisen. Die lokale Ersetzung gilt weiterhin für alle.",
     "glossary.terms.quick_limit.tooltip": "Nicht im schnellen Diktat:",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs lehnt Begriffe mit mehr als {chars} Zeichen ab, daher überspringt das schnelle Diktat: {terms}.",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs lehnt Begriffe mit mehr als {chars} Zeichen ab, daher überspringt die Live-Erkennung: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} von {total} Begriffen aktiv — der Rest ist gespeichert, aber "
         "inaktiv. Pro aktiviert alle (bis zu {pro_cap})."
@@ -584,12 +584,11 @@ STRINGS: dict[str, str] = {
     "main.glossary_pro.title": "Begriffe für die Transkription sind eine Pro-Funktion",
     "main.glossary_pro.body": "Pro öffnet die Begriffsliste von hier und erweitert sie auf 200 Begriffe plus fertige Fachpakete. Kostenlos sind 5 Begriffe enthalten — fügen Sie diese unter Einstellungen → Glossar hinzu.",
 
-    "main.hint.keyboard.transcribe": "{key} drücken, um zu diktieren und zu transkribieren.",
     "main.hint.keyboard.translate": "{key} drücken, um zu diktieren, zu transkribieren und zu übersetzen.",
     # Anführungszeichen um {style}: dort kann ein vom Nutzer erfundener Stilname
     # eingesetzt werden — eine grammatische Angleichung ist unmöglich.
     "main.hint.keyboard.custom": "{key} drücken, um zu diktieren, zu transkribieren und den Text im Stil „{style}“ zurückzugeben.",
-    "main.hint.keyboard.quick": "{key} drücken für schnelles Diktat ohne KI-Verarbeitung.",
+    "main.hint.keyboard.quick": "{key} drücken, um zu diktieren.",
     "main.hint.style.casual": "locker",
     "main.hint.style.professional": "sachlich",
     "main.hint.style.custom": "eigenem",

@@ -45,10 +45,9 @@ STRINGS: dict[str, str] = {
     "tray.keys.change": "Cambia (premi un tasto)",
     "tray.hotkey.item": "{action}: {key}",
     "tray.hotkey.none": "non assegnato",
-    "tray.action.transcribe": "Trascrivi",
     "tray.action.translate": "Trascrivi + traduci",
     "tray.action.custom": "Trascrivi + stile",
-    "tray.action.quick": "Dettatura rapida (senza IA)",
+    "tray.action.quick": "Dettatura rapida",
     "tray.suppress.on": "Cattura totale: ON (tasti intercettati)",
     "tray.suppress.off": "Cattura totale: OFF (tasti lasciati passare)",
     "tray.mouse_button": "Pulsante del mouse per l'attivazione: {button}",
@@ -87,14 +86,12 @@ STRINGS: dict[str, str] = {
 
     # «Cattura il tasto» — le virgolette caporali seguono il resto del testo
     # italiano; in originale è “Catch the key”.
-    "general.hotkey.transcribe": "Trascrivi + incolla",
-    "general.hotkey.transcribe.hint": "Detta, poi incolla la trascrizione con correzione grammaticale e punteggiatura. Clicca «Cattura il tasto» per assegnare un tasto.",
     "general.hotkey.translate": "Trascrivi + traduci",
     "general.hotkey.translate.hint": "Detta, poi traduci nella lingua secondaria prima di incollare. Clicca «Cattura il tasto» per assegnare un tasto.",
     "general.hotkey.custom": "Trascrivi + riscrivi nello stile personalizzato",
     "general.hotkey.custom.hint": "Detta, poi riscrivi nello stile scelto qui sotto e incolla. Clicca «Cattura il tasto» per assegnare un tasto.",
     "general.hotkey.quick": "Dettatura rapida",
-    "general.hotkey.quick.hint": "Incolla il testo grezzo appena smetti di parlare, senza correzione o riscrittura con l’IA. Trascrive in diretta con ElevenLabs se la sua chiave è impostata nella pagina Trascrizione. Clicca «Cattura il tasto» per assegnare un tasto.",
+    "general.hotkey.quick.hint": "Incolla il testo appena smetti di parlare. Trascrive in diretta con Gemini o ElevenLabs se una chiave è impostata nella pagina Trascrizione; lì si può anche attivare la correzione con l’IA. Clicca «Cattura il tasto» per assegnare un tasto.",
     "general.hotkey.none": "Non assegnato",
 
     "general.stylepair.name": "Personalizzato",
@@ -124,7 +121,6 @@ STRINGS: dict[str, str] = {
     # Inseriti in general.hotkey.released. Chiavi separate dalle etichette
     # delle righe: l'errore nomina l'azione ("Il tasto di Traduci non può
     # essere vuoto") e una lingua deve poter flettere il nome in quel contesto.
-    "general.action.transcribe": "Trascrivi",
     "general.action.translate": "Traduci",
     "general.action.custom": "Stile personalizzato",
     "general.action.quick": "Dettatura rapida",
@@ -211,10 +207,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Copiala e incollala qui",
     "transcription.keys.gemini.help.link": "Apri Google AI Studio",
-    "transcription.quick.title": "Dettatura rapida (ElevenLabs in tempo reale)",
-    "transcription.quick.hint": "Usato solo dal tasto di dettatura rapida: il parlato viene trascritto in diretta mentre parli e incollato subito dopo lo stop, senza correzione IA. Senza chiave, quel tasto usa i backend qui sopra.",
+    "transcription.quick.title": "Riconoscimento in diretta (Gemini Live, ElevenLabs)",
+    "transcription.quick.hint": "I tasti di dettatura rapida, traduzione e stile personalizzato trascrivono il parlato in diretta mentre parli, così il testo è pronto subito dopo lo stop. Si usa Gemini 3.5 Transcribe Live se la chiave Gemini qui sopra è impostata, altrimenti ElevenLabs. Senza nessuna delle due chiavi, questi tasti usano i backend qui sopra.",
     "transcription.quick.clean.label": "Rimuovi intercalari",
-    "transcription.quick.clean.hint": "ElevenLabs elimina «ehm», «cioè» e le parole troncate dal testo.",
+    "transcription.quick.clean.hint": "Elimina «ehm», «uh» e suoni di esitazione simili dal testo dettato. ElevenLabs toglie anche le parole troncate.",
+    "transcription.dictation.title": "Testo della dettatura",
+    "transcription.dictation.hint": "Cosa succede al testo della dettatura rapida (anche quella col tasto del mouse) prima di incollarlo, qualunque servizio l’abbia riconosciuto.",
+    "transcription.dictation.ai.label": "Correggi il testo con l’IA",
+    "transcription.dictation.ai.hint": "Dopo il riconoscimento, gpt-4o-mini corregge grammatica e refusi e porta il testo nella tua lingua principale. Serve una chiave OpenAI e aggiunge circa un secondo. Più utile con Whisper locale; Gemini Live restituisce già un testo finito.",
     "transcription.keys.elevenlabs.label": "Chiave ElevenLabs",
     "transcription.keys.elevenlabs.placeholder": "Inserisci la chiave API di ElevenLabs",
     "transcription.keys.elevenlabs.help.title": "Come ottenere una chiave API ElevenLabs",
@@ -324,12 +324,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "Ogni livello usa gli stessi termini; attiva o disattiva i singoli livelli.",
     "glossary.layers.asr": "Bias ASR",
     "glossary.layers.asr.hint": "Orienta il riconoscimento vocale verso i tuoi termini (prompt nel cloud / hotwords in locale).",
-    "glossary.layers.correction": "Correzione LLM (trascrizione)",
-    "glossary.layers.correction.hint": "Aggiunge i termini al prompt di correzione grammaticale nell'azione di trascrizione predefinita.",
+    "glossary.layers.correction": "Correzione LLM (dettatura)",
+    "glossary.layers.correction.hint": "Aggiunge i termini al prompt di correzione grammaticale della correzione IA della dettatura (pagina Trascrizione).",
     "glossary.layers.rewrite": "LLM in traduzione e riscrittura",
     "glossary.layers.rewrite.hint": "Aggiunge i termini ai prompt di traduzione e riscrittura (pulsanti manuali + azioni con tasti di scelta rapida).",
-    "glossary.layers.fuzzy": "Sostituzione fuzzy (trascrizione)",
-    "glossary.layers.fuzzy.hint": "Riconduce in modo deterministico le parole quasi uguali ai termini canonici, solo in trascrizione.",
+    "glossary.layers.fuzzy": "Sostituzione fuzzy (dettatura)",
+    "glossary.layers.fuzzy.hint": "Riconduce in modo deterministico le parole quasi uguali ai termini canonici, solo nella dettatura.",
     "glossary.layers.threshold": "Soglia fuzzy",
     "glossary.layers.threshold.hint": "Quanto una parola deve essere vicina a un termine perché scatti la sostituzione fuzzy (70–100; più alto = più severo).",
 
@@ -353,9 +353,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} termini — tutti attivi.",
     "glossary.terms.counter.used": "{total} di {cap} termini usati · altri {remaining} disponibili.",
-    "glossary.terms.quick_limit": "La dettatura rapida (ElevenLabs) usa solo i primi {limit} termini: {count} dei tuoi {total} restano fuori dai suoi suggerimenti di riconoscimento. La sostituzione locale li copre comunque tutti.",
+    "glossary.terms.quick_limit": "Il riconoscimento in diretta ({engine}) usa solo i primi {limit} termini: {count} dei tuoi {total} restano fuori dai suoi suggerimenti di riconoscimento. La sostituzione locale li copre comunque tutti.",
     "glossary.terms.quick_limit.tooltip": "Non inviati alla dettatura rapida:",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs rifiuta i termini più lunghi di {chars} caratteri, quindi la dettatura rapida salta: {terms}.",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs rifiuta i termini più lunghi di {chars} caratteri, quindi il riconoscimento in diretta salta: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} di {total} termini attivi — gli altri sono salvati ma inattivi. "
         "Pro li attiva tutti (fino a {pro_cap})."
@@ -571,12 +571,11 @@ STRINGS: dict[str, str] = {
     "main.glossary_pro.title": "I termini di trascrizione sono una funzione Pro",
     "main.glossary_pro.body": "Pro apre l'elenco dei termini da qui e lo porta a 200, più pacchetti professionali pronti. Il piano gratuito include 5 termini: aggiungili in Impostazioni → Glossario.",
 
-    "main.hint.keyboard.transcribe": "Premi {key} per dettare e trascrivere.",
     "main.hint.keyboard.translate": "Premi {key} per dettare, trascrivere e tradurre.",
     # Virgolette intorno a {style}: lì può finire un nome di stile inventato
     # dall'utente, impossibile da concordare con «stile».
     "main.hint.keyboard.custom": "Premi {key} per dettare, trascrivere e restituire il testo in stile «{style}».",
-    "main.hint.keyboard.quick": "Premi {key} per una dettatura rapida senza elaborazione IA.",
+    "main.hint.keyboard.quick": "Premi {key} per dettare.",
     "main.hint.style.casual": "informale",
     "main.hint.style.professional": "professionale",
     "main.hint.style.custom": "personalizzato",

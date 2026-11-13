@@ -178,6 +178,7 @@ def test_quick_dictation_limit_names_the_terms_left_out(page, monkeypatch):
     from ui.settings_pages.glossary_page import QUICK_KEYTERMS_LIMIT
 
     monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page._quick_engine = "elevenlabs"
     page.enable_switch.setChecked(True)
     page.asr_switch.setChecked(True)
     names = [f"Name{i}" for i in range(QUICK_KEYTERMS_LIMIT)]
@@ -197,6 +198,7 @@ def test_quick_dictation_limit_hidden_within_limit(page, monkeypatch):
     import licensing
 
     monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page._quick_engine = "elevenlabs"
     page.enable_switch.setChecked(True)
     page.asr_switch.setChecked(True)
     page.names_edit.setPlainText("Acme\nKubernetes")
@@ -207,9 +209,46 @@ def test_quick_dictation_warns_about_terms_too_long_for_elevenlabs(page, monkeyp
     import licensing
 
     monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page._quick_engine = "elevenlabs"
     page.enable_switch.setChecked(True)
     page.asr_switch.setChecked(True)
     page.services_edit.setPlainText("Kubernetes\nбалансировщик нагрузки")
     assert not page.quick_limit_label.isHidden()
     assert "балансировщик нагрузки" in page.quick_limit_label.text()
     assert "Kubernetes" not in page.quick_limit_label.text()
+
+
+def _many_terms_page(page, monkeypatch, engine, n):
+    import licensing
+
+    monkeypatch.setattr(licensing, "get_entitlement", lambda: _Unlimited())
+    page._quick_engine = engine
+    page.enable_switch.setChecked(True)
+    page.asr_switch.setChecked(True)
+    page.names_edit.setPlainText("\n".join(f"Name{i}" for i in range(n)))
+    page.services_edit.setPlainText("балансировщик нагрузки")    # > 20 chars
+
+
+def test_gemini_live_limit_is_its_own_and_has_no_length_cap(page, monkeypatch):
+    from ui.settings_pages.glossary_page import GEMINI_LIVE_TERMS_LIMIT
+
+    _many_terms_page(page, monkeypatch, "gemini", GEMINI_LIVE_TERMS_LIMIT - 1)
+    assert page.quick_limit_label.isHidden()       # 100 terms fit, long one too
+    _many_terms_page(page, monkeypatch, "gemini", GEMINI_LIVE_TERMS_LIMIT + 1)
+    assert not page.quick_limit_label.isHidden()
+    assert "Gemini" in page.quick_limit_label.text()
+    assert page.quick_limit_label.toolTip().endswith("балансировщик нагрузки")
+
+
+def test_no_live_engine_key_no_live_warning(page, monkeypatch):
+    _many_terms_page(page, monkeypatch, None, 200)
+    assert page.quick_limit_label.isHidden()
+
+
+def test_load_from_picks_the_engine_from_saved_keys(page):
+    cfg = FakeConfig({"QUICK_ENGINE": "gemini"})
+    cfg.quick_engine = lambda: "elevenlabs"
+    page.load_from(cfg)
+    assert page._quick_engine == "elevenlabs"
+    page.load_from(FakeConfig())                   # no quick_engine → no warning
+    assert page._quick_engine is None

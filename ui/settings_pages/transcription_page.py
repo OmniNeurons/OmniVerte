@@ -295,9 +295,10 @@ class TranscriptionPage(BasePage):
         self._groq_loaded_mask: Optional[str] = None
         self._gemini_loaded_mask: Optional[str] = None
 
-        # --- Quick mode (ElevenLabs realtime) ---
+        # --- Live recognition (Gemini Live / ElevenLabs realtime) ---
         # Its own card, not a row in the keys card above: ElevenLabs is not a
-        # member of the priority chain — it serves only the quick hotkey.
+        # member of the priority chain — it serves only the live keys
+        # (quick, translate, custom). Gemini Live reuses the Gemini key above.
         card, body = make_section_card(
             t("transcription.quick.title"),
             t("transcription.quick.hint"),
@@ -321,6 +322,16 @@ class TranscriptionPage(BasePage):
                 stretch_widget=True,
             )
         )
+        content_layout.addWidget(card)
+        self._elevenlabs_loaded_mask: Optional[str] = None
+
+        # --- Dictation text: what happens to the transcript before the paste.
+        # Its own card: it applies whatever recognized the speech (live engine,
+        # cloud batch or local Whisper), not just the live engines above.
+        card, body = make_section_card(
+            t("transcription.dictation.title"),
+            t("transcription.dictation.hint"),
+        )
         self.quick_clean_switch = SwitchButton()
         self.quick_clean_switch.setOnText(t("common.on"))
         self.quick_clean_switch.setOffText(t("common.off"))
@@ -330,8 +341,16 @@ class TranscriptionPage(BasePage):
             hint=t("transcription.quick.clean.hint"),
             align_right=True,
         ))
+        self.dictation_ai_switch = SwitchButton()
+        self.dictation_ai_switch.setOnText(t("common.on"))
+        self.dictation_ai_switch.setOffText(t("common.off"))
+        body.addWidget(make_form_row(
+            t("transcription.dictation.ai.label"),
+            self.dictation_ai_switch,
+            hint=t("transcription.dictation.ai.hint"),
+            align_right=True,
+        ))
         content_layout.addWidget(card)
-        self._elevenlabs_loaded_mask: Optional[str] = None
 
         # --- Per-backend models ---
         card, body = make_section_card(
@@ -511,6 +530,9 @@ class TranscriptionPage(BasePage):
         self.quick_clean_switch.setChecked(
             (config.get("QUICK_CLEAN_FILLERS") or "true").strip().lower() == "true"
         )
+        self.dictation_ai_switch.setChecked(
+            (config.get("DICTATION_AI_CORRECTION") or "false").strip().lower() == "true"
+        )
 
         # Model selectors
         for backend_id, combo in self.model_combos.items():
@@ -605,6 +627,10 @@ class TranscriptionPage(BasePage):
         config.set(
             "QUICK_CLEAN_FILLERS",
             "true" if self.quick_clean_switch.isChecked() else "false",
+        )
+        config.set(
+            "DICTATION_AI_CORRECTION",
+            "true" if self.dictation_ai_switch.isChecked() else "false",
         )
 
         for backend_id, combo in self.model_combos.items():

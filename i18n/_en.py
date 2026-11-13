@@ -52,10 +52,9 @@ STRINGS: dict[str, str] = {
     "tray.hotkey.none": "not set",
     # Action names for the hotkey submenu. Keyed from HOTKEY_ACTIONS'
     # `label_key` in services/audio_writer.py.
-    "tray.action.transcribe": "Transcribe",
     "tray.action.translate": "Transcribe + translate",
     "tray.action.custom": "Transcribe + style",
-    "tray.action.quick": "Quick dictation (no AI)",
+    "tray.action.quick": "Quick dictation",
     "tray.suppress.on": "Hard-capture: ON (keys swallowed)",
     "tray.suppress.off": "Hard-capture: OFF (pass-through)",
     "tray.mouse_button": "Mouse activation button: {button}",
@@ -97,14 +96,12 @@ STRINGS: dict[str, str] = {
     "general.activation.keyboard": "Keyboard hotkeys",
     "general.activation.mouse": "Mouse button",
 
-    "general.hotkey.transcribe": "Transcribe + paste",
-    "general.hotkey.transcribe.hint": "Dictate, then paste the transcription with grammar correction and punctuation. Click “Catch the key” to grab a key.",
     "general.hotkey.translate": "Transcribe + translate",
     "general.hotkey.translate.hint": "Dictate, then translate to the secondary language before pasting. Click “Catch the key” to grab a key.",
     "general.hotkey.custom": "Transcribe + rewrite custom style",
     "general.hotkey.custom.hint": "Dictate, then rewrite using the style chosen below and paste. Click “Catch the key” to grab a key.",
     "general.hotkey.quick": "Quick dictation",
-    "general.hotkey.quick.hint": "Paste the raw transcript the moment you stop talking — no AI correction or rewrite. Streams live through ElevenLabs when its key is set on the Transcription page. Click “Catch the key” to grab a key.",
+    "general.hotkey.quick.hint": "Paste the transcript the moment you stop talking. Streams live through Gemini or ElevenLabs when a key is set on the Transcription page; AI correction can be turned on there too. Click “Catch the key” to grab a key.",
     "general.hotkey.none": "Not set",
 
     # The `[F11] Custom → [ style ▾ ]` panel. {key} is the live hotkey, so the
@@ -139,7 +136,6 @@ STRINGS: dict[str, str] = {
     # rather than reusing the row labels: the message names the action ("Translate
     # now has no key"), and a language that inflects the name in that
     # frame must be free to.
-    "general.action.transcribe": "Transcribe",
     "general.action.translate": "Translate",
     "general.action.custom": "Custom-style",
     "general.action.quick": "Quick dictation",
@@ -229,10 +225,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. Get API key → Create API key",
     "transcription.keys.gemini.help.step3": "3. Copy it and paste it here",
     "transcription.keys.gemini.help.link": "Open Google AI Studio",
-    "transcription.quick.title": "Quick dictation (ElevenLabs realtime)",
-    "transcription.quick.hint": "Used only by the quick-dictation hotkey: speech is transcribed live while you talk and pasted right after you stop, without AI correction. Without a key, that hotkey uses the backends above.",
+    "transcription.quick.title": "Live recognition (Gemini Live, ElevenLabs)",
+    "transcription.quick.hint": "The quick-dictation, translate and custom-style hotkeys transcribe speech live while you talk, so the text is ready right after you stop. Gemini 3.5 Transcribe Live is used when the Gemini key above is set, otherwise ElevenLabs. Without either key, these hotkeys use the backends above.",
     "transcription.quick.clean.label": "Remove filler words",
-    "transcription.quick.clean.hint": "ElevenLabs drops “um”, “uh” and cut-off false starts from the text.",
+    "transcription.quick.clean.hint": "Drops “um”, “uh” and similar hesitation sounds from dictated text. ElevenLabs also removes cut-off false starts.",
+    "transcription.dictation.title": "Dictation text",
+    "transcription.dictation.hint": "What happens to the quick-dictation text before it is pasted (also the mouse button's dictation), whichever service recognized it.",
+    "transcription.dictation.ai.label": "Correct text with AI",
+    "transcription.dictation.ai.hint": "After recognition, gpt-4o-mini fixes grammar and typos and brings the text into your primary language. Needs an OpenAI key and adds about a second. Most useful with local Whisper; Gemini Live already returns finished text.",
     "transcription.keys.elevenlabs.label": "ElevenLabs key",
     "transcription.keys.elevenlabs.placeholder": "Enter ElevenLabs API key",
     "transcription.keys.elevenlabs.help.title": "Getting an ElevenLabs API key",
@@ -358,12 +358,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "Each layer uses the same terms; turn individual layers on or off.",
     "glossary.layers.asr": "ASR bias",
     "glossary.layers.asr.hint": "Bias the speech recogniser toward your terms (cloud prompt / local hotwords).",
-    "glossary.layers.correction": "LLM correction (transcribe)",
-    "glossary.layers.correction.hint": "Add the terms to the grammar-correction prompt on the default transcribe action.",
+    "glossary.layers.correction": "LLM correction (dictation)",
+    "glossary.layers.correction.hint": "Add the terms to the grammar-correction prompt of dictation's AI correction (Transcription page).",
     "glossary.layers.rewrite": "LLM in translate & rewrite",
     "glossary.layers.rewrite.hint": "Add the terms to the translate/rewrite prompts (manual buttons + hotkey actions).",
-    "glossary.layers.fuzzy": "Fuzzy replace (transcribe)",
-    "glossary.layers.fuzzy.hint": "Deterministically snap near-miss words to canonical terms, transcribe only.",
+    "glossary.layers.fuzzy": "Fuzzy replace (dictation)",
+    "glossary.layers.fuzzy.hint": "Deterministically snap near-miss words to canonical terms, dictation only.",
     "glossary.layers.threshold": "Fuzzy threshold",
     "glossary.layers.threshold.hint": "How close a word must be to a term before fuzzy replace fires (70–100; higher = stricter).",
 
@@ -391,9 +391,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} terms — all active.",
     "glossary.terms.counter.used": "{total} of {cap} terms used · {remaining} more available.",
-    "glossary.terms.quick_limit": "Quick dictation (ElevenLabs) takes only the first {limit} terms: {count} of your {total} are left out of its recognition hints. Local replacement still covers all of them.",
+    "glossary.terms.quick_limit": "Live recognition ({engine}) takes only the first {limit} terms: {count} of your {total} are left out of its recognition hints. Local replacement still covers all of them.",
     "glossary.terms.quick_limit.tooltip": "Not sent to quick dictation:",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs rejects terms longer than {chars} characters, so quick dictation skips: {terms}.",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs rejects terms longer than {chars} characters, so live recognition skips: {terms}.",
     "glossary.terms.counter.over_free": (
         "{cap} of {total} terms active — the rest are saved but inactive. "
         "Pro activates all of them (up to {pro_cap})."
@@ -667,10 +667,9 @@ STRINGS: dict[str, str] = {
     # key per line, joined with "\n" by the window — the newline stays out of
     # the catalog, where a translator could lose it. `{key}` is a live hotkey
     # name (F9/F10/F11), Latin everywhere.
-    "main.hint.keyboard.transcribe": "Press {key} to dictate and transcribe.",
     "main.hint.keyboard.translate": "Press {key} to dictate, transcribe, and translate.",
     "main.hint.keyboard.custom": "Press {key} to dictate, transcribe, and return in {style} style.",
-    "main.hint.keyboard.quick": "Press {key} for quick dictation without AI processing.",
+    "main.hint.keyboard.quick": "Press {key} to dictate.",
     # `{style}` above: the two built-in styles, or — when the custom hotkey is
     # set to "custom" — the user's own CUSTOM_STYLE_NAME, verbatim. Separate
     # from `general.style.*`, which names the same three in a dropdown: this is

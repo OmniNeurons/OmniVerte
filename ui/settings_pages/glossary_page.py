@@ -51,6 +51,7 @@ from services.elevenlabs_realtime import (
     MAX_KEYTERMS as QUICK_KEYTERMS_LIMIT,
     usable_keyterms,
 )
+from services.gemini_live import MAX_VOCABULARY_TERMS as GEMINI_LIVE_TERMS_LIMIT
 from services.glossary import Glossary
 from services.text_operations import LANGUAGE_TO_WHISPER_CODE
 from ui import style
@@ -202,6 +203,11 @@ class GlossaryPage(BasePage):
         # Own glossary instance — the lists/replacements live in glossary.json,
         # not config.env. Built before BasePage.__init__ calls build().
         self._glossary = Glossary()
+        # Live-recognition engine whose term limits the warning reflects
+        # ("gemini" | "elevenlabs" | None = no engine key, no warning). Set by
+        # load_from from the saved keys; read once there, not per keystroke —
+        # every Credential Manager read is a system call.
+        self._quick_engine = None
         super().__init__(parent)
 
     def build(self, content_layout: QVBoxLayout) -> None:
@@ -612,6 +618,9 @@ class GlossaryPage(BasePage):
     # ---------- Config / Glossary interface ----------
 
     def load_from(self, config: Config) -> None:
+        quick_engine = getattr(config, "quick_engine", None)
+        self._quick_engine = quick_engine() if quick_engine else None
+
         def flag(key: str, default: str = "true") -> bool:
             return (config.get(key) or default).strip().lower() == "true"
 
@@ -814,20 +823,29 @@ class GlossaryPage(BasePage):
         return terms if cap < 0 else terms[:cap]
 
     def _update_quick_limit(self, *_) -> None:
-        """Warn when quick dictation would drop terms: past its keyterm cap, or
-        longer than the server accepts. Mirrors usable_keyterms exactly."""
-        active = self.enable_switch.isChecked() and self.asr_switch.isChecked()
+        """Warn when live recognition would drop terms: past its engine's cap,
+        or (ElevenLabs) longer than the server accepts. Mirrors what
+        gemini_live.build_setup / elevenlabs usable_keyterms send."""
+        active = (self._quick_engine is not None
+                  and self.enable_switch.isChecked() and self.asr_switch.isChecked())
         terms = self._typed_bias_terms() if active else []
-        sent, too_long = usable_keyterms(terms)
-        too_long_keys = {term.casefold() for term in too_long}
-        over_cap = [
-            term for term in terms if term.casefold() not in too_long_keys
-        ][len(sent):]
+        if self._quick_engine == "gemini":
+            engine, limit = "Gemini", GEMINI_LIVE_TERMS_LIMIT
+            too_long = []
+            over_cap = terms[limit:]
+        else:
+            engine, limit = "ElevenLabs", QUICK_KEYTERMS_LIMIT
+            sent, too_long = usable_keyterms(terms)
+            too_long_keys = {term.casefold() for term in too_long}
+            over_cap = [
+                term for term in terms if term.casefold() not in too_long_keys
+            ][len(sent):]
         lines = []
         if over_cap:
             lines.append(t(
                 "glossary.terms.quick_limit",
-                limit=QUICK_KEYTERMS_LIMIT,
+                engine=engine,
+                limit=limit,
                 total=len(terms),
                 count=len(over_cap),
             ))

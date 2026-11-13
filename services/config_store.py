@@ -40,22 +40,32 @@ LLM_MAX_TOKENS_MAX = 16000
 
 # Fallback values for non-secret settings.
 DEFAULTS: dict[str, str] = {
-    "ACTIVATION_KEY": "F8",
     "ACTIVATION_MODE": "keyboard",
     "MOUSE_ACTIVATION_BUTTON": "middle",
     # Per-action global hotkeys (keyboard mode). Each is hard-captured
     # (suppressed) so the focused app never sees the keypress — see
-    # HOTKEYS_SUPPRESS. HOTKEY_TRANSCRIBE supersedes the legacy ACTIVATION_KEY.
-    "HOTKEY_TRANSCRIBE": "F8",
+    # HOTKEYS_SUPPRESS. (The old transcribe action and its HOTKEY_TRANSCRIBE /
+    # ACTIVATION_KEY are gone — see _migrate_drop_transcribe_action.)
     "HOTKEY_TRANSLATE": "F10",
     "HOTKEY_CUSTOM": "F11",
-    # Quick dictation: ElevenLabs realtime streaming (when ELEVENLABS_API_KEY
-    # is set), no LLM pass — the raw transcript is pasted the moment speech ends.
-    # Fresh installs only; an upgrade gets a free key via _migrate_quick_hotkey.
+    # Dictation ("quick"): realtime streaming (Gemini Live or ElevenLabs, see
+    # QUICK_ENGINE), pasted the moment speech ends; no LLM pass unless
+    # DICTATION_AI_CORRECTION. Fresh installs only; an upgrade keeps its old
+    # dictation key via _migrate_drop_transcribe_action.
     "HOTKEY_QUICK": "F9",
-    # ElevenLabs `no_verbatim`: the server drops fillers and false starts
-    # ("э-э-э", "пр-- к--"), the cleanup the LLM pass does on the other keys.
+    # Dictation's optional gpt-4o-mini pass (grammar + PRIMARY language, the
+    # old transcribe action's correction). Off: the live engines already
+    # return finished text; worth it mostly for local Whisper.
+    "DICTATION_AI_CORRECTION": "false",
+    # Drop fillers on the quick key, the cleanup the LLM pass does on the other
+    # keys: ElevenLabs `no_verbatim` (server-side, also false starts), Gemini
+    # Live a local strip of hesitation sounds ("э-э", "эм").
     "QUICK_CLEAN_FILLERS": "true",
+    # Quick-key streaming engine: gemini (Gemini 3.5 Transcribe Live, needs
+    # GEMINI_API_KEY) | elevenlabs (Scribe v2 Realtime, ELEVENLABS_API_KEY).
+    # The preferred engine's key missing → the other one, no key → batch chain.
+    # Gemini is the default: ~3x fewer errors on real takes (A/B 2026-11-12).
+    "QUICK_ENGINE": "gemini",
     # Which rewrite style the custom hotkey applies: casual | professional |
     # custom. On a fresh install (no config yet) F11 defaults to the
     # "professional" preset — a useful out-of-the-box rewrite that needs no
@@ -80,7 +90,7 @@ DEFAULTS: dict[str, str] = {
     # Per-backend model preference. The currently active model
     # (WHISPER_MODEL) is derived from these based on the active backend.
     "MODEL_LOCAL": "small",
-    "MODEL_OPENAI": "gpt-4o-mini-transcribe",
+    "MODEL_OPENAI": "gpt-transcribe",
     "MODEL_GROQ": "whisper-large-v3-turbo",
     "MODEL_GEMINI": "gemini-3.5-transcribe",
     # Mic capture: empty INPUT_DEVICE = PortAudio system default. Non-empty
@@ -121,7 +131,7 @@ DEFAULTS: dict[str, str] = {
     "GLOSSARY_ENABLED": "false",
     # Layer B: bias the ASR step (cloud `prompt`, local faster-whisper `hotwords`).
     "GLOSSARY_ASR_BIAS": "true",
-    # Layer A in the transcribe auto-correction (_normalize_to_primary).
+    # Layer A in dictation's AI correction (_normalize_to_primary).
     "GLOSSARY_LLM_CORRECTION": "true",
     # Layer A in translate/rewrite — both the auto translate/custom hotkey actions
     # and the manual main-window buttons. Separate flag so the glossary can stay
@@ -140,6 +150,27 @@ def _appdata_dir() -> Path:
     """Per-user config directory. Uses %APPDATA% on Windows, ~/.config elsewhere."""
     base = os.environ.get("APPDATA") or str(Path.home() / ".config")
     return Path(base) / APP_NAME
+
+
+QUICK_ENGINES = ("gemini", "elevenlabs")
+
+
+def choose_quick_engine(preferred, has_gemini: bool, has_elevenlabs: bool):
+    """Streaming engine for the live keys: "gemini" | "elevenlabs" | None.
+
+    QUICK_ENGINE names the preference (unknown/empty → gemini); when its key is
+    missing the other engine is used if that one has a key, so a single key
+    always works. None = no engine key: those keys use the batch chain.
+    """
+    preferred = (preferred or "gemini").strip().lower()
+    if preferred not in QUICK_ENGINES:
+        preferred = "gemini"
+    has = {"gemini": has_gemini, "elevenlabs": has_elevenlabs}
+    other = "elevenlabs" if preferred == "gemini" else "gemini"
+    for engine in (preferred, other):
+        if has[engine]:
+            return engine
+    return None
 
 
 class Config:
@@ -162,8 +193,7 @@ class Config:
 
         # Must run before defaults are applied — they inspect which keys the
         # user actually has on file.
-        self._migrate_hotkeys()
-        self._migrate_quick_hotkey()
+        self._migrate_drop_transcribe_action()
         self._migrate_ui_language()
 
         for k, v in DEFAULTS.items():
@@ -171,36 +201,37 @@ class Config:
 
         self._migrate_preferred_language()
 
-    def _migrate_hotkeys(self) -> None:
-        """One-shot: carry a customised legacy ACTIVATION_KEY into HOTKEY_TRANSCRIBE.
+    def _migrate_drop_transcribe_action(self) -> None:
+        """One-shot: fold the retired transcribe action into dictation.
 
-        Older versions had a single ACTIVATION_KEY. The per-action design keys
-        transcription off HOTKEY_TRANSCRIBE; if a user customised ACTIVATION_KEY
-        (e.g. to F7) we copy it so their key isn't silently reset to the
-        default. Only fires when HOTKEY_TRANSCRIBE isn't already on file.
+        Transcribe (batch chain + LLM correction) was dictation's twin; it is
+        gone, and its correction lives on as DICTATION_AI_CORRECTION. Its key
+        (HOTKEY_TRANSCRIBE, or the older single ACTIVATION_KEY) goes to
+        dictation when dictation has none — an install from before the quick
+        action existed keeps the key it dictates with. Never steals a key
+        translate/custom hold. Must run before defaults are applied.
         """
-        if "HOTKEY_TRANSCRIBE" not in self._values:
-            legacy = self._values.get("ACTIVATION_KEY")
-            if legacy:
-                self._values["HOTKEY_TRANSCRIBE"] = legacy
-                logger.info(f"Migrated legacy ACTIVATION_KEY={legacy} → HOTKEY_TRANSCRIBE")
-
-    def _migrate_quick_hotkey(self) -> None:
-        """One-shot: give an upgrading user's new quick action a free key.
-
-        Its default (F9) was the transcribe default before the two swapped,
-        so on an existing install F9 is usually taken already. Take F9, else
-        F8, else leave the action unbound ("") — never steal a key the user
-        is already pressing for something else.
-        """
-        if "HOTKEY_QUICK" in self._values:
-            return
+        legacy = self._values.pop("HOTKEY_TRANSCRIBE", None)
+        older = self._values.pop("ACTIVATION_KEY", None)
+        self._values.pop("TRANSCRIBE_HOTKEY_RETIRED", None)
+        if legacy is None:
+            legacy = older
+        legacy = (legacy or "").strip()
         taken = {
             (self._values.get(k) or DEFAULTS[k]).strip().lower()
-            for k in ("HOTKEY_TRANSCRIBE", "HOTKEY_TRANSLATE", "HOTKEY_CUSTOM")
+            for k in ("HOTKEY_TRANSLATE", "HOTKEY_CUSTOM")
         }
-        free = [k for k in (DEFAULTS["HOTKEY_QUICK"], "F8") if k.lower() not in taken]
-        self._values["HOTKEY_QUICK"] = free[0] if free else ""
+        if "HOTKEY_QUICK" not in self._values:
+            # Pre-quick install: its dictation key was the transcribe one.
+            choice = legacy or DEFAULTS["HOTKEY_QUICK"]
+            self._values["HOTKEY_QUICK"] = "" if choice.lower() in taken else choice
+        elif (not (self._values["HOTKEY_QUICK"] or "").strip()
+              and legacy and legacy.lower() not in taken):
+            self._values["HOTKEY_QUICK"] = legacy
+        else:
+            return
+        logger.info(f"Transcribe action retired → dictation key "
+                    f"{self._values['HOTKEY_QUICK'] or '(unbound)'}")
 
     def _migrate_ui_language(self) -> None:
         """One-shot: pin existing installs to English so an update never
@@ -313,6 +344,14 @@ class Config:
 
     def has_secret(self, key: str) -> bool:
         return bool(self.get_secret(key))
+
+    def quick_engine(self):
+        """choose_quick_engine for the stored QUICK_ENGINE and keys."""
+        return choose_quick_engine(
+            self.get("QUICK_ENGINE"),
+            self.has_secret("GEMINI_API_KEY"),
+            self.has_secret("ELEVENLABS_API_KEY"),
+        )
 
     # ---------- backend priority helpers ----------
 

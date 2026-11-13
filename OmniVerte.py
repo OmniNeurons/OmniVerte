@@ -218,7 +218,7 @@ def main():
     )
 
     if audio_writer.activation_mode == 'keyboard':
-      logger.info(f"Press the {audio_writer.activation_key} key for voice input.")
+      logger.info(f"Press the {audio_writer.hotkeys.get('quick') or '(unbound)'} key for voice input.")
     else:
       logger.info(f"Press the {audio_writer.mouse_activation_button} mouse button for voice input.")
 

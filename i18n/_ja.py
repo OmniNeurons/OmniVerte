@@ -48,10 +48,9 @@ STRINGS: dict[str, str] = {
     "tray.keys.change": "変更(キーを押す)",
     "tray.hotkey.item": "{action}: {key}",
     "tray.hotkey.none": "未設定",
-    "tray.action.transcribe": "文字起こし",
     "tray.action.translate": "文字起こし + 翻訳",
     "tray.action.custom": "文字起こし + スタイル変換",
-    "tray.action.quick": "クイック口述（AIなし）",
+    "tray.action.quick": "クイック口述",
     "tray.suppress.on": "強制キャプチャ: オン(キーを遮断)",
     "tray.suppress.off": "強制キャプチャ: オフ(キーを通過)",
     "tray.mouse_button": "起動用マウスボタン: {button}",
@@ -88,14 +87,12 @@ STRINGS: dict[str, str] = {
     "general.activation.keyboard": "キーボードショートカット",
     "general.activation.mouse": "マウスボタン",
 
-    "general.hotkey.transcribe": "文字起こし + 貼り付け",
-    "general.hotkey.transcribe.hint": "口述すると、文法補正と句読点を付けた文字起こしを貼り付けます。「キーを取得」をクリックしてキーを割り当てます。",
     "general.hotkey.translate": "文字起こし + 翻訳",
     "general.hotkey.translate.hint": "口述すると、副言語に翻訳してから貼り付けます。「キーを取得」をクリックしてキーを割り当てます。",
     "general.hotkey.custom": "文字起こし + カスタムスタイルに書き換え",
     "general.hotkey.custom.hint": "口述すると、下で選んだスタイルに書き換えて貼り付けます。「キーを取得」をクリックしてキーを割り当てます。",
     "general.hotkey.quick": "クイック口述",
-    "general.hotkey.quick.hint": "話し終えた瞬間に未加工のテキストを貼り付けます。AIによる校正や書き換えはありません。「文字起こし」ページでElevenLabsのキーを設定すると、話しながらリアルタイムで文字起こしします。「キーを取得」をクリックしてキーを割り当てます。",
+    "general.hotkey.quick.hint": "話し終えた瞬間にテキストを貼り付けます。「文字起こし」ページでGeminiまたはElevenLabsのキーを設定すると、話しながらリアルタイムで文字起こしします。AIによる校正も同じページで有効にできます。「キーを取得」をクリックしてキーを割り当てます。",
     "general.hotkey.none": "未設定",
 
     "general.stylepair.name": "カスタム",
@@ -125,7 +122,6 @@ STRINGS: dict[str, str] = {
     # Action names interpolated into general.hotkey.released. Kept as their
     # own keys (not the row labels) so the error frame can name the action
     # naturally in Japanese ("〜の…").
-    "general.action.transcribe": "文字起こし",
     "general.action.translate": "翻訳",
     "general.action.custom": "カスタムスタイル",
     "general.action.quick": "クイック口述",
@@ -212,10 +208,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2.「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. コピーしてここに貼り付け",
     "transcription.keys.gemini.help.link": "Google AI Studioを開く",
-    "transcription.quick.title": "クイック口述（ElevenLabs リアルタイム）",
-    "transcription.quick.hint": "クイック口述のショートカット専用です。話している間にリアルタイムで文字起こしし、停止直後にAI校正なしで貼り付けます。キーがない場合、このショートカットは上のバックエンドを使います。",
+    "transcription.quick.title": "リアルタイム認識（Gemini Live、ElevenLabs）",
+    "transcription.quick.hint": "クイック口述・翻訳・カスタムスタイルのショートカットは話している間にリアルタイムで文字起こしするため、停止直後にテキストが用意できます。上でGeminiのキーを設定していればGemini 3.5 Transcribe Liveを、なければElevenLabsを使います。どちらのキーもない場合、これらのショートカットは上のバックエンドを使います。",
     "transcription.quick.clean.label": "フィラーを除去",
-    "transcription.quick.clean.hint": "ElevenLabs が「えー」「あのー」などのフィラーや言いかけの語をテキストから取り除きます。",
+    "transcription.quick.clean.hint": "口述したテキストから「um」などのためらいの音を取り除きます。ElevenLabsでは「えー」「あのー」などのフィラーや言いかけの語も取り除きます。",
+    "transcription.dictation.title": "口述テキスト",
+    "transcription.dictation.hint": "クイック口述（マウスボタンでの口述も含む）のテキストを貼り付ける前の処理です。どのサービスで認識した場合も適用されます。",
+    "transcription.dictation.ai.label": "AIでテキストを校正",
+    "transcription.dictation.ai.hint": "認識後、gpt-4o-miniが文法や誤字を直し、テキストを主言語にそろえます。OpenAIのキーが必要で、約1秒長くかかります。ローカルのWhisperで特に役立ちます。Gemini Liveはそのまま使えるテキストを返します。",
     "transcription.keys.elevenlabs.label": "ElevenLabsキー",
     "transcription.keys.elevenlabs.placeholder": "ElevenLabs APIキーを入力",
     "transcription.keys.elevenlabs.help.title": "ElevenLabs APIキーの取得方法",
@@ -328,12 +328,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "各レイヤーは同じ用語を使います。レイヤーごとに個別にオン・オフできます。",
     "glossary.layers.asr": "ASRバイアス",
     "glossary.layers.asr.hint": "音声認識をあなたの用語に寄せます(クラウドはprompt / ローカルはhotwords)。",
-    "glossary.layers.correction": "LLM補正(文字起こし)",
-    "glossary.layers.correction.hint": "既定の文字起こしアクションで、文法補正のプロンプトに用語を追加します。",
+    "glossary.layers.correction": "LLM補正(口述)",
+    "glossary.layers.correction.hint": "口述のAI校正(「文字起こし」ページ)で、文法補正のプロンプトに用語を追加します。",
     "glossary.layers.rewrite": "翻訳・書き換えでのLLM",
     "glossary.layers.rewrite.hint": "翻訳・書き換えのプロンプトに用語を追加します(手動ボタン + ショートカットキーのアクション)。",
-    "glossary.layers.fuzzy": "あいまい置換(文字起こし)",
-    "glossary.layers.fuzzy.hint": "近い単語を定型の用語に確定的にそろえます。文字起こしのみ。",
+    "glossary.layers.fuzzy": "あいまい置換(口述)",
+    "glossary.layers.fuzzy.hint": "近い単語を定型の用語に確定的にそろえます。口述のみ。",
     "glossary.layers.threshold": "あいまい一致のしきい値",
     "glossary.layers.threshold.hint": "あいまい置換が働くために単語が用語にどれだけ近い必要があるか(70〜100、大きいほど厳格)。",
 
@@ -361,9 +361,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "用語{total}件 — すべて有効。",
     "glossary.terms.counter.used": "{cap}件中{total}件の用語を使用中 · あと{remaining}件追加できます。",
-    "glossary.terms.quick_limit": "クイック口述（ElevenLabs）は先頭の {limit} 語しか使いません。{total} 語のうち {count} 語は認識ヒントに含まれません。ローカル置換は引き続きすべてに適用されます。",
+    "glossary.terms.quick_limit": "リアルタイム認識（{engine}）は先頭の {limit} 語しか使いません。{total} 語のうち {count} 語は認識ヒントに含まれません。ローカル置換は引き続きすべてに適用されます。",
     "glossary.terms.quick_limit.tooltip": "クイック口述に送られない用語：",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs は {chars} 文字を超える用語を受け付けないため、クイック口述では次を省きます：{terms}。",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs は {chars} 文字を超える用語を受け付けないため、リアルタイム認識では次を省きます：{terms}。",
     "glossary.terms.counter.over_free": (
         "{total}件中{cap}件の用語が有効 — 残りは保存されていますが無効です。"
         "Proならすべて有効になります(最大{pro_cap}件)。"
@@ -570,10 +570,9 @@ STRINGS: dict[str, str] = {
     "main.glossary_pro.body": "Pro ではここから用語リストを開き、200 語まで登録でき、専門パックも使えます。無料版は 5 語までです。設定 → 用語集 から追加できます。",
 
     # Empty-state onboarding. {key} is a live hotkey name (F9/F10/F11), Latin.
-    "main.hint.keyboard.transcribe": "{key}を押して口述・文字起こし。",
     "main.hint.keyboard.translate": "{key}を押して口述・文字起こし・翻訳。",
     "main.hint.keyboard.custom": "{key}を押して口述・文字起こしし、{style}スタイルで返します。",
-    "main.hint.keyboard.quick": "{key}を押してAI処理なしのクイック口述。",
+    "main.hint.keyboard.quick": "{key}を押して口述します。",
     # {style} above: the two built-in styles or the user's own name, verbatim.
     "main.hint.style.casual": "カジュアル",
     "main.hint.style.professional": "ビジネス",

@@ -50,7 +50,8 @@ from services.transcription_models import (
     OPENAI_TRANSCRIPTION_MODELS,
 )
 from services.api_errors import CloudApiError, classify_api_error
-from services import elevenlabs_realtime, gemini_transcribe
+from services import elevenlabs_realtime, gemini_live, gemini_transcribe
+from services.config_store import choose_quick_engine
 from services.glossary import Glossary
 from services.audio_prep import (
     normalize_enhance_profile,
@@ -75,11 +76,17 @@ CLOUD_BACKEND_LABELS = {"openai": "OpenAI", "groq": "Groq", "gemini": "Gemini"}
 # before the UI language is known, and the tray menu that renders it is rebuilt
 # on every change. Resolving the label here would freeze it in the boot locale.
 HOTKEY_ACTIONS = {
-    "transcribe": {"label_key": "tray.action.transcribe", "config_key": "HOTKEY_TRANSCRIBE", "default": "F8"},
     "translate":  {"label_key": "tray.action.translate",  "config_key": "HOTKEY_TRANSLATE",  "default": "F10"},
     "custom":     {"label_key": "tray.action.custom",     "config_key": "HOTKEY_CUSTOM",     "default": "F11"},
     "quick":      {"label_key": "tray.action.quick",      "config_key": "HOTKEY_QUICK",      "default": "F9"},
 }
+
+
+# Actions whose audio streams to the quick engine (Gemini Live / ElevenLabs)
+# while the user speaks, when that engine has a key — i.e. every action (the
+# mouse button starts dictation, "quick", too). Translate/custom then run
+# their LLM pass on that transcript.
+REALTIME_ACTIONS = ("quick", "translate", "custom")
 
 
 def resolve_hotkey(config, action_id):
@@ -118,6 +125,32 @@ logger = logging.getLogger(__name__)
 # `git add` can never commit a clip of the user's voice into the repo again.
 _TEMP_DIR = os.path.join(tempfile.gettempdir(), "OmniVerte")
 os.makedirs(_TEMP_DIR, exist_ok=True)
+
+
+# Opening punctuation a dictated text may start with, skipped to reach the
+# first word.
+_LEADING_PUNCT = "\"'«„“‘([{¿¡—–-…"
+
+
+def capitalize_first(text: str) -> str:
+  """Start the text with a capital letter, as a sentence would.
+
+  The quick key has no LLM pass, and the streaming engines start a take in
+  lower case whenever they read it as a continuation ("после сохранения…").
+  Only a plain lower-case first word is touched: one that already carries a
+  capital (iPhone, eBay), starts with a digit (2G), or looks like a link, path
+  or address stays exactly as transcribed.
+  """
+  i = 0
+  while i < len(text) and (text[i].isspace() or text[i] in _LEADING_PUNCT):
+    i += 1
+  word = text[i:].split(None, 1)[0] if text[i:].strip() else ""
+  if (not word or not word[0].isalpha() or not word[0].islower()
+      or any(c.isupper() for c in word)
+      or any(m in word for m in ("://", "@", "/", "\\"))
+      or word.lower().startswith("www.")):
+    return text
+  return text[:i] + text[i].upper() + text[i + 1:]
 
 
 def _model_key_for_backend(backend: str) -> str:
@@ -326,7 +359,9 @@ class AudioWriter:
   # defaults keep partially-built instances (tests, early hotkeys) on the
   # ordinary batch path.
   _session_source = "batch"
+  _quick_engine = "elevenlabs"
   elevenlabs_api_key = None
+  gemini_api_key = None
 
   def __init__(self, config, ui_bridge, history_manager):
     """
@@ -435,14 +470,12 @@ class AudioWriter:
     self._session_source = "batch"
 
     self.activation_mode = config.get("ACTIVATION_MODE", 'keyboard')  # or 'mouse'
-    self.activation_key = config.get("ACTIVATION_KEY", 'F8')  # legacy; mouse-mode + migration only
     self.mouse_activation_button = config.get("MOUSE_ACTIVATION_BUTTON", 'middle')  # 'left'|'middle'|'right'
     self.double_tap_opens_window = (
         config.get("DOUBLE_TAP_OPENS_WINDOW", "true") or "true"
     ).lower() == "true"
 
-    # Per-action hotkeys; "" = unbound. (A customised legacy ACTIVATION_KEY is
-    # carried into HOTKEY_TRANSCRIBE by Config._migrate_hotkeys.)
+    # Per-action hotkeys; "" = unbound.
     self.hotkeys = {aid: resolve_hotkey(config, aid) for aid in HOTKEY_ACTIONS}
     # Hard-capture (swallow) hotkeys via a low-level keyboard hook.
     self.suppress_hotkeys = (
@@ -451,9 +484,9 @@ class AudioWriter:
     # action id -> keyboard.add_hotkey handle, so we can remove them on rebind.
     self.activation_hooks: dict[str, object] = {}
     # The action the *current* recording was started with (locked at start).
-    self.active_action = "transcribe"
+    self.active_action = "quick"
     # Set by the hotkey callback just before toggling, consumed on start.
-    self._pending_action = "transcribe"
+    self._pending_action = "quick"
 
     self.last_toggle_time = 0
 
@@ -764,7 +797,6 @@ class AudioWriter:
     """
     config = self.config
     self.activation_mode = config.get("ACTIVATION_MODE", 'keyboard')
-    self.activation_key = config.get("ACTIVATION_KEY", 'F8')
     self.mouse_activation_button = config.get("MOUSE_ACTIVATION_BUTTON", 'middle')
     self.double_tap_opens_window = (
         config.get("DOUBLE_TAP_OPENS_WINDOW", "true") or "true"
@@ -846,7 +878,7 @@ class AudioWriter:
     """
     if target == 'openai':
       self.change_transcription_model(
-          self.config.get("MODEL_OPENAI", "gpt-4o-mini-transcribe")
+          self.config.get("MODEL_OPENAI", "gpt-transcribe")
       )
       return
 
@@ -878,7 +910,7 @@ class AudioWriter:
     # background. The CUDA->CPU fallback lives in the worker.
     self._reinit_backend_async()
 
-  def listen_for_new_activation_key(self, action_id="transcribe"):
+  def listen_for_new_activation_key(self, action_id="quick"):
     """Wait for the user to press a key and bind it to `action_id`."""
     spec = HOTKEY_ACTIONS.get(action_id)
     if spec is None:
@@ -892,7 +924,7 @@ class AudioWriter:
     self.change_activation_key(new_key, action_id)
     logger.info(f"New key for '{action_id}' set: {self.hotkeys[action_id]}")
 
-  def change_activation_key(self, new_key, action_id="transcribe"):
+  def change_activation_key(self, new_key, action_id="quick"):
     """Rebind `action_id` to `new_key`, persist it, and re-register all hotkeys."""
     spec = HOTKEY_ACTIONS.get(action_id)
     if spec is None:
@@ -907,10 +939,6 @@ class AudioWriter:
         logger.info(f"Key {new_key} moved from '{other_id}' to '{action_id}'")
     self.hotkeys[action_id] = new_key
     self.config.set(spec["config_key"], new_key)
-    if action_id == "transcribe":
-      # Keep the legacy key in sync for migration / back-compat.
-      self.activation_key = new_key
-      self.config.set("ACTIVATION_KEY", new_key)
     # Re-register everything so the new binding takes effect immediately and
     # the old hook is removed (no double-firing).
     self._unhook_all()
@@ -1349,10 +1377,11 @@ class AudioWriter:
     logger.info("Streaming transcription completed.")
 
   def realtime_transcribe(self, session_gen=None):
-    """Quick-hotkey counterpart of streaming_transcribe: stream PCM to
-    ElevenLabs Scribe v2 Realtime while the user speaks.
+    """Quick-hotkey counterpart of streaming_transcribe: stream PCM to the
+    quick engine (Gemini Live or ElevenLabs Scribe v2 Realtime, see
+    _pick_quick_engine) while the user speaks.
 
-    The server commits segments on pauses, so at stop only the short tail is
+    The server transcribes as the audio arrives, so at stop only the tail is
     left to finalize — the transcript is ready almost the moment speech ends.
     A local copy of every frame is kept: if the session fails (no network,
     bad key, quota, session limit) the audio is replayed through the ordinary
@@ -1363,10 +1392,7 @@ class AudioWriter:
     def _current():
       return session_gen is None or session_gen == self._session_gen
 
-    logger.info(f"Transcribing via ElevenLabs realtime ({elevenlabs_realtime.MODEL_ID})")
-    session = elevenlabs_realtime.RealtimeSession(
-        self.elevenlabs_api_key, self._realtime_url()
-    )
+    session, provider = self._open_quick_session()
     session.start()
     frames = []
     while True:
@@ -1381,11 +1407,11 @@ class AudioWriter:
 
     if _current():
       self.ui_bridge.safe_emit_status("processing")
+    finish_started = time.monotonic()
     try:
-      finish_started = time.monotonic()
       text = session.finish()
       logger.info(
-          f"ElevenLabs realtime transcript ({time.monotonic() - finish_started:.2f}s "
+          f"{provider} realtime transcript ({time.monotonic() - finish_started:.2f}s "
           f"after stop): {text!r}"
       )
     except Exception as e:
@@ -1394,7 +1420,7 @@ class AudioWriter:
       # Told only once the replay worked: the text did arrive, just the slow
       # way. A failed replay reports itself ("not transcribed") instead.
       if text and _current():
-        self._notify_api_error("realtime_fallback", e, provider="ElevenLabs")
+        self._notify_api_error("realtime_fallback", e, provider=provider)
 
     text = self._scrub_glossary_echo(text or "")
     if not text.strip():
@@ -1404,6 +1430,41 @@ class AudioWriter:
     else:
       self.transcribed_segments.append(text)
     logger.info("Realtime transcription completed.")
+
+  def _pick_quick_engine(self):
+    """Engine for a live session: "gemini" | "elevenlabs" | None (no key → batch).
+
+    Same rule as the settings pages (config_store.choose_quick_engine), on the
+    keys this engine instance holds.
+    """
+    config = getattr(self, "config", None)    # absent on partially-built instances
+    return choose_quick_engine(config.get("QUICK_ENGINE") if config else None,
+                               bool(self.gemini_api_key), bool(self.elevenlabs_api_key))
+
+  def _open_quick_session(self):
+    """(session, provider label) for _quick_engine."""
+    if self._quick_engine == "gemini":
+      setup = self._gemini_live_setup()
+      logger.info(f"Transcribing via Gemini Live ({gemini_live.MODEL_ID})")
+      session = gemini_live.LiveSession(self.gemini_api_key, setup)
+      return session, "Gemini"
+    url = self._realtime_url()
+    logger.info(f"Transcribing via ElevenLabs realtime ({elevenlabs_realtime.MODEL_ID})")
+    session = elevenlabs_realtime.RealtimeSession(self.elevenlabs_api_key, url)
+    return session, "ElevenLabs"
+
+  def _gemini_live_setup(self):
+    """Live setup: PRIMARY (+SECONDARY for code-switching) and layer B."""
+    from services.text_operations import LANGUAGE_TO_WHISPER_CODE
+    secondary = LANGUAGE_TO_WHISPER_CODE.get(self.config.get("SECONDARY_LANGUAGE") or "")
+    vocabulary = None
+    if self._glossary_asr_active():
+      vocabulary = self.glossary.canonical_terms() or None
+    return gemini_live.build_setup(
+        language=self._whisper_language_hint(),
+        secondary_languages=[secondary] if secondary else None,
+        vocabulary=vocabulary,
+    )
 
   def _realtime_url(self):
     """Session URL: PRIMARY (+SECONDARY for code-switching) and layer B."""
@@ -1696,7 +1757,8 @@ class AudioWriter:
   def _normalize_to_primary(self, raw):
     """Grammar-correct the transcript and ensure it ends up in PRIMARY language.
 
-    This is the F8 (default) action. It guarantees the output language without
+    Dictation's optional AI pass (DICTATION_AI_CORRECTION). It guarantees the
+    output language without
     over-correcting mixed-language speech: foreign words, brand/product names,
     proper nouns, technical terms, code, and URLs that are embedded in
     otherwise-primary text are kept verbatim — only prose that is wholly in
@@ -1741,10 +1803,32 @@ Text to process:
     logger.debug(f"OpenAI response: {result[:100]}...")
     return result
 
+  def _dictation_text(self, raw):
+    """Dictation's cleanup after layer C: hesitation sounds, then the optional
+    AI correction. Speed first — both are local/cheap unless the user turned
+    the AI pass on, and a failed AI pass falls back to the cleaned text."""
+    if self._flag_on("QUICK_CLEAN_FILLERS"):
+      # Gemini VERBATIM and the batch chain keep "э-э"; ElevenLabs drops them
+      # server-side already (no_verbatim) — stripping again is a no-op there.
+      raw = gemini_live.strip_hesitations(raw)
+    if not raw.strip() or not self._flag_on("DICTATION_AI_CORRECTION"):
+      return raw
+    if not self.client:
+      logger.info("AI correction is on but there is no OpenAI client — pasting as is")
+      return raw
+    try:
+      return self._normalize_to_primary(raw) or raw
+    except Exception as e:
+      logger.warning(f"AI correction failed, pasting uncorrected text: {e}")
+      self._notify_api_error("postprocess", e, provider="OpenAI")
+      return raw
+
   def _apply_action_transform(self, raw):
     """Turn the raw transcript into the final text based on the active action.
 
-    transcribe -> grammar-correct, always output in PRIMARY language
+    quick      -> dictation: layer C, filler strip (QUICK_CLEAN_FILLERS), the
+                  optional AI correction (DICTATION_AI_CORRECTION: grammar +
+                  PRIMARY language), then a capital first letter
     translate  -> always translate into SECONDARY language (fixed target)
     custom     -> rewrite using the style picked for the custom hotkey
                   (HOTKEY_CUSTOM_STYLE): casual / professional preset, or the
@@ -1757,20 +1841,19 @@ Text to process:
     raw = raw or ""
     action = self.active_action
 
-    # Layer C: deterministic glossary replacements, transcribe only. Applied up
+    # Layer C: deterministic glossary replacements, dictation only. Applied up
     # front (before the client check / LLM call) so the canonical forms survive
     # even with no client or a failed correction — both of those fall back to
     # `raw`. translate/custom never get layer C (they keep the source meaning).
-    if action in ("transcribe", "quick") and self._glossary_fuzzy_active():
+    if action == "quick" and self._glossary_fuzzy_active():
       raw = self.glossary.apply_replacements(
           raw,
           threshold=self._glossary_fuzzy_threshold(),
           max_terms=self._glossary_fuzzy_max_terms(),
       )
 
-    # Quick: speed over polish — layer C above is the only post-processing.
     if action == "quick":
-      return raw
+      return capitalize_first(self._dictation_text(raw))
 
     if not self.client:
       logger.info(f"No OpenAI client — pasting raw transcript (action='{action}')")
@@ -1823,8 +1906,8 @@ Text to process:
             max_tokens=max_tokens,
         ) or raw
 
-      # Default action: grammar-correct + normalize to PRIMARY language.
-      return self._normalize_to_primary(raw)
+      logger.warning(f"Unknown action '{action}' — pasting raw transcript")
+      return raw
     except Exception as e:
       # Post-processing is a nice-to-have. On failure (network, timeout,
       # rate-limit) fall back to the raw transcript so the user still gets
@@ -1856,10 +1939,10 @@ Text to process:
 
     corrected_text = self._apply_action_transform(input_text)
     # Reset to the default action so any subsequent stray start (mouse mode, a
-    # race, the safety-timer auto-stop) defaults to plain transcription — but
-    # only if we still own the session, else we'd wipe the new session's action.
+    # race, the safety-timer auto-stop) defaults to dictation — but only if we
+    # still own the session, else we'd wipe the new session's action.
     if _current():
-      self.active_action = "transcribe"
+      self.active_action = "quick"
 
     # Hand off to the main window + session history before the paste, so the
     # user sees it appear in the GUI even if Ctrl+V fails for some reason.
@@ -1972,14 +2055,15 @@ Text to process:
       # Lock the action for this session at start. Pressing a *different*
       # hotkey while recording won't change it — it just stops the session.
       self.active_action = self._pending_action
-      self._session_source = (
-          "realtime"
-          if self.active_action == "quick" and self.elevenlabs_api_key
-          else "batch"
-      )
-      if self.active_action == "quick" and self._session_source == "batch":
+      engine = (self._pick_quick_engine()
+                if self.active_action in REALTIME_ACTIONS else None)
+      self._session_source = "realtime" if engine else "batch"
+      if engine:
+        self._quick_engine = engine
+      elif self.active_action in REALTIME_ACTIONS:
         logger.info(
-            "Quick dictation without ELEVENLABS_API_KEY: using the batch chain"
+            f"'{self.active_action}' without GEMINI_API_KEY / ELEVENLABS_API_KEY: "
+            "using the batch chain"
         )
       logger.debug(
           f"Recording started in '{self.active_action}' mode "
@@ -1997,10 +2081,11 @@ Text to process:
             f"{self.active_action} -> {self._pending_action}"
         )
         self.active_action = self._pending_action
-      # Realtime sessions stop at once: the whole point is zero wait, and the
-      # 300ms double-tap window would be the single largest delay left. Still
-      # off the hook thread — stop_recording joins the session thread.
-      if self._session_source == "realtime":
+      # A realtime quick session stops at once: the whole point is zero wait,
+      # and the 300ms double-tap window would be the single largest delay
+      # left. Translate/custom keep the window — their LLM pass dwarfs it.
+      # Still off the hook thread — stop_recording joins the session thread.
+      if self._session_source == "realtime" and self.active_action == "quick":
         threading.Thread(target=self._deferred_stop, daemon=True).start()
         return
       # Defer the stop to give a possible double-tap a chance to land.
@@ -2100,10 +2185,10 @@ Text to process:
         mouse.unhook(self.mouse_hook)
 
       def mouse_handler(event):
-        """Handle mouse events for recording activation (transcribe only)."""
+        """Handle mouse events for recording activation (dictation only)."""
         if hasattr(event, 'event_type') and event.event_type == 'down':
           if getattr(event, 'button', None) == self.mouse_activation_button:
-            self._pending_action = "transcribe"
+            self._pending_action = "quick"
             self.toggle_recording()
 
       self.mouse_hook = mouse.hook(mouse_handler)

@@ -70,8 +70,8 @@ def writer(clock, timers):
     w._skip_next_paste = False
     w.double_tap_opens_window = True
     w.is_recording = False
-    w.active_action = "transcribe"
-    w._pending_action = "transcribe"
+    w.active_action = "quick"
+    w._pending_action = "quick"
     w.ui_bridge = MagicMock()
     w.start_recording = MagicMock()
     w.stop_recording = MagicMock()
@@ -158,14 +158,19 @@ def test_quick_without_key_falls_back_to_batch(writer):
     assert writer.active_action == "quick"     # still no LLM pass
 
 
-def test_other_actions_stay_batch_even_with_key(writer):
-    writer.elevenlabs_api_key = "k"
-    writer._pending_action = "transcribe"
+@pytest.mark.parametrize("action", ["translate", "custom"])
+def test_translate_and_custom_stream_too(writer, action):
+    writer.gemini_api_key = "k"
+    writer.elevenlabs_api_key = None
+    writer._pending_action = action
     writer.toggle_recording()
-    assert writer._session_source == "batch"
+    assert writer._session_source == "realtime"
+    assert writer._quick_engine == "gemini"
+    assert writer.active_action == action       # its LLM pass still runs
 
 
-def test_realtime_stop_skips_the_double_tap_window(writer, clock, timers, monkeypatch):
+@pytest.fixture
+def threads(monkeypatch):
     started = []
 
     class _Thread:
@@ -176,12 +181,29 @@ def test_realtime_stop_skips_the_double_tap_window(writer, clock, timers, monkey
             started.append(self.target)
 
     monkeypatch.setattr(aw.threading, "Thread", _Thread)
+    return started
+
+
+def test_realtime_quick_stop_skips_the_double_tap_window(writer, clock, timers, threads):
     writer._session_source = "realtime"
     writer.is_recording = True
-    writer.active_action = "quick"
-    writer._pending_action = "translate"
+    writer.active_action = "translate"
+    writer._pending_action = "quick"
     clock["now"] += 5
     writer.toggle_recording()
     assert timers == []                         # no 300ms deferral
-    assert started == [writer._deferred_stop]   # stop runs at once, off-hook
-    assert writer.active_action == "translate"  # closing key still wins
+    assert threads == [writer._deferred_stop]   # stop runs at once, off-hook
+    assert writer.active_action == "quick"      # closing key still wins
+
+
+@pytest.mark.parametrize("closing", ["translate", "custom"])
+def test_realtime_llm_stop_keeps_the_double_tap_window(writer, clock, timers, threads, closing):
+    writer._session_source = "realtime"
+    writer.is_recording = True
+    writer.active_action = "quick"
+    writer._pending_action = closing
+    clock["now"] += 5
+    writer.toggle_recording()
+    assert threads == []
+    assert len(timers) == 1 and timers[0].interval == 0.3
+    assert writer.active_action == closing

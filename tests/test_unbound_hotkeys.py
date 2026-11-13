@@ -34,7 +34,8 @@ class _DictConfig:
 
 def test_resolve_hotkey_missing_key_gets_default_empty_stays_unbound():
     cfg = _DictConfig({"HOTKEY_QUICK": "", "HOTKEY_TRANSLATE": " F7 "})
-    assert resolve_hotkey(cfg, "transcribe") == "F8"
+    assert resolve_hotkey(cfg, "custom") == "F11"          # missing → default
+    assert "transcribe" not in aw.HOTKEY_ACTIONS          # the retired action
     assert resolve_hotkey(cfg, "quick") == ""
     assert resolve_hotkey(cfg, "translate") == "F7"
 
@@ -51,26 +52,26 @@ def _keyboard_writer(hotkeys):
 def test_press_and_talk_skips_unbound_actions(monkeypatch):
     add = MagicMock(return_value="handle")
     monkeypatch.setattr(aw.keyboard, "add_hotkey", add)
-    w = _keyboard_writer({"transcribe": "F9", "translate": "", "custom": "F11", "quick": ""})
+    w = _keyboard_writer({"translate": "", "custom": "F11", "quick": "F9"})
     w.press_and_talk()
     assert sorted(c.args[0] for c in add.call_args_list) == ["F11", "F9"]
-    assert set(w.activation_hooks) == {"transcribe", "custom"}
+    assert set(w.activation_hooks) == {"quick", "custom"}
 
 
 def test_tray_rebind_takes_the_key_from_its_previous_action(monkeypatch):
     monkeypatch.setattr(aw.time, "sleep", lambda _s: None)
-    w = _keyboard_writer({"transcribe": "F9", "translate": "F10", "custom": "F11", "quick": "F8"})
+    w = _keyboard_writer({"translate": "F10", "custom": "F11", "quick": "F8"})
     w.config = _DictConfig()
     w._unhook_all = MagicMock()
     w.press_and_talk = MagicMock()
 
-    w.change_activation_key("f9", "quick")
+    w.change_activation_key("f10", "quick")
 
-    assert w.hotkeys["quick"] == "f9"
-    assert w.hotkeys["transcribe"] == ""
-    assert w.config.values["HOTKEY_TRANSCRIBE"] == ""
-    assert w.config.values["HOTKEY_QUICK"] == "f9"
-    assert w.hotkeys["translate"] == "F10"     # untouched
+    assert w.hotkeys["quick"] == "f10"
+    assert w.hotkeys["translate"] == ""
+    assert w.config.values["HOTKEY_TRANSLATE"] == ""
+    assert w.config.values["HOTKEY_QUICK"] == "f10"
+    assert w.hotkeys["custom"] == "F11"        # untouched
 
 
 # ---------- settings page ----------
@@ -86,8 +87,8 @@ def page(qapp, appdata):
 
     p = GeneralPage()
     p.mode_keyboard.setChecked(True)
-    for key, edit in zip(("F9", "F8", "F10", "F11"),
-                         (p.hotkey_edit, p.hotkey_quick_edit,
+    for key, edit in zip(("F9", "F10", "F11"),
+                         (p.hotkey_quick_edit,
                           p.hotkey_translate_edit, p.hotkey_custom_edit)):
         edit.setText(key)
     yield p
@@ -99,11 +100,11 @@ def test_caught_key_is_released_from_the_other_action(page, monkeypatch):
 
     info = MagicMock()
     monkeypatch.setattr(general_page.InfoBar, "info", info)
-    page._release_hotkey(page.hotkey_quick_edit, "F9")
+    page._release_hotkey(page.hotkey_translate_edit, "F9")
     assert info.call_count == 1
-    assert page.hotkey_edit.text() == ""
-    assert page.hotkey_translate_edit.text() == "F10"
-    assert page.hotkey_quick_edit.text() == "F8"   # the target is the capture's to set
+    assert page.hotkey_quick_edit.text() == ""
+    assert page.hotkey_custom_edit.text() == "F11"
+    assert page.hotkey_translate_edit.text() == "F10"   # the target is the capture's to set
 
 
 def test_empty_field_validates_and_saves_as_unbound(page, monkeypatch):
@@ -118,7 +119,7 @@ def test_empty_field_validates_and_saves_as_unbound(page, monkeypatch):
     page.apply_to(cfg)
     assert Config().get("HOTKEY_TRANSLATE") == ""            # survives a reload
     assert resolve_hotkey(Config(), "translate") == ""
-    assert Config().get("HOTKEY_TRANSCRIBE") == "F9"
+    assert Config().get("HOTKEY_QUICK") == "F9"
 
 
 def test_all_fields_empty_is_rejected(page):

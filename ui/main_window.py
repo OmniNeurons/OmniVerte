@@ -1172,8 +1172,6 @@ class MainWindow(FramelessWindow):
             return (self._config.get(config_key) or "").strip()
 
         lines = []
-        if key := key_of("HOTKEY_TRANSCRIBE"):
-            lines.append(t("main.hint.keyboard.transcribe", key=key))
         if key := key_of("HOTKEY_QUICK"):
             lines.append(t("main.hint.keyboard.quick", key=key))
         if key := key_of("HOTKEY_TRANSLATE"):

@@ -70,7 +70,7 @@ def _writer_for_process_text(monkeypatch):
     """Bare writer with every process_text side effect stubbed/spied."""
     w = AudioWriter.__new__(AudioWriter)
     w._session_gen = 1
-    w.active_action = "transcribe"
+    w.active_action = "quick"
     w._skip_next_paste = False
     w._foreground_was_own = False
     w._prev_foreground_hwnd = 0  # skip the SetForegroundWindow block by default

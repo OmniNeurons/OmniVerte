@@ -219,8 +219,9 @@ def test_postprocess_failure_pastes_raw_and_notifies():
     """The graceful raw-transcript fallback stays — but now the user learns WHY
     the text arrived uncorrected."""
     w = _bare_writer()
-    w.active_action = "transcribe"
-    w.config = SimpleNamespace(get=lambda *a, **k: None, llm_max_tokens=4000)
+    w.active_action = "quick"
+    values = {"DICTATION_AI_CORRECTION": "true"}
+    w.config = SimpleNamespace(get=lambda k, d=None: values.get(k, d), llm_max_tokens=4000)
 
     def _raise(**kwargs):
         raise TimeoutError("watchdog")
@@ -228,5 +229,5 @@ def test_postprocess_failure_pastes_raw_and_notifies():
         chat=SimpleNamespace(completions=SimpleNamespace(create=_raise))
     )
 
-    assert w._apply_action_transform("raw words") == "raw words"
+    assert w._apply_action_transform("raw words") == "Raw words"
     assert w.ui_bridge.errors == [("postprocess", "network", "OpenAI")]

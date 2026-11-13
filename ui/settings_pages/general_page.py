@@ -128,16 +128,6 @@ class GeneralPage(BasePage):
         self.mode_keyboard.setChecked(True)
         body.addWidget(self.mode_keyboard)
 
-        self.hotkey_edit = LineEdit()
-        self.hotkey_edit.setPlaceholderText(t("general.hotkey.none"))
-        self.hotkey_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
-        transcribe_row = make_form_row(
-            t("general.hotkey.transcribe"),
-            make_capture_field(self.hotkey_edit, self._release_hotkey),
-            hint=t("general.hotkey.transcribe.hint"),
-            align_right=True,
-        )
-
         self.hotkey_quick_edit = LineEdit()
         self.hotkey_quick_edit.setPlaceholderText(t("general.hotkey.none"))
         self.hotkey_quick_edit.setFixedWidth(HOTKEY_FIELD_WIDTH)
@@ -189,7 +179,7 @@ class GeneralPage(BasePage):
         # so disabling it on a mode switch also greys out the labels + hints,
         # not just the controls.
         self.keyboard_sub = _subsection(
-            transcribe_row, quick_row, translate_row, custom_row, custom_style_row,
+            quick_row, translate_row, custom_row, custom_style_row,
             suppress_row,
         )
         body.addWidget(self.keyboard_sub)
@@ -301,7 +291,6 @@ class GeneralPage(BasePage):
         properly in languages where the action name changes form.
         """
         return [
-            ("HOTKEY_TRANSCRIBE", "general.action.transcribe", self.hotkey_edit),
             ("HOTKEY_QUICK", "general.action.quick", self.hotkey_quick_edit),
             ("HOTKEY_TRANSLATE", "general.action.translate", self.hotkey_translate_edit),
             ("HOTKEY_CUSTOM", "general.action.custom", self.hotkey_custom_edit),
@@ -393,8 +382,6 @@ class GeneralPage(BasePage):
         # An empty field is saved as "" = no key for that action.
         for config_key, _, edit in self._hotkey_fields():
             config.set(config_key, edit.text().strip())
-        if self.hotkey_edit.text().strip():
-            config.set("ACTIVATION_KEY", self.hotkey_edit.text().strip())  # legacy sync
         _, style_val = CUSTOM_STYLE_CHOICES[self.custom_style_combo.currentIndex()]
         config.set("HOTKEY_CUSTOM_STYLE", style_val)
         config.set("HOTKEYS_SUPPRESS", "true" if self.suppress_switch.isChecked() else "false")

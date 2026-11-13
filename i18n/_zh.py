@@ -46,10 +46,9 @@ STRINGS: dict[str, str] = {
     "tray.keys.change": "更改（按一个键）",
     "tray.hotkey.item": "{action}：{key}",
     "tray.hotkey.none": "未设置",
-    "tray.action.transcribe": "转写",
     "tray.action.translate": "转写并翻译",
     "tray.action.custom": "转写并改写",
-    "tray.action.quick": "快速听写（无 AI）",
+    "tray.action.quick": "快速听写",
     "tray.suppress.on": "强制捕获：开（按键被拦截）",
     "tray.suppress.off": "强制捕获：关（按键透传）",
     "tray.mouse_button": "激活用鼠标键：{button}",
@@ -87,14 +86,12 @@ STRINGS: dict[str, str] = {
     "general.activation.mouse": "鼠标键",
 
     # "Catch the key" — the console's own action, quoted with 「」 as elsewhere.
-    "general.hotkey.transcribe": "转写并粘贴",
-    "general.hotkey.transcribe.hint": "先听写，再粘贴带语法纠正和标点的转写结果。点击「捕获按键」以指定按键。",
     "general.hotkey.translate": "转写并翻译",
     "general.hotkey.translate.hint": "先听写，再翻译为副语言后粘贴。点击「捕获按键」以指定按键。",
     "general.hotkey.custom": "转写并按自定义风格改写",
     "general.hotkey.custom.hint": "先听写，再按下方所选风格改写并粘贴。点击「捕获按键」以指定按键。",
     "general.hotkey.quick": "快速听写",
-    "general.hotkey.quick.hint": "停止说话后立即粘贴原始文本，不做 AI 校正或改写。若在「转写」页面设置了 ElevenLabs 密钥，则边说边实时转写。点击「捕获按键」以指定按键。",
+    "general.hotkey.quick.hint": "停止说话后立即粘贴文本。若在「转写」页面设置了 Gemini 或 ElevenLabs 密钥，则边说边实时转写；也可以在该页面开启 AI 校正。点击「捕获按键」以指定按键。",
     "general.hotkey.none": "未设置",
 
     "general.stylepair.name": "自定义",
@@ -123,7 +120,6 @@ STRINGS: dict[str, str] = {
 
     # Action names interpolated into general.hotkey.released; kept as their
     # own keys so the error can name each action naturally.
-    "general.action.transcribe": "转写",
     "general.action.translate": "翻译",
     "general.action.custom": "自定义风格",
     "general.action.quick": "快速听写",
@@ -208,10 +204,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. 「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. 复制它并粘贴到这里",
     "transcription.keys.gemini.help.link": "打开 Google AI Studio",
-    "transcription.quick.title": "快速听写（ElevenLabs 实时）",
-    "transcription.quick.hint": "仅供快速听写快捷键使用：说话时实时转写，停止后立即粘贴，不做 AI 校正。未设置密钥时，该快捷键使用上方的后端。",
+    "transcription.quick.title": "实时识别（Gemini Live、ElevenLabs）",
+    "transcription.quick.hint": "快速听写、翻译和自定义风格快捷键会在你说话时实时转写，停止后文本即可就绪。若已在上方设置 Gemini 密钥，则使用 Gemini 3.5 Transcribe Live，否则使用 ElevenLabs。两个密钥都未设置时，这些快捷键使用上方的后端。",
     "transcription.quick.clean.label": "去除口头禅",
-    "transcription.quick.clean.hint": "ElevenLabs 会从文本中去掉“嗯”“呃”等填充词和说了一半的词。",
+    "transcription.quick.clean.hint": "从听写文本中去掉“um”等犹豫声。使用 ElevenLabs 时还会去掉“嗯”“呃”等填充词和说了一半的词。",
+    "transcription.dictation.title": "听写文本",
+    "transcription.dictation.hint": "快速听写（包括鼠标按键听写）的文本在粘贴前如何处理——无论由哪个服务识别。",
+    "transcription.dictation.ai.label": "用 AI 校正文本",
+    "transcription.dictation.ai.hint": "识别后由 gpt-4o-mini 修正语法和错别字，并将文本统一为主语言。需要 OpenAI 密钥，约多花一秒。对本地 Whisper 最有用；Gemini Live 返回的已是成品文本。",
     "transcription.keys.elevenlabs.label": "ElevenLabs 密钥",
     "transcription.keys.elevenlabs.placeholder": "输入 ElevenLabs API 密钥",
     "transcription.keys.elevenlabs.help.title": "获取 ElevenLabs API 密钥",
@@ -316,12 +316,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "各层使用同一套术语；可单独开启或关闭每一层。",
     "glossary.layers.asr": "ASR 偏置",
     "glossary.layers.asr.hint": "让语音识别偏向你的术语（云端 prompt / 本地 hotwords）。",
-    "glossary.layers.correction": "LLM 纠正（转写）",
-    "glossary.layers.correction.hint": "在默认转写操作的语法纠正提示词中加入这些术语。",
+    "glossary.layers.correction": "LLM 纠正（听写）",
+    "glossary.layers.correction.hint": "在听写 AI 校正（「转写」页面）的语法纠正提示词中加入这些术语。",
     "glossary.layers.rewrite": "翻译与改写中的 LLM",
     "glossary.layers.rewrite.hint": "在翻译/改写提示词中加入这些术语（手动按钮 + 快捷键操作）。",
-    "glossary.layers.fuzzy": "模糊替换（转写）",
-    "glossary.layers.fuzzy.hint": "确定性地将近似词归拢到规范术语，仅限转写。",
+    "glossary.layers.fuzzy": "模糊替换（听写）",
+    "glossary.layers.fuzzy.hint": "确定性地将近似词归拢到规范术语，仅限听写。",
     "glossary.layers.threshold": "模糊阈值",
     "glossary.layers.threshold.hint": "词与术语要多接近才触发模糊替换（70–100；越高越严格）。",
 
@@ -347,9 +347,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "{total} 个术语 — 全部生效。",
     "glossary.terms.counter.used": "已使用 {total}/{cap} 个术语 · 还可添加 {remaining} 个。",
-    "glossary.terms.quick_limit": "快速听写（ElevenLabs）只采用前 {limit} 个术语：你的 {total} 个中有 {count} 个不会进入其识别提示。本地替换仍对全部术语生效。",
+    "glossary.terms.quick_limit": "实时识别（{engine}）只采用前 {limit} 个术语：你的 {total} 个中有 {count} 个不会进入其识别提示。本地替换仍对全部术语生效。",
     "glossary.terms.quick_limit.tooltip": "未发送到快速听写的术语：",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs 不接受超过 {chars} 个字符的术语，因此快速听写会跳过：{terms}。",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs 不接受超过 {chars} 个字符的术语，因此实时识别会跳过：{terms}。",
     "glossary.terms.counter.over_free": (
         "{cap}/{total} 个术语生效 — 其余已保存但未启用。"
         "Pro 会全部启用（最多 {pro_cap} 个）。"
@@ -555,11 +555,10 @@ STRINGS: dict[str, str] = {
     "main.glossary_pro.title": "转写术语是 Pro 功能",
     "main.glossary_pro.body": "Pro 可从这里直接打开术语列表，并将上限提高到 200 条，另含现成的专业词包。免费版包含 5 条术语，可在设置 → 术语表中添加。",
 
-    "main.hint.keyboard.transcribe": "按 {key} 即可听写并转写。",
     "main.hint.keyboard.translate": "按 {key} 即可听写、转写并翻译。",
     # Quotes around {style}: it may hold a user-invented style name.
     "main.hint.keyboard.custom": "按 {key} 即可听写、转写并以「{style}」风格返回。",
-    "main.hint.keyboard.quick": "按 {key} 即可快速听写，不经 AI 处理。",
+    "main.hint.keyboard.quick": "按 {key} 开始听写。",
     "main.hint.style.casual": "随意",
     "main.hint.style.professional": "专业",
     "main.hint.style.custom": "自定义",

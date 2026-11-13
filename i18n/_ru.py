@@ -46,10 +46,9 @@ STRINGS: dict[str, str] = {
     "tray.keys.change": "Изменить (нажмите клавишу)",
     "tray.hotkey.item": "{action}: {key}",
     "tray.hotkey.none": "не назначена",
-    "tray.action.transcribe": "Расшифровать",
     "tray.action.translate": "Расшифровать и перевести",
     "tray.action.custom": "Расшифровать и переписать",
-    "tray.action.quick": "Быстрая диктовка (без ИИ)",
+    "tray.action.quick": "Быстрая диктовка",
     "tray.suppress.on": "Жёсткий перехват: ВКЛ (клавиши поглощаются)",
     "tray.suppress.off": "Жёсткий перехват: ВЫКЛ (проходят насквозь)",
     "tray.mouse_button": "Кнопка мыши для активации: {button}",
@@ -88,14 +87,12 @@ STRINGS: dict[str, str] = {
 
     # «Поймать клавишу» — кавычки-ёлочки, как в остальном русском тексте;
     # в оригинале это “Catch the key”.
-    "general.hotkey.transcribe": "Транскрибировать и вставить",
-    "general.hotkey.transcribe.hint": "Продиктовать, затем вставить транскрипцию с исправлением грамматики и расстановкой знаков препинания. Нажмите «Задать», чтобы задать клавишу.",
     "general.hotkey.translate": "Транскрибировать и перевести",
     "general.hotkey.translate.hint": "Продиктовать, затем перевести на дополнительный язык и вставить. Нажмите «Задать», чтобы задать клавишу.",
     "general.hotkey.custom": "Транскрибировать и переписать в кастомный стиль",
     "general.hotkey.custom.hint": "Продиктовать, затем переписать в выбранном стиле и вставить. Нажмите «Задать», чтобы задать клавишу.",
     "general.hotkey.quick": "Быстрая диктовка",
-    "general.hotkey.quick.hint": "Вставить текст сразу, как только вы замолчите, — без ИИ-коррекции и переписывания. Распознаёт на лету через ElevenLabs, если ключ задан на странице «Транскрипция». Нажмите «Задать», чтобы задать клавишу.",
+    "general.hotkey.quick.hint": "Вставить текст сразу, как только вы замолчите. Распознаёт на лету через Gemini или ElevenLabs, если ключ задан на странице «Транскрипция»; там же можно включить правку через ИИ. Нажмите «Задать», чтобы задать клавишу.",
     "general.hotkey.none": "Не назначена",
 
     "general.stylepair.name": "Кастомный стиль",
@@ -123,9 +120,8 @@ STRINGS: dict[str, str] = {
     "general.behaviour.autostart.hint": "Запускать Omni Verte автоматически при входе в Windows.",
 
     # Подставляются в general.hotkey.released в родительном падеже:
-    # «…снята с расшифровки». Поэтому это отдельные
+    # «…снята с перевода». Поэтому это отдельные
     # ключи, а не переиспользование подписей строк.
-    "general.action.transcribe": "расшифровки",
     "general.action.translate": "перевода",
     "general.action.custom": "своего стиля",
     "general.action.quick": "быстрой диктовки",
@@ -214,10 +210,14 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. Откройте «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Скопируйте его и вставьте сюда",
     "transcription.keys.gemini.help.link": "Открыть Google AI Studio",
-    "transcription.quick.title": "Быстрая диктовка (ElevenLabs в реальном времени)",
-    "transcription.quick.hint": "Используется только клавишей быстрой диктовки: речь распознаётся прямо во время разговора и вставляется сразу после остановки, без ИИ-коррекции. Без ключа эта клавиша работает через бэкенды выше.",
+    "transcription.quick.title": "Распознавание на лету (Gemini Live, ElevenLabs)",
+    "transcription.quick.hint": "Клавиши быстрой диктовки, перевода и своего стиля распознают речь прямо во время разговора, поэтому текст готов сразу после остановки. Используется Gemini 3.5 Transcribe Live, если выше задан ключ Gemini, иначе ElevenLabs. Без обоих ключей эти клавиши работают через бэкенды выше.",
     "transcription.quick.clean.label": "Убирать слова-паразиты",
-    "transcription.quick.clean.hint": "ElevenLabs вырезает «э-э-э», «ну-у» и оборванные начала слов из текста.",
+    "transcription.quick.clean.hint": "Убирает «э-э», «эм» и похожие звуки-заминки из продиктованного текста. ElevenLabs также вырезает оборванные начала слов.",
+    "transcription.dictation.title": "Текст диктовки",
+    "transcription.dictation.hint": "Что происходит с текстом быстрой диктовки (и диктовки кнопкой мыши) перед вставкой — каким бы сервисом он ни был распознан.",
+    "transcription.dictation.ai.label": "Править текст через ИИ",
+    "transcription.dictation.ai.hint": "После распознавания gpt-4o-mini исправляет грамматику и опечатки и приводит текст к основному языку. Нужен ключ OpenAI, добавляет около секунды. Полезнее всего с локальным Whisper: Gemini Live и так возвращает готовый текст.",
     "transcription.keys.elevenlabs.label": "Ключ ElevenLabs",
     "transcription.keys.elevenlabs.placeholder": "Введите ключ API ElevenLabs",
     "transcription.keys.elevenlabs.help.title": "Как создать ключ API ElevenLabs",
@@ -326,12 +326,12 @@ STRINGS: dict[str, str] = {
     "glossary.layers.hint": "Все слои используют одни и те же термины; включайте и выключайте их по отдельности.",
     "glossary.layers.asr": "Подсказка распознаванию",
     "glossary.layers.asr.hint": "Смещает распознавание речи в сторону ваших терминов (prompt в облаке / hotwords локально).",
-    "glossary.layers.correction": "LLM-исправление (расшифровка)",
-    "glossary.layers.correction.hint": "Добавлять термины в промпт исправления грамматики в стандартном действии расшифровки.",
+    "glossary.layers.correction": "LLM-исправление (диктовка)",
+    "glossary.layers.correction.hint": "Добавлять термины в промпт правки через ИИ для диктовки (страница «Транскрипция»).",
     "glossary.layers.rewrite": "LLM в переводе и переписывании",
     "glossary.layers.rewrite.hint": "Добавлять термины в промпты перевода и переписывания (кнопки и действия по горячим клавишам).",
-    "glossary.layers.fuzzy": "Нечёткая замена (расшифровка)",
-    "glossary.layers.fuzzy.hint": "Детерминированно подтягивает похожие слова к каноничным терминам, только при расшифровке.",
+    "glossary.layers.fuzzy": "Нечёткая замена (диктовка)",
+    "glossary.layers.fuzzy.hint": "Детерминированно подтягивает похожие слова к каноничным терминам, только при диктовке.",
     "glossary.layers.threshold": "Порог нечёткости",
     "glossary.layers.threshold.hint": "Насколько слово должно быть близко к термину, чтобы сработала нечёткая замена (70–100; больше = строже).",
 
@@ -356,9 +356,9 @@ STRINGS: dict[str, str] = {
     ),
     "glossary.terms.counter.unlimited": "Терминов: {total} — все активны.",
     "glossary.terms.counter.used": "Использовано терминов: {total} из {cap} · доступно ещё {remaining}.",
-    "glossary.terms.quick_limit": "Быстрая диктовка (ElevenLabs) учитывает только первые {limit} терминов: {count} из ваших {total} не попадут в её подсказки распознаванию. Локальная замена по-прежнему работает для всех.",
+    "glossary.terms.quick_limit": "Распознавание на лету ({engine}) учитывает только первые {limit} терминов: {count} из ваших {total} не попадут в его подсказки распознаванию. Локальная замена по-прежнему работает для всех.",
     "glossary.terms.quick_limit.tooltip": "Не попадут в быструю диктовку:",
-    "glossary.terms.quick_limit.too_long": "ElevenLabs не принимает термины длиннее {chars} символов, поэтому быстрая диктовка пропустит: {terms}.",
+    "glossary.terms.quick_limit.too_long": "ElevenLabs не принимает термины длиннее {chars} символов, поэтому распознавание на лету пропустит: {terms}.",
     "glossary.terms.counter.over_free": (
         "Активны {cap} из {total} терминов — остальные сохранены, но не "
         "используются. Pro активирует все (до {pro_cap})."
@@ -586,12 +586,11 @@ STRINGS: dict[str, str] = {
     "main.glossary_pro.title": "Термины для распознавания — функция Pro",
     "main.glossary_pro.body": "Pro открывает список терминов отсюда и расширяет его до 200, плюс готовые профессиональные наборы. На бесплатном плане доступны 5 терминов — их можно добавить в Настройки → Глоссарий.",
 
-    "main.hint.keyboard.transcribe": "Нажмите {key}, чтобы продиктовать и расшифровать.",
     "main.hint.keyboard.translate": "Нажмите {key}, чтобы продиктовать, расшифровать и перевести.",
     # Кавычки вокруг {style}: туда может подставиться название стиля,
     # придуманное пользователем, — согласовать его с «стиле» невозможно.
     "main.hint.keyboard.custom": "Нажмите {key}, чтобы продиктовать, расшифровать и вернуть текст в стиле «{style}».",
-    "main.hint.keyboard.quick": "Нажмите {key} для быстрой диктовки без обработки ИИ.",
+    "main.hint.keyboard.quick": "Нажмите {key}, чтобы продиктовать текст.",
     "main.hint.style.casual": "Неформальный",
     "main.hint.style.professional": "Деловой",
     "main.hint.style.custom": "Кастомный",
