@@ -6,6 +6,35 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.37] - 2026-11-15
+
+### Added
+- Pro: history is now saved between sessions, encrypted on your computer,
+  for 30 days by default — up to a year (Settings → History). It stays on
+  your machine: nothing is sent anywhere, and the encryption key is kept in
+  Windows Credential Manager.
+- A search button on the History block opens the full history: text
+  search, filter by type and period, and a per-day volume chart. Click an
+  entry to load it back into the window. On Free the window shows the
+  current session with the search and filters locked.
+- "Clear history" in Settings → History and in the history window deletes
+  every entry and the encryption key, on any plan.
+
+### Changed
+- Free keeps the last 15 entries of the current session (up to 1,500
+  characters). The main window shows the latest 20 entries.
+- Results of the translate and custom-style hotkeys are now labelled as
+  translations and rewrites in the history, not as transcriptions.
+- "Get a license" and the Pro tags now open the purchase page on
+  omniverte.ai in your interface language, with checkout ready.
+- Glossary: inflected forms of a term are no longer "corrected" back to the
+  dictionary form ("два коммита" stays as said), and a replaced word at the
+  start of a sentence keeps its capital letter. The Russian IT pack drops
+  "бэклог", which the recogniser already knows.
+
+### Fixed
+- Gemini Live: an unsupported-model error was reported as a rate limit.
+
 ## [1.1.36] - 2026-11-13
 
 ### Added
