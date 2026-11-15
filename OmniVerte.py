@@ -57,6 +57,38 @@ def _set_app_user_model_id():
     logger.warning(f"Failed to set AppUserModelID: {e}")
 
 
+def _install_qt_message_handler():
+  """Send Qt's own warnings into our log instead of bare stderr.
+
+  Qt reports problems it detects in C++ (e.g. "QFont::setPointSize: Point
+  size <= 0") only on stderr — invisible in a packaged build and with no hint
+  of which of our calls led there. Routing them through `logging` puts them in
+  omni_verte.log next to the surrounding events, with the Python stack at the
+  moment Qt complained (the frame that triggered it, or the event loop when it
+  came from a deferred paint/layout)."""
+  import traceback
+  from PySide6.QtCore import QtMsgType, qInstallMessageHandler
+
+  qt_logger = logging.getLogger("qt")
+  levels = {
+      QtMsgType.QtDebugMsg: logging.DEBUG,
+      QtMsgType.QtInfoMsg: logging.INFO,
+      QtMsgType.QtWarningMsg: logging.WARNING,
+      QtMsgType.QtCriticalMsg: logging.ERROR,
+      QtMsgType.QtFatalMsg: logging.CRITICAL,
+  }
+
+  def _handler(mode, context, message):
+    level = levels.get(mode, logging.WARNING)
+    if level >= logging.WARNING:
+      stack = "".join(traceback.format_stack(limit=10)[:-1])
+      qt_logger.log(level, f"{message}\n  Python stack at the warning:\n{stack}")
+    else:
+      qt_logger.log(level, message)
+
+  qInstallMessageHandler(_handler)
+
+
 def check_cuda_availability():
   """Check if CUDA is available via ctranslate2 (avoids pulling in torch)."""
   try:
@@ -147,6 +179,8 @@ def main():
   # would group us with generic python.exe.
   _set_app_user_model_id()
 
+  _install_qt_message_handler()
+
   from PySide6.QtWidgets import QApplication
   app = QApplication.instance() or QApplication(sys.argv)
   app.setQuitOnLastWindowClosed(False)  # tray-only by default — closing the main window must NOT quit
@@ -207,7 +241,13 @@ def main():
 
   try:
     ui_bridge = UIBridge()
-    history_manager = HistoryManager()
+    # Free: session-only, in memory. Pro: the encrypted on-disk store, purged
+    # by HISTORY_RETENTION_DAYS (read live, so a settings change applies on the
+    # next add/save without a restart).
+    history_manager = HistoryManager(
+        retention_days=lambda: config.history_retention_days,
+    )
+    history_manager.apply_retention()
 
     audio_writer = AudioWriter(config, ui_bridge, history_manager)
 
@@ -335,7 +375,10 @@ def main():
 
       # Pass the bridge so the license page can broadcast entitlement_changed
       # live (badge + glossary cap re-apply) without an app restart.
-      window = SettingsWindow(config, is_initial=False, ui_bridge=ui_bridge)
+      window = SettingsWindow(
+          config, is_initial=False, ui_bridge=ui_bridge,
+          history_manager=history_manager,
+      )
       # Let Qt delete the window after close (the destroyed handler, wired at
       # open time, clears our handle and queues the next spare).
       window.setAttribute(_Qt.WA_DeleteOnClose, True)
@@ -456,6 +499,11 @@ def main():
     # entitlement cache — re-cap the glossary on the live voice path. The tray
     # callback thread is fine here; set_active_cap only touches in-memory state.
     ui_bridge.entitlement_changed.connect(audio_writer.apply_entitlement)
+    # Pro on → history switches to the encrypted store; Pro off → back to the
+    # session list (the file on disk is left alone). A settings save may have
+    # shortened the retention window — purge right away.
+    ui_bridge.entitlement_changed.connect(history_manager.on_entitlement_changed)
+    ui_bridge.settings_saved.connect(history_manager.apply_retention)
 
     # Tray menu → quit. Stop daemon threads gracefully where we can.
     def _on_quit():

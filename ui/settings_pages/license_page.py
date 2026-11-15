@@ -55,7 +55,7 @@ from qfluentwidgets import (
 )
 
 from i18n import t
-from licensing.config import PRO_SALES_OPEN, WAITLIST_URL
+from licensing.config import PRO_SALES_OPEN, WAITLIST_URL, buy_url
 from services.config_store import Config
 from .base import BasePage, make_section_card
 
@@ -241,7 +241,7 @@ class LicensePage(BasePage):
         btn_row.setSpacing(12)
 
         self.buy_btn = PushButton(t("license.button.buy"))
-        self.buy_btn.clicked.connect(self._on_waitlist)
+        self.buy_btn.clicked.connect(self._on_buy)
         btn_row.addWidget(self.buy_btn)
 
         self.change_btn = PushButton(t("license.button.change_key"))
@@ -356,6 +356,9 @@ class LicensePage(BasePage):
 
     def _on_waitlist(self) -> None:
         QDesktopServices.openUrl(QUrl(WAITLIST_URL))
+
+    def _on_buy(self) -> None:
+        QDesktopServices.openUrl(QUrl(buy_url()))
 
     def _on_activate(self) -> None:
         if self.key_edit is None:

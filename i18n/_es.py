@@ -33,7 +33,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "Cancelar",
     "common.save": "Guardar",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Función Pro — apúntese a la lista de espera",
+    "common.pro.tooltip": "Función Pro — comprar una licencia",
     "common.help.where_key": "¿Dónde consigo una clave?",
 
     # ---------- tray menu ----------
@@ -337,7 +337,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "Términos",
-    "glossary.terms.hint": "Palabras específicas de su empresa, por grupos. Una entrada por línea.",
+    "glossary.terms.hint": "Palabras que el reconocimiento no puede conocer: nombres de su empresa, productos y clientes, abreviaturas internas, grafías poco habituales. El vocabulario profesional común no hace falta: el reconocimiento ya lo conoce, y un término de más puede atraer palabras de sonido parecido. Una entrada por línea.",
     "glossary.terms.tab.names": "Nombres y términos",
     "glossary.terms.tab.replacements": "Reemplazos",
     "glossary.terms.names": "Nombres",
@@ -345,7 +345,7 @@ STRINGS: dict[str, str] = {
     # Nombres de empresa inventados — nombres propios, se quedan en latín.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "Servicios y términos",
-    "glossary.terms.services.hint": "Nombres de servicios, planes, términos del sector.",
+    "glossary.terms.services.hint": "Nombres de servicios y planes, términos y abreviaturas internos.",
     "glossary.terms.services.placeholder": "TurboDrive\nplan Órbita",
     # `{sep}` es el separador `=>` (`_REPL_SEP`); una forma mal oída plausible
     # en español mapeada al término canónico en latín.
@@ -458,7 +458,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "Glosario — hasta 200 términos (Free: 5) más packs profesionales ya preparados",
     "license.benefit.custom_styles": "Estilos personalizados — cree y edite sus propios estilos de reescritura (Free: solo plantillas)",
     "license.benefit.presets": "Preajustes de estilo — guarde todos los que quiera (Free: una ranura)",
-    "license.benefit.history": "Historial — ilimitado y con búsqueda (Free: últimos 10)",
+    "license.benefit.history": "Historial — guardado cifrado hasta un año, con búsqueda (Free: últimos 15, solo esta sesión)",
     "license.benefit.builds": "Compilaciones firmadas y con actualización automática, y soporte prioritario",
 
     "license.waitlist.title": "Pro está por llegar",
@@ -592,4 +592,46 @@ STRINGS: dict[str, str] = {
         "Editar estilos personalizados es una función Pro. Elija una plantilla "
         "en Ajustes → Estilo personalizado."
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "Historial",
+    "page.history.title": "Historial",
+    "page.history.hint": "Cuánto tiempo se guarda el historial y cómo borrarlo.",
+    "settings.history.storage.title": "Historial guardado",
+    "settings.history.storage.hint": "Pro guarda el historial entre sesiones, cifrado en este equipo. No se envía a ningún sitio.",
+    "settings.history.retention": "Guardar historial durante",
+    "settings.history.retention.hint": "Las entradas más antiguas se eliminan automáticamente.",
+    "settings.history.retention.days": "{days} días",
+    "settings.history.pro_hint": "Free solo conserva la sesión actual (últimas 15 entradas). El historial guardado y con búsqueda de hasta un año es parte de Pro.",
+    "settings.history.clear.title": "Borrar historial",
+    "settings.history.clear.hint": "Elimina todas las entradas — de esta sesión y las guardadas — y la clave de cifrado. No se puede deshacer.",
+    "history.clear.button": "Borrar historial",
+    "history.clear.confirm.title": "¿Borrar el historial?",
+    "history.clear.confirm.text": "Todas las entradas del historial se eliminarán para siempre. No se puede deshacer.",
+    "history.status.empty": "El historial está vacío.",
+    "history.status.stored": "Entradas: {count} · caracteres: {chars} · desde {since}",
+    "history.status.session": "Entradas en esta sesión: {count}",
+    "main.tooltip.history_search": "Buscar en el historial",
+    "history_dialog.title": "Historial",
+    "history_dialog.pro_banner": "La búsqueda, los filtros y el historial de hasta un año son parte de Pro. Free muestra solo esta sesión.",
+    "history_dialog.search.placeholder": "Buscar en el texto…",
+    "history_dialog.kind.all": "Todos los tipos",
+    "history_dialog.period.today": "Hoy",
+    "history_dialog.period.week": "7 días",
+    "history_dialog.period.month": "30 días",
+    "history_dialog.period.all": "Todo",
+    "history_dialog.period.custom": "Rango propio…",
+    "history_dialog.range.from": "Desde",
+    "history_dialog.range.to": "Hasta",
+    "history_dialog.volume.title": "Volumen por día",
+    "history_dialog.volume.reset_day": "Ver todo el periodo",
+    "history_dialog.volume.tooltip": "{day}: {count} entradas, {chars} caracteres",
+    "history_dialog.summary": "Periodo: {count} entradas · {chars} caracteres",
+    "history_dialog.summary.filtered": "Periodo: {count} entradas · {chars} caracteres · encontradas: {shown}",
+    "history_dialog.empty": "No se encontró nada.",
+    "history_dialog.close": "Cerrar",
+    "history_dialog.locked_tooltip": "Disponible en Pro",
+    "history_dialog.menu.open": "Abrir en la ventana",
+    "history_dialog.menu.copy": "Copiar",
+    "history_dialog.menu.delete": "Eliminar",
 }

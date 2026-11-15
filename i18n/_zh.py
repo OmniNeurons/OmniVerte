@@ -32,7 +32,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "取消",
     "common.save": "保存",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Pro 功能 — 加入等候名单",
+    "common.pro.tooltip": "Pro 功能 — 购买许可证",
     "common.help.where_key": "在哪里获取密钥？",
 
     # ---------- tray menu ----------
@@ -327,7 +327,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "术语",
-    "glossary.terms.hint": "公司专有词汇，按组分列。每行一条。",
+    "glossary.terms.hint": "识别无法知道的词：贵公司、产品和客户的名称，内部缩写，特殊写法。常见的专业词汇无需添加——识别本身已经认识它们，多余的术语反而会把发音相近的词拉向自己。每行一条。",
     "glossary.terms.tab.names": "名称与术语",
     "glossary.terms.tab.replacements": "替换",
     "glossary.terms.names": "名称",
@@ -335,7 +335,7 @@ STRINGS: dict[str, str] = {
     # Invented company names — proper nouns, Latin in every locale.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "服务与术语",
-    "glossary.terms.services.hint": "服务名称、套餐、领域术语。",
+    "glossary.terms.services.hint": "服务和套餐名称、内部术语和缩写。",
     # Latin brand + a natural Chinese example on the second line.
     "glossary.terms.services.placeholder": "TurboDrive\n轨道套餐",
     # A spoken (heard) Chinese form mapping to a canonical Latin term — the CJK
@@ -446,7 +446,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "术语表 — 最多 200 个术语（Free：5 个）外加现成的行业术语包",
     "license.benefit.custom_styles": "自定义风格 — 创建并编辑你自己的改写风格（Free：仅模板）",
     "license.benefit.presets": "风格预设 — 想存多少存多少（Free：一个槽位）",
-    "license.benefit.history": "历史 — 无限量且可搜索（Free：最近 10 条）",
+    "license.benefit.history": "历史 — 加密保存最长一年，可搜索（Free：最近 15 条，仅本次会话）",
     "license.benefit.builds": "签名、自动更新的版本及优先支持",
 
     "license.waitlist.title": "Pro 即将推出",
@@ -573,4 +573,46 @@ STRINGS: dict[str, str] = {
         "编辑自定义风格是 Pro 功能。请在 设置 → 自定义风格 中"
         "选择一个模板。"
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "历史",
+    "page.history.title": "历史",
+    "page.history.hint": "历史记录的保留时长以及清除方式。",
+    "settings.history.storage.title": "已保存的历史",
+    "settings.history.storage.hint": "Pro 会在会话之间保存历史，并在本机加密存储。不会发送到任何地方。",
+    "settings.history.retention": "历史保留时长",
+    "settings.history.retention.hint": "超过期限的记录会自动删除。",
+    "settings.history.retention.days": "{days} 天",
+    "settings.history.pro_hint": "Free 仅保留当前会话（最近 15 条）。最长一年、可搜索的已保存历史属于 Pro。",
+    "settings.history.clear.title": "清除历史",
+    "settings.history.clear.hint": "删除所有记录（本次会话和已保存的）以及加密密钥。此操作无法撤销。",
+    "history.clear.button": "清除历史",
+    "history.clear.confirm.title": "要清除历史吗？",
+    "history.clear.confirm.text": "所有历史记录将被永久删除，且无法撤销。",
+    "history.status.empty": "历史为空。",
+    "history.status.stored": "记录：{count} · 字符：{chars} · 自 {since} 起",
+    "history.status.session": "本次会话记录：{count}",
+    "main.tooltip.history_search": "搜索历史",
+    "history_dialog.title": "历史",
+    "history_dialog.pro_banner": "搜索、筛选和最长一年的历史属于 Pro。Free 仅显示本次会话。",
+    "history_dialog.search.placeholder": "搜索文本…",
+    "history_dialog.kind.all": "全部类型",
+    "history_dialog.period.today": "今天",
+    "history_dialog.period.week": "7 天",
+    "history_dialog.period.month": "30 天",
+    "history_dialog.period.all": "全部时间",
+    "history_dialog.period.custom": "自定义范围…",
+    "history_dialog.range.from": "从",
+    "history_dialog.range.to": "到",
+    "history_dialog.volume.title": "每日数量",
+    "history_dialog.volume.reset_day": "显示整个期间",
+    "history_dialog.volume.tooltip": "{day}：{count} 条，{chars} 个字符",
+    "history_dialog.summary": "期间：{count} 条 · {chars} 个字符",
+    "history_dialog.summary.filtered": "期间：{count} 条 · {chars} 个字符 · 找到：{shown}",
+    "history_dialog.empty": "未找到任何内容。",
+    "history_dialog.close": "关闭",
+    "history_dialog.locked_tooltip": "Pro 功能",
+    "history_dialog.menu.open": "在窗口中打开",
+    "history_dialog.menu.copy": "复制",
+    "history_dialog.menu.delete": "删除",
 }

@@ -69,7 +69,7 @@ def test_free_has_no_features_and_default_caps():
     assert FREE.features == set()
     for f in Feature:
         assert not FREE.has(f)
-    assert FREE.limit("history_entries") == 10
+    assert FREE.limit("history_entries") == 15
     assert FREE.limit("glossary_terms") == 5
     assert FREE.limit("style_presets") == 1
 
@@ -246,3 +246,12 @@ def test_glossary_cap_survives_reload(tmp_path):
     g.set_active_cap(5)
     g.reload()
     assert len(g.all_terms()) == 5  # cap is preserved across reload
+
+
+def test_buy_url_follows_ui_language_and_opens_checkout():
+    from licensing.config import buy_url
+
+    assert buy_url("en") == "https://omniverte.ai/#buy"
+    assert buy_url("ru") == "https://omniverte.ai/ru/#buy"
+    assert buy_url("zh") == "https://omniverte.ai/zh/#buy"
+    assert buy_url("pt") == "https://omniverte.ai/#buy"  # not a site language

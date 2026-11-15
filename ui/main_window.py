@@ -681,7 +681,7 @@ class MainWindow(FramelessWindow):
         # height for one event-loop pass — long enough to clamp the user's
         # scroll position to the top. A new transcript arriving *should* jump to
         # the newest row; a language switch should not move the view at all.
-        # (`_refresh_history_count` is not needed here: it renders "3/10".)
+        # (`_refresh_history_count` is not needed here: it renders "3/15".)
         for item in self.feed_container.findChildren(_FeedItem):
             item.retranslate()
 
@@ -1012,10 +1012,18 @@ class MainWindow(FramelessWindow):
         title.setObjectName("cardTitle")
         header_row.addWidget(title)
         header_row.addStretch(1)
-        # Live count vs the tier cap (Free = N/10). Neutral; accented at the cap.
+        # Live count vs the tier cap (Free = N/15). Neutral; accented at the cap.
         self.history_count_label = QLabel("")
         self.history_count_label.setObjectName("historyCount")
         header_row.addWidget(self.history_count_label)
+        # Search / full history. Opens on every tier: Free sees the form with
+        # its filters locked (the Pro pitch), Pro gets the working search.
+        self.history_search_btn = TransparentToolButton(FIF.SEARCH)
+        self.history_search_btn.setFixedSize(28, 28)
+        self.history_search_btn.setCursor(Qt.PointingHandCursor)
+        self._tr(self.history_search_btn, "main.tooltip.history_search", setter="setToolTip")
+        self.history_search_btn.clicked.connect(self._open_history_dialog)
+        header_row.addWidget(self.history_search_btn)
         outer.addLayout(header_row)
 
         self.feed_scroll = QScrollArea()
@@ -1258,15 +1266,10 @@ class MainWindow(FramelessWindow):
 
     def _refresh_history_count(self):
         """Show 'used / cap' for the session history; tint it at the cap. On an
-        unlimited tier show just the count."""
-        from licensing import UNLIMITED, get_entitlement
-
-        try:
-            cap = get_entitlement().limit("history_entries")
-        except Exception:
-            cap = 10
-        n = len(self._history.entries())
-        if cap == UNLIMITED:
+        unlimited tier (Pro) show the total number of stored entries."""
+        cap = self._history.entry_cap()
+        n = self._history.count()
+        if cap is None:
             self.history_count_label.setText(f"{n}")
             at_cap = False
         else:
@@ -1289,6 +1292,14 @@ class MainWindow(FramelessWindow):
             self._repaint_result_title()
         else:
             self.original_card.set_text(entry.text)
+
+    def _open_history_dialog(self):
+        from ui.history_dialog import HistoryDialog
+
+        dialog = HistoryDialog(self._history, parent=self)
+        dialog.entry_chosen.connect(self._on_feed_item_clicked)
+        dialog.license_requested.connect(self._bridge.license_requested.emit)
+        dialog.exec()
 
     # ---------- card actions ----------
 

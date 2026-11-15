@@ -58,3 +58,14 @@ def appdata(tmp_path, monkeypatch):
     """Point %APPDATA% at a temp dir so each test gets an isolated config dir."""
     monkeypatch.setenv("APPDATA", str(tmp_path))
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def _isolate_history_db(tmp_path, monkeypatch):
+    """No test ever opens the developer's real APPDATA/OmniVerte/history.db —
+    a Pro entitlement (patched, or OMNIVERTE_DEV_TIER in the shell) would
+    otherwise route a bare HistoryManager() straight to it."""
+    import services.history_store as hs
+
+    monkeypatch.setattr(hs, "default_db_path", lambda: tmp_path / "isolated-history.db")
+    yield

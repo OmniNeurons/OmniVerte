@@ -61,6 +61,7 @@ from ui.settings_pages import (
     CustomStylePage,
     GeneralPage,
     GlossaryPage,
+    HistoryPage,
     LanguagesPage,
     LicensePage,
     TranscriptionPage,
@@ -75,9 +76,15 @@ class SettingsWindow(FluentWindow):
     saved = Signal()
     cancelled = Signal()
 
-    def __init__(self, config: Config, is_initial: bool = False, ui_bridge=None):
+    def __init__(
+        self, config: Config, is_initial: bool = False, ui_bridge=None,
+        history_manager=None,
+    ):
         super().__init__()
         self._config = config
+        # The app-wide HistoryManager (None in the standalone `--settings` run;
+        # the History page then builds its own over the same store).
+        self._history_manager = history_manager
         self._is_initial = is_initial
         self._ui_bridge = ui_bridge
         self._result_saved = False
@@ -157,6 +164,7 @@ class SettingsWindow(FluentWindow):
         languages = LanguagesPage()
         custom = CustomStylePage()
         glossary = GlossaryPage()
+        history = HistoryPage(history_manager=self._history_manager)
         license_page = LicensePage(ui_bridge=self._ui_bridge)
         about = AboutPage()
 
@@ -169,6 +177,7 @@ class SettingsWindow(FluentWindow):
         self.addSubInterface(languages, FIF.LANGUAGE, t("settingswindow.nav.languages"))
         self.addSubInterface(custom, FIF.BRUSH, t("settingswindow.nav.custom_style"))
         self.addSubInterface(glossary, FIF.DICTIONARY, t("settingswindow.nav.glossary"))
+        self.addSubInterface(history, FIF.HISTORY, t("settingswindow.nav.history"))
         self.addSubInterface(
             license_page, FIF.CERTIFICATE, t("settingswindow.nav.license"),
             NavigationItemPosition.BOTTOM,
@@ -178,7 +187,10 @@ class SettingsWindow(FluentWindow):
             NavigationItemPosition.BOTTOM,
         )
 
-        self._pages = [general, transcription, languages, custom, glossary, license_page, about]
+        self._pages = [
+            general, transcription, languages, custom, glossary, history,
+            license_page, about,
+        ]
         self._page_by_id: dict[str, BasePage] = {p.PAGE_ID: p for p in self._pages}
 
         # Re-gate every page the moment the entitlement changes, so activating

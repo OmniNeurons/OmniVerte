@@ -155,6 +155,14 @@ _STOP_WORDS: frozenset[str] = frozenset().union(*_STOP_WORDS_BY_LANGUAGE.values(
 # the explicit replacement map only.
 _MIN_FUZZY_TOKEN_LEN = 4
 
+# Inflection guard for layer C (Glossary._is_inflection_of): a word that differs
+# from a term only by an ending of at most _MAX_ENDING_LEN letters drawn from
+# _ENDING_CHARS is a grammatical form of it, not a mishearing. Cyrillic: the
+# vowels plus й/ь and the consonants of case endings (-ом, -ам, -ах, -ов, -ев).
+# Latin: plural/gender endings (-s, -es, -i, -e, -a, -o).
+_MAX_ENDING_LEN = 3
+_ENDING_CHARS = frozenset("аеёиоуыэюяйьмхв" + "aeios")
+
 
 class Glossary:
     """The corporate glossary: data model + per-layer representations."""
@@ -517,6 +525,56 @@ class Glossary:
     # ---------- layer C: deterministic replacements (transcribe only) ----------
 
     @staticmethod
+    def _is_inflection_of(word: str, term: str) -> bool:
+        """True when `word` is `term` with only a grammatical ending changed.
+
+        Both sides are already normalized (casefolded). Fuzzy scoring cannot tell
+        "коммита" (genitive of the term "коммит") from a mishearing — both sit well
+        above the threshold — so without this check layer C rewrote every inflected
+        form back to the dictionary one ("два коммита" -> "два коммит"). An ending
+        is a tail made only of letters that endings are built from (vowels plus a
+        few consonants of Russian case endings, plural s/e/i in Latin languages);
+        a mishearing at the end of a word ("masterdrife" vs "MasterDrive") changes
+        other letters and is still fixed.
+        """
+        if word == term:
+            return False
+        stem = 0
+        for a, b in zip(word, term):
+            if a != b:
+                break
+            stem += 1
+        if stem < _MIN_FUZZY_TOKEN_LEN:
+            return False
+        tails = word[stem:] + term[stem:]
+        return (
+            len(word) - stem <= _MAX_ENDING_LEN
+            and len(term) - stem <= _MAX_ENDING_LEN
+            and all(ch in _ENDING_CHARS for ch in tails)
+        )
+
+    @classmethod
+    def _is_inflected_window(cls, window_norm: str, term_norm: str) -> bool:
+        """Word-by-word :meth:`_is_inflection_of` for a 1–3-word window: every word
+        equal or merely inflected, at least one inflected ("брокера сообщений")."""
+        words, terms = window_norm.split(), term_norm.split()
+        if len(words) != len(terms):
+            return False
+        pairs = list(zip(words, terms))
+        return all(w == t or cls._is_inflection_of(w, t) for w, t in pairs) and any(
+            w != t for w, t in pairs
+        )
+
+    @staticmethod
+    def _keep_leading_capital(original: str, canonical: str) -> str:
+        """Carry a capital first letter of the replaced text over to a lowercase
+        canonical, so a sentence-initial word stays capitalized. Only a lowercase
+        first letter is touched; a canonical like "PostgreSQL" is left as written."""
+        if original[:1].isupper() and canonical[:1].islower():
+            return canonical[:1].upper() + canonical[1:]
+        return canonical
+
+    @staticmethod
     def _normalize_for_match(s: str) -> str:
         """Casefold + collapse whitespace/hyphens to single spaces.
 
@@ -589,9 +647,10 @@ class Glossary:
             canonical = rep["canonical"]
 
             def _sub(m, canonical=canonical):
-                if changes is not None and m.group(0) != canonical:
-                    changes.append({"from": m.group(0), "to": canonical, "via": "map"})
-                return canonical
+                out = self._keep_leading_capital(m.group(0), canonical)
+                if changes is not None and m.group(0) != out:
+                    changes.append({"from": m.group(0), "to": out, "via": "map"})
+                return out
 
             text = pattern.sub(_sub, text)
         return text
@@ -628,16 +687,22 @@ class Glossary:
                 if n == 1 and (len(norm) < _MIN_FUZZY_TOKEN_LEN or norm in _STOP_WORDS):
                     continue
                 best = None
+                best_norm = ""
                 best_score = float(threshold)  # score_cutoff: never below the threshold
                 for cand_norm, canonical in bucket:
                     score = _rf_fuzz.token_sort_ratio(
                         norm, cand_norm, score_cutoff=best_score
                     )
                     if score >= best_score:
-                        best, best_score = canonical, score
+                        best, best_norm, best_score = canonical, cand_norm, score
                 if best is not None:
                     start, end = window[0][1], window[-1][2]
                     original = text[start:end]
+                    # An inflected form of the term is already right: consume the
+                    # window (so a shorter one can't re-match inside it) but keep it.
+                    if self._is_inflected_window(norm, best_norm):
+                        best = original
+                    best = self._keep_leading_capital(original, best)
                     if original != best:
                         spans.append((start, end, best))
                         if changes is not None:

@@ -34,7 +34,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "キャンセル",
     "common.save": "保存",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Pro機能 — ウェイトリストに登録",
+    "common.pro.tooltip": "Pro機能 — ライセンスを購入",
     "common.help.where_key": "キーの入手方法は?",
 
     # ---------- tray menu ----------
@@ -339,7 +339,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "用語",
-    "glossary.terms.hint": "会社固有の単語をグループ分けして。1行につき1件。",
+    "glossary.terms.hint": "認識が知り得ない語：自社・製品・顧客の名前、社内の略語、独特な表記。一般的な専門用語は登録不要です。認識はすでに知っており、余分な用語は発音の似た語を引き寄せてしまうことがあります。1 行に 1 項目。",
     "glossary.terms.tab.names": "名前・用語",
     "glossary.terms.tab.replacements": "置換",
     "glossary.terms.names": "名前",
@@ -347,7 +347,7 @@ STRINGS: dict[str, str] = {
     # Invented company names — proper nouns, Latin in every locale.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "サービス・用語",
-    "glossary.terms.services.hint": "サービス名、プラン、分野固有の用語。",
+    "glossary.terms.services.hint": "サービス名・プラン名、社内用語や略語。",
     # Latin brand kept, Japanese example on the second line.
     "glossary.terms.services.placeholder": "TurboDrive\nオービットプラン",
     # {sep} is the `=>` separator (_REPL_SEP). Illustrates the CJK case: a term
@@ -459,7 +459,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "用語集 — 最大200件の用語(Free: 5件)と既製の職業別パック",
     "license.benefit.custom_styles": "カスタムスタイル — 独自の書き換えスタイルを作成・編集(Free: テンプレートのみ)",
     "license.benefit.presets": "スタイルプリセット — 好きなだけ保存(Free: 1枠)",
-    "license.benefit.history": "履歴 — 無制限で検索可能(Free: 直近10件)",
+    "license.benefit.history": "履歴 — 暗号化して最長1年保存、検索可能(Free: 直近15件、このセッションのみ)",
     "license.benefit.builds": "署名付きの自動更新ビルドと優先サポート",
 
     "license.waitlist.title": "Proは近日公開",
@@ -589,4 +589,46 @@ STRINGS: dict[str, str] = {
         "カスタムスタイルの編集はPro機能です。設定 → カスタムスタイル で"
         "テンプレートを選んでください。"
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "履歴",
+    "page.history.title": "履歴",
+    "page.history.hint": "履歴の保存期間と消去。",
+    "settings.history.storage.title": "保存された履歴",
+    "settings.history.storage.hint": "Pro ではセッションをまたいで履歴を保存し、このコンピューター上で暗号化します。どこにも送信されません。",
+    "settings.history.retention": "履歴の保存期間",
+    "settings.history.retention.hint": "期限を過ぎた項目は自動的に削除されます。",
+    "settings.history.retention.days": "{days} 日",
+    "settings.history.pro_hint": "Free では現在のセッション（直近15件）のみ保持します。最長1年の検索可能な保存履歴は Pro の機能です。",
+    "settings.history.clear.title": "履歴を消去",
+    "settings.history.clear.hint": "すべての項目（このセッションと保存済み）と暗号化キーを削除します。元に戻せません。",
+    "history.clear.button": "履歴を消去",
+    "history.clear.confirm.title": "履歴を消去しますか？",
+    "history.clear.confirm.text": "すべての履歴項目が完全に削除されます。元に戻せません。",
+    "history.status.empty": "履歴は空です。",
+    "history.status.stored": "項目：{count} · 文字数：{chars} · {since} から",
+    "history.status.session": "このセッションの項目：{count}",
+    "main.tooltip.history_search": "履歴を検索",
+    "history_dialog.title": "履歴",
+    "history_dialog.pro_banner": "検索、フィルター、最長1年の履歴は Pro の機能です。Free ではこのセッションのみ表示されます。",
+    "history_dialog.search.placeholder": "テキストを検索…",
+    "history_dialog.kind.all": "すべての種類",
+    "history_dialog.period.today": "今日",
+    "history_dialog.period.week": "7日間",
+    "history_dialog.period.month": "30日間",
+    "history_dialog.period.all": "全期間",
+    "history_dialog.period.custom": "期間を指定…",
+    "history_dialog.range.from": "開始",
+    "history_dialog.range.to": "終了",
+    "history_dialog.volume.title": "日別の量",
+    "history_dialog.volume.reset_day": "期間全体を表示",
+    "history_dialog.volume.tooltip": "{day}：{count} 件、{chars} 文字",
+    "history_dialog.summary": "期間：{count} 件 · {chars} 文字",
+    "history_dialog.summary.filtered": "期間：{count} 件 · {chars} 文字 · 該当：{shown}",
+    "history_dialog.empty": "見つかりませんでした。",
+    "history_dialog.close": "閉じる",
+    "history_dialog.locked_tooltip": "Pro で利用可能",
+    "history_dialog.menu.open": "ウィンドウで開く",
+    "history_dialog.menu.copy": "コピー",
+    "history_dialog.menu.delete": "削除",
 }

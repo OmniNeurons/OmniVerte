@@ -263,6 +263,42 @@ def test_fuzzy_snaps_near_miss_to_canonical(gpath):
     assert "MasterDrive" in out
 
 
+def test_fuzzy_keeps_inflected_forms_of_a_term(gpath):
+    """An inflected form scores far above the threshold, but it is already right:
+    rewriting it to the dictionary form broke Russian grammar ("два коммит")."""
+    _write(gpath, {"services": ["коммит", "микросервис", "шардирование",
+                                "брокер сообщений", "commit"]})
+    g = Glossary(gpath)
+    for text in (
+        "закинул два коммита",
+        "задеплоил микросервисы",
+        "при шардировании базы",
+        "через брокера сообщений",
+        "pushed two commits",
+    ):
+        assert g.apply_replacements(text) == text
+
+
+def test_fuzzy_still_fixes_a_mishearing_at_the_end_of_a_word(gpath):
+    """The inflection guard only excuses ending letters; "-fe" vs "-ve" is a
+    mishearing and is still snapped (see test_fuzzy_snaps_near_miss_to_canonical)."""
+    _write(gpath, {"services": ["рефакторинг"]})
+    g = Glossary(gpath)
+    assert g.apply_replacements("нужен рефракторинг") == "нужен рефакторинг"
+
+
+def test_replacement_keeps_a_sentence_initial_capital(gpath):
+    _write(gpath, {
+        "services": ["рефакторинг", "PostgreSQL"],
+        "replacements": [{"heard": "мерж реквест", "canonical": "merge request"}],
+    })
+    g = Glossary(gpath)
+    assert g.apply_replacements("Рефракторинг сделан") == "Рефакторинг сделан"
+    assert g.apply_replacements("Мерж реквест готов") == "Merge request готов"
+    # A canonical with its own capitalization is written as declared.
+    assert g.apply_replacements("Postgresql упал") == "PostgreSQL упал"
+
+
 def test_fuzzy_leaves_distant_words_alone(gpath):
     _write(gpath, {"own_names": ["MasterDrive"]})
     g = Glossary(gpath)

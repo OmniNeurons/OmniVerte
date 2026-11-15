@@ -31,7 +31,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "Annulla",
     "common.save": "Salva",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Funzione Pro — iscriviti alla lista d'attesa",
+    "common.pro.tooltip": "Funzione Pro — acquista una licenza",
     "common.help.where_key": "Dove trovo una chiave?",
 
     # ---------- tray menu ----------
@@ -335,7 +335,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "Termini",
-    "glossary.terms.hint": "Parole specifiche della tua azienda, raggruppate. Una voce per riga.",
+    "glossary.terms.hint": "Parole che il riconoscimento non può conoscere: nomi della tua azienda, dei prodotti e dei clienti, abbreviazioni interne, grafie insolite. Il lessico professionale comune non serve: il riconoscimento lo conosce già, e un termine in più può attirare a sé parole dal suono simile. Una voce per riga.",
     "glossary.terms.tab.names": "Nomi e termini",
     "glossary.terms.tab.replacements": "Sostituzioni",
     "glossary.terms.names": "Nomi",
@@ -343,7 +343,7 @@ STRINGS: dict[str, str] = {
     # Nomi di aziende inventati — nomi propri, restano in latino.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "Servizi e termini",
-    "glossary.terms.services.hint": "Nomi di servizi, piani, termini di settore.",
+    "glossary.terms.services.hint": "Nomi di servizi e piani, termini e abbreviazioni interni.",
     "glossary.terms.services.placeholder": "TurboDrive\npiano Orbita",
     "glossary.terms.replacements.placeholder": "turbo draiv {sep} TurboDrive",
     "glossary.terms.replacements.hint": (
@@ -454,7 +454,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "Glossario — fino a 200 termini (Free: 5) più pacchetti professionali pronti all'uso",
     "license.benefit.custom_styles": "Stili personalizzati — crea e modifica i tuoi stili di riscrittura (Free: solo modelli)",
     "license.benefit.presets": "Preset di stile — salvane quanti vuoi (Free: uno slot)",
-    "license.benefit.history": "Cronologia — illimitata e ricercabile (Free: ultimi 10)",
+    "license.benefit.history": "Cronologia — salvata cifrata fino a un anno, con ricerca (Free: ultimi 15, solo questa sessione)",
     "license.benefit.builds": "Build firmate con aggiornamento automatico e supporto prioritario",
 
     "license.waitlist.title": "Pro sta arrivando",
@@ -590,4 +590,46 @@ STRINGS: dict[str, str] = {
         "Modificare gli stili personalizzati è una funzione Pro. Scegli un modello "
         "in Impostazioni → Stile personalizzato."
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "Cronologia",
+    "page.history.title": "Cronologia",
+    "page.history.hint": "Per quanto tempo conservare la cronologia e come cancellarla.",
+    "settings.history.storage.title": "Cronologia salvata",
+    "settings.history.storage.hint": "Pro conserva la cronologia tra le sessioni, cifrata su questo computer. Non viene inviato nulla.",
+    "settings.history.retention": "Conserva la cronologia per",
+    "settings.history.retention.hint": "Le voci più vecchie vengono eliminate automaticamente.",
+    "settings.history.retention.days": "{days} giorni",
+    "settings.history.pro_hint": "Free conserva solo la sessione corrente (ultime 15 voci). La cronologia salvata e ricercabile fino a un anno fa parte di Pro.",
+    "settings.history.clear.title": "Cancella cronologia",
+    "settings.history.clear.hint": "Elimina tutte le voci — di questa sessione e salvate — e la chiave di cifratura. Non si può annullare.",
+    "history.clear.button": "Cancella cronologia",
+    "history.clear.confirm.title": "Cancellare la cronologia?",
+    "history.clear.confirm.text": "Tutte le voci della cronologia verranno eliminate definitivamente. Non si può annullare.",
+    "history.status.empty": "La cronologia è vuota.",
+    "history.status.stored": "Voci: {count} · caratteri: {chars} · dal {since}",
+    "history.status.session": "Voci in questa sessione: {count}",
+    "main.tooltip.history_search": "Cerca nella cronologia",
+    "history_dialog.title": "Cronologia",
+    "history_dialog.pro_banner": "Ricerca, filtri e cronologia fino a un anno fanno parte di Pro. Free mostra solo questa sessione.",
+    "history_dialog.search.placeholder": "Cerca nel testo…",
+    "history_dialog.kind.all": "Tutti i tipi",
+    "history_dialog.period.today": "Oggi",
+    "history_dialog.period.week": "7 giorni",
+    "history_dialog.period.month": "30 giorni",
+    "history_dialog.period.all": "Tutto",
+    "history_dialog.period.custom": "Intervallo personalizzato…",
+    "history_dialog.range.from": "Dal",
+    "history_dialog.range.to": "Al",
+    "history_dialog.volume.title": "Volume per giorno",
+    "history_dialog.volume.reset_day": "Mostra tutto il periodo",
+    "history_dialog.volume.tooltip": "{day}: {count} voci, {chars} caratteri",
+    "history_dialog.summary": "Periodo: {count} voci · {chars} caratteri",
+    "history_dialog.summary.filtered": "Periodo: {count} voci · {chars} caratteri · trovate: {shown}",
+    "history_dialog.empty": "Nessun risultato.",
+    "history_dialog.close": "Chiudi",
+    "history_dialog.locked_tooltip": "Disponibile in Pro",
+    "history_dialog.menu.open": "Apri nella finestra",
+    "history_dialog.menu.copy": "Copia",
+    "history_dialog.menu.delete": "Elimina",
 }

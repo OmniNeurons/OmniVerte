@@ -39,6 +39,7 @@ from ui.settings_pages import (
     CustomStylePage,
     GeneralPage,
     GlossaryPage,
+    HistoryPage,
     LanguagesPage,
     LicensePage,
     TranscriptionPage,
@@ -54,6 +55,7 @@ TRANSLATED_PAGES = [
     AboutPage,
     GlossaryPage,
     CustomStylePage,
+    HistoryPage,
     LicensePage,
 ]
 

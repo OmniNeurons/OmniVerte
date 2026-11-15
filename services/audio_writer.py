@@ -349,6 +349,18 @@ def _dedup_overlap_join(segments) -> str:
   return result.strip()
 
 
+_LANG_SHORT = {
+    "English": "EN", "Russian": "RU", "Spanish": "ES", "German": "DE",
+    "French": "FR", "Italian": "IT", "Chinese": "ZH", "Japanese": "JA",
+}
+
+
+def _lang_short(name: str) -> str:
+  """Short label for a history row's direction ("→ RU"). Same table the main
+  window's translate pill uses, for the 8 app languages."""
+  return _LANG_SHORT.get(name, (name or "")[:2].upper())
+
+
 class AudioWriter:
   """
   Class for audio recording, transcription and processing using OpenAI and WhisperModel.
@@ -1840,6 +1852,9 @@ Text to process:
     """
     raw = raw or ""
     action = self.active_action
+    # What the history should call the result. Stays "transcription" unless an
+    # LLM step actually produced the text (a failed/skipped one pastes raw).
+    self._last_history = ("transcription", {})
 
     # Layer C: deterministic glossary replacements, dictation only. Applied up
     # front (before the client check / LLM call) so the canonical forms survive
@@ -1871,10 +1886,13 @@ Text to process:
         from services.text_operations import translate_to_language
         secondary = self.config.get("SECONDARY_LANGUAGE") or "Russian"
         logger.info(f"Translating transcript -> {secondary}")
-        return translate_to_language(
+        out = translate_to_language(
             self.client, raw, secondary, glossary_block=rewrite_glossary,
             max_tokens=max_tokens,
-        ) or raw
+        )
+        if out:
+          self._last_history = ("translation", {"direction": f"→ {_lang_short(secondary)}"})
+        return out or raw
 
       if action == "custom":
         from services.text_operations import (
@@ -1885,26 +1903,35 @@ Text to process:
         style = (self.config.get("HOTKEY_CUSTOM_STYLE") or "custom").strip().lower()
         if style == "casual":
           logger.info("Rewriting transcript in casual style")
-          return rewrite_text(
+          out = rewrite_text(
               self.client, raw, CONVERSATIONAL_STYLE, glossary_block=rewrite_glossary,
               max_tokens=max_tokens,
-          ) or raw
+          )
+          if out:
+            self._last_history = ("casual", {})
+          return out or raw
         if style == "professional":
           logger.info("Rewriting transcript in professional style")
-          return rewrite_text(
+          out = rewrite_text(
               self.client, raw, BUSINESS_STYLE, glossary_block=rewrite_glossary,
               max_tokens=max_tokens,
-          ) or raw
+          )
+          if out:
+            self._last_history = ("professional", {})
+          return out or raw
         # "custom" (or any unknown value): use the user's own prompt.
         prompt = (self.config.get("CUSTOM_STYLE_PROMPT") or "").strip()
         if not prompt:
           logger.info("Custom-style hotkey but no CUSTOM_STYLE_PROMPT set — pasting raw")
           return raw
         logger.info("Rewriting transcript in custom style")
-        return rewrite_text(
+        out = rewrite_text(
             self.client, raw, prompt, glossary_block=rewrite_glossary,
             max_tokens=max_tokens,
-        ) or raw
+        )
+        if out:
+          self._last_history = ("custom", {})
+        return out or raw
 
       logger.warning(f"Unknown action '{action}' — pasting raw transcript")
       return raw
@@ -1938,6 +1965,7 @@ Text to process:
       self.ui_bridge.safe_emit_status("processing")
 
     corrected_text = self._apply_action_transform(input_text)
+    history_kind, history_meta = getattr(self, "_last_history", ("transcription", {}))
     # Reset to the default action so any subsequent stray start (mouse mode, a
     # race, the safety-timer auto-stop) defaults to dictation — but only if we
     # still own the session, else we'd wipe the new session's action.
@@ -1949,7 +1977,7 @@ Text to process:
     try:
       self.ui_bridge.transcript_ready.emit(corrected_text or "")
       if corrected_text:
-        self.history_manager.add(corrected_text)
+        self.history_manager.add(corrected_text, kind=history_kind, meta=history_meta)
     except Exception as e:
       logger.warning(f"Failed to forward transcript to UI: {e}")
 

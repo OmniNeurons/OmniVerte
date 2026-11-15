@@ -58,12 +58,16 @@ TIER_FEATURES: dict[Tier, set[Feature]] = {
 TIER_LIMITS: dict[Tier, dict[str, int]] = {
     Tier.FREE: {
         "style_presets": 1,       # one custom slot, templates only (editing is Pro)
-        "history_entries": 10,    # last 10, no search
+        "history_entries": 15,    # last 15, this session only, no search
+        "history_chars": 1500,    # ~10-15 short takes: an active user hits it fast
         "glossary_terms": 5,      # demo only; no profession packs
     },
     Tier.PRO: {
         "style_presets": UNLIMITED,
         "history_entries": UNLIMITED,
+        # Not a paywall — a sanity ceiling for the encrypted on-disk store
+        # (someone pasting a novel every second must not grow it forever).
+        "history_chars": 1_000_000,
         # Hard practical ceiling: past ~200 terms the ASR prompt / LLM block /
         # fuzzy index degrade faster than they help, so Pro is capped too (not
         # a paywall — a quality guard). The editor never blocks input; only the
@@ -73,6 +77,9 @@ TIER_LIMITS: dict[Tier, dict[str, int]] = {
     Tier.ENTERPRISE: {
         "style_presets": UNLIMITED,
         "history_entries": UNLIMITED,
+        # Not a paywall — a sanity ceiling for the encrypted on-disk store
+        # (someone pasting a novel every second must not grow it forever).
+        "history_chars": 1_000_000,
         "glossary_terms": 200,    # same quality ceiling as Pro
     },
 }

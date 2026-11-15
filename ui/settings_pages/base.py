@@ -381,14 +381,14 @@ def make_pro_tag(text: Optional[str] = None) -> QWidget:
     from PySide6.QtGui import QDesktopServices
     from PySide6.QtWidgets import QPushButton
 
-    from licensing.config import WAITLIST_URL
+    from licensing.config import buy_url
 
     btn = QPushButton(text if text is not None else t("common.pro"))
     btn.setObjectName("proTag")
     btn.setCursor(Qt.PointingHandCursor)
     btn.setToolTip(t("common.pro.tooltip"))
     btn.setFlat(True)
-    btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(WAITLIST_URL)))
+    btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(buy_url())))
     return btn
 
 

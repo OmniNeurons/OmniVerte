@@ -33,7 +33,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "Abbrechen",
     "common.save": "Speichern",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Pro-Funktion — auf die Warteliste setzen",
+    "common.pro.tooltip": "Pro-Funktion — Lizenz kaufen",
     "common.help.where_key": "Wo bekomme ich einen Schlüssel?",
 
     # ---------- tray menu ----------
@@ -335,7 +335,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "Begriffe",
-    "glossary.terms.hint": "Firmenspezifische und alltägliche Begriffe, nach Gruppen. Ein Eintrag pro Zeile.",
+    "glossary.terms.hint": "Wörter, die die Erkennung nicht kennen kann: Namen Ihrer Firma, Produkte und Kunden, interne Abkürzungen, ungewöhnliche Schreibweisen. Gängiges Fachvokabular braucht keinen Eintrag – die Erkennung kennt es bereits, und ein überflüssiger Begriff kann ähnlich klingende Wörter an sich ziehen. Ein Eintrag pro Zeile.",
     "glossary.terms.tab.names": "Namen & Begriffe",
     "glossary.terms.tab.replacements": "Ersetzungen",
     "glossary.terms.names": "Namen",
@@ -343,7 +343,7 @@ STRINGS: dict[str, str] = {
     # Erfundene Firmennamen — Eigennamen, bleiben in lateinischer Schrift.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "Dienste & Begriffe",
-    "glossary.terms.services.hint": "Dienstnamen, Tarife, Fachbegriffe.",
+    "glossary.terms.services.hint": "Namen von Diensten und Tarifen, interne Begriffe und Abkürzungen.",
     "glossary.terms.services.placeholder": "TurboDrive\nTarif Orbita",
     # {sep} ist der `=>`-Trenner (`_REPL_SEP`), damit das Beispiel nie vom
     # Parser abweicht.
@@ -463,7 +463,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "Glossar — bis zu 200 Begriffe (Free: 5) plus fertige Fachpakete",  # _KEEP_LATIN
     "license.benefit.custom_styles": "Eigene Stile — eigene Umschreibstile erstellen und bearbeiten (Free: nur Vorlagen)",  # _KEEP_LATIN
     "license.benefit.presets": "Stilvorlagen — beliebig viele speichern (Free: ein Platz)",  # _KEEP_LATIN
-    "license.benefit.history": "Verlauf — unbegrenzt und durchsuchbar (Free: letzte 10)",  # _KEEP_LATIN
+    "license.benefit.history": "Verlauf — verschlüsselt bis zu einem Jahr gespeichert, mit Suche (Free: letzte 15, nur diese Sitzung)",  # _KEEP_LATIN
     "license.benefit.builds": "Signierte, sich selbst aktualisierende Builds und bevorzugter Support",
 
     "license.waitlist.title": "Pro kommt bald",                               # _KEEP_LATIN
@@ -603,4 +603,46 @@ STRINGS: dict[str, str] = {
         "Das Bearbeiten eigener Stile ist eine Pro-Funktion. Wählen Sie eine "
         "Vorlage unter Einstellungen → Eigener Stil."
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "Verlauf",
+    "page.history.title": "Verlauf",
+    "page.history.hint": "Wie lange der Verlauf aufbewahrt wird und wie man ihn löscht.",
+    "settings.history.storage.title": "Gespeicherter Verlauf",
+    "settings.history.storage.hint": "Pro speichert den Verlauf sitzungsübergreifend, verschlüsselt auf diesem Computer. Es wird nichts gesendet.",
+    "settings.history.retention": "Verlauf aufbewahren",
+    "settings.history.retention.hint": "Ältere Einträge werden automatisch gelöscht.",
+    "settings.history.retention.days": "{days} Tage",
+    "settings.history.pro_hint": "Free behält nur die aktuelle Sitzung (letzte 15 Einträge). Gespeicherter, durchsuchbarer Verlauf bis zu einem Jahr gehört zu Pro.",
+    "settings.history.clear.title": "Verlauf löschen",
+    "settings.history.clear.hint": "Löscht alle Einträge — dieser Sitzung und gespeicherte — und den Schlüssel. Nicht rückgängig zu machen.",
+    "history.clear.button": "Verlauf löschen",
+    "history.clear.confirm.title": "Verlauf löschen?",
+    "history.clear.confirm.text": "Alle Verlaufseinträge werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.",
+    "history.status.empty": "Der Verlauf ist leer.",
+    "history.status.stored": "Einträge: {count} · Zeichen: {chars} · seit {since}",
+    "history.status.session": "Einträge in dieser Sitzung: {count}",
+    "main.tooltip.history_search": "Verlauf durchsuchen",
+    "history_dialog.title": "Verlauf",
+    "history_dialog.pro_banner": "Suche, Filter und Verlauf bis zu einem Jahr gehören zu Pro. Free zeigt nur diese Sitzung.",
+    "history_dialog.search.placeholder": "Im Text suchen…",
+    "history_dialog.kind.all": "Alle Typen",
+    "history_dialog.period.today": "Heute",
+    "history_dialog.period.week": "7 Tage",
+    "history_dialog.period.month": "30 Tage",
+    "history_dialog.period.all": "Gesamter Zeitraum",
+    "history_dialog.period.custom": "Eigener Zeitraum…",
+    "history_dialog.range.from": "Von",
+    "history_dialog.range.to": "Bis",
+    "history_dialog.volume.title": "Umfang pro Tag",
+    "history_dialog.volume.reset_day": "Ganzen Zeitraum zeigen",
+    "history_dialog.volume.tooltip": "{day}: {count} Einträge, {chars} Zeichen",
+    "history_dialog.summary": "Zeitraum: {count} Einträge · {chars} Zeichen",
+    "history_dialog.summary.filtered": "Zeitraum: {count} Einträge · {chars} Zeichen · gefunden: {shown}",
+    "history_dialog.empty": "Nichts gefunden.",
+    "history_dialog.close": "Schließen",
+    "history_dialog.locked_tooltip": "In Pro verfügbar",
+    "history_dialog.menu.open": "Im Fenster öffnen",
+    "history_dialog.menu.copy": "Kopieren",
+    "history_dialog.menu.delete": "Löschen",
 }

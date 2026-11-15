@@ -54,6 +54,9 @@ def test_strip_hesitations(raw, clean):
     (1007, "API key not valid. Please pass a valid API key.", "auth"),
     (1011, "RESOURCE_EXHAUSTED: You exceeded your current quota", "quota"),
     (1008, "models/x is not found for API version v1beta", "unknown"),
+    (1008, "models/x is not found for API version v1beta, or is not supported "
+           "for bidiGenerateContent.", "unknown"),
+    (1011, "Rate limit exceeded, retry later", "rate"),
 ])
 def test_close_error_is_classified_like_batch_gemini(code, reason, kind):
     err = gl.close_error(code, reason)

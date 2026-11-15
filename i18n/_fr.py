@@ -34,7 +34,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "Annuler",
     "common.save": "Enregistrer",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Fonctionnalité Pro — rejoindre la liste d'attente",
+    "common.pro.tooltip": "Fonctionnalité Pro — acheter une licence",
     "common.help.where_key": "Où obtenir une clé ?",
 
     # ---------- tray menu ----------
@@ -338,7 +338,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "Termes",
-    "glossary.terms.hint": "Mots propres à votre entreprise, par groupes. Une entrée par ligne.",
+    "glossary.terms.hint": "Les mots que la reconnaissance ne peut pas connaître : noms de votre entreprise, de vos produits et de vos clients, abréviations internes, graphies inhabituelles. Le vocabulaire professionnel courant n'a pas besoin d'y figurer : la reconnaissance le connaît déjà, et un terme en trop peut attirer à lui des mots qui sonnent pareil. Une entrée par ligne.",
     "glossary.terms.tab.names": "Noms et termes",
     "glossary.terms.tab.replacements": "Remplacements",
     "glossary.terms.names": "Noms",
@@ -346,7 +346,7 @@ STRINGS: dict[str, str] = {
     # Noms d'entreprises fictifs — noms propres, ils restent en latin.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "Services et termes",
-    "glossary.terms.services.hint": "Noms de services, forfaits, termes du domaine.",
+    "glossary.terms.services.hint": "Noms de services et d'offres, termes et abréviations internes.",
     "glossary.terms.services.placeholder": "TurboDrive\nforfait Orbite",
     # {sep} est le séparateur `=>` (`_REPL_SEP`), passé pour que l'exemple ne
     # puisse jamais diverger de l'analyseur.
@@ -459,7 +459,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "Glossaire — jusqu'à 200 termes (Free : 5) plus des packs métier prêts à l'emploi",
     "license.benefit.custom_styles": "Styles personnalisés — créez et modifiez vos propres styles de réécriture (Free : modèles uniquement)",
     "license.benefit.presets": "Préréglages de style — enregistrez-en autant que vous voulez (Free : un seul emplacement)",
-    "license.benefit.history": "Historique — illimité et consultable (Free : les 10 derniers)",
+    "license.benefit.history": "Historique — conservé chiffré jusqu'à un an, avec recherche (Free : les 15 derniers, cette session uniquement)",
     "license.benefit.builds": "Versions signées à mise à jour automatique et support prioritaire",
 
     "license.waitlist.title": "Pro arrive bientôt",
@@ -590,4 +590,46 @@ STRINGS: dict[str, str] = {
         "Modifier les styles personnalisés est une fonctionnalité Pro. Choisissez un modèle "
         "dans Paramètres → Style personnalisé."
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "Historique",
+    "page.history.title": "Historique",
+    "page.history.hint": "Durée de conservation de l'historique et effacement.",
+    "settings.history.storage.title": "Historique enregistré",
+    "settings.history.storage.hint": "Pro conserve l'historique d'une session à l'autre, chiffré sur cet ordinateur. Rien n'est envoyé.",
+    "settings.history.retention": "Conserver l'historique",
+    "settings.history.retention.hint": "Les entrées plus anciennes sont supprimées automatiquement.",
+    "settings.history.retention.days": "{days} jours",
+    "settings.history.pro_hint": "Free ne garde que la session en cours (15 dernières entrées). L'historique enregistré et consultable jusqu'à un an fait partie de Pro.",
+    "settings.history.clear.title": "Effacer l'historique",
+    "settings.history.clear.hint": "Supprime toutes les entrées — de cette session et enregistrées — ainsi que la clé de chiffrement. Irréversible.",
+    "history.clear.button": "Effacer l'historique",
+    "history.clear.confirm.title": "Effacer l'historique ?",
+    "history.clear.confirm.text": "Toutes les entrées de l'historique seront supprimées définitivement. C'est irréversible.",
+    "history.status.empty": "L'historique est vide.",
+    "history.status.stored": "Entrées : {count} · caractères : {chars} · depuis le {since}",
+    "history.status.session": "Entrées de cette session : {count}",
+    "main.tooltip.history_search": "Rechercher dans l'historique",
+    "history_dialog.title": "Historique",
+    "history_dialog.pro_banner": "La recherche, les filtres et l'historique jusqu'à un an font partie de Pro. Free n'affiche que cette session.",
+    "history_dialog.search.placeholder": "Rechercher dans le texte…",
+    "history_dialog.kind.all": "Tous les types",
+    "history_dialog.period.today": "Aujourd'hui",
+    "history_dialog.period.week": "7 jours",
+    "history_dialog.period.month": "30 jours",
+    "history_dialog.period.all": "Toute la période",
+    "history_dialog.period.custom": "Période personnalisée…",
+    "history_dialog.range.from": "Du",
+    "history_dialog.range.to": "Au",
+    "history_dialog.volume.title": "Volume par jour",
+    "history_dialog.volume.reset_day": "Toute la période",
+    "history_dialog.volume.tooltip": "{day} : {count} entrées, {chars} caractères",
+    "history_dialog.summary": "Période : {count} entrées · {chars} caractères",
+    "history_dialog.summary.filtered": "Période : {count} entrées · {chars} caractères · trouvées : {shown}",
+    "history_dialog.empty": "Aucun résultat.",
+    "history_dialog.close": "Fermer",
+    "history_dialog.locked_tooltip": "Disponible dans Pro",
+    "history_dialog.menu.open": "Ouvrir dans la fenêtre",
+    "history_dialog.menu.copy": "Copier",
+    "history_dialog.menu.delete": "Supprimer",
 }

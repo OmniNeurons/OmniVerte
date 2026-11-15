@@ -32,7 +32,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "Отмена",
     "common.save": "Сохранить",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Функция Pro — записаться в лист ожидания",
+    "common.pro.tooltip": "Функция Pro — купить лицензию",
     "common.help.where_key": "Где взять ключ?",
 
     # ---------- tray menu ----------
@@ -337,7 +337,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "Термины",
-    "glossary.terms.hint": "Слова, специфичные для вашей компании и ежедневные термины, по группам. По одной записи в строке.",
+    "glossary.terms.hint": "Слова, которые распознавание не может знать: названия вашей компании, продуктов и клиентов, внутренние сокращения, необычные написания. Общепринятые профессиональные слова вносить не нужно — распознавание их уже знает, а лишний термин может перетягивать на себя похожие по звучанию слова. По одной записи в строке.",
     "glossary.terms.tab.names": "Имена и термины",
     "glossary.terms.tab.replacements": "Замены",
     "glossary.terms.names": "Имена",
@@ -345,7 +345,7 @@ STRINGS: dict[str, str] = {
     # Вымышленные названия компаний — имена собственные, остаются латиницей.
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "Сервисы и термины",
-    "glossary.terms.services.hint": "Названия сервисов, тарифов, отраслевые термины.",
+    "glossary.terms.services.hint": "Названия сервисов и тарифов, внутренние термины и сокращения.",
     "glossary.terms.services.placeholder": "TurboDrive\nтариф Орбита",
     "glossary.terms.replacements.placeholder": "турбо драйв {sep} TurboDrive",
     "glossary.terms.replacements.hint": (
@@ -463,7 +463,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "Глоссарий — до 200 терминов (Free: 5) и готовые профессиональные наборы",  # _KEEP_LATIN
     "license.benefit.custom_styles": "Свои стили — создавайте и редактируйте собственные стили переписывания (Free: только шаблоны)",  # _KEEP_LATIN
     "license.benefit.presets": "Пресеты стилей — сохраняйте сколько угодно (Free: один слот)",  # _KEEP_LATIN
-    "license.benefit.history": "История — без ограничений и с поиском (Free: последние 10)",  # _KEEP_LATIN
+    "license.benefit.history": "История — хранится зашифрованной до года, с поиском (Free: последние 15, только текущая сессия)",  # _KEEP_LATIN
     "license.benefit.builds": "Подписанные сборки с автообновлением и приоритетная поддержка",
 
     "license.waitlist.title": "Pro скоро",                                   # _KEEP_LATIN
@@ -606,4 +606,46 @@ STRINGS: dict[str, str] = {
         "Редактирование своих стилей — функция Pro. Выберите шаблон "
         "на странице «Кастомный стиль» в настройках."
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "История",
+    "page.history.title": "История",
+    "page.history.hint": "Сколько хранить историю и как её очистить.",
+    "settings.history.storage.title": "Сохранённая история",
+    "settings.history.storage.hint": "В Pro история сохраняется между сессиями в зашифрованном виде на этом компьютере. Никуда не отправляется.",
+    "settings.history.retention": "Хранить историю",
+    "settings.history.retention.hint": "Записи старше срока удаляются автоматически.",
+    "settings.history.retention.days": "{days} дн.",
+    "settings.history.pro_hint": "Во Free хранится только текущая сессия (последние 15 записей). Сохранённая история с поиском до года — в Pro.",
+    "settings.history.clear.title": "Очистить историю",
+    "settings.history.clear.hint": "Удаляет все записи — текущей сессии и сохранённые — и ключ шифрования. Отменить нельзя.",
+    "history.clear.button": "Очистить историю",
+    "history.clear.confirm.title": "Очистить историю?",
+    "history.clear.confirm.text": "Все записи истории будут удалены безвозвратно. Отменить это нельзя.",
+    "history.status.empty": "История пуста.",
+    "history.status.stored": "Записей: {count} · символов: {chars} · с {since}",
+    "history.status.session": "Записей в этой сессии: {count}",
+    "main.tooltip.history_search": "Поиск по истории",
+    "history_dialog.title": "История",
+    "history_dialog.pro_banner": "Поиск, фильтры и история до года доступны в Pro. Во Free видна только текущая сессия.",
+    "history_dialog.search.placeholder": "Искать в тексте…",
+    "history_dialog.kind.all": "Все типы",
+    "history_dialog.period.today": "Сегодня",
+    "history_dialog.period.week": "7 дней",
+    "history_dialog.period.month": "30 дней",
+    "history_dialog.period.all": "Всё время",
+    "history_dialog.period.custom": "Свой период…",
+    "history_dialog.range.from": "С",
+    "history_dialog.range.to": "По",
+    "history_dialog.volume.title": "Объём по дням",
+    "history_dialog.volume.reset_day": "Весь период",
+    "history_dialog.volume.tooltip": "{day}: записей — {count}, символов — {chars}",
+    "history_dialog.summary": "За период: записей — {count} · символов — {chars}",
+    "history_dialog.summary.filtered": "За период: записей — {count} · символов — {chars} · найдено: {shown}",
+    "history_dialog.empty": "Ничего не найдено.",
+    "history_dialog.close": "Закрыть",
+    "history_dialog.locked_tooltip": "Доступно в Pro",
+    "history_dialog.menu.open": "Открыть в окне",
+    "history_dialog.menu.copy": "Копировать",
+    "history_dialog.menu.delete": "Удалить",
 }

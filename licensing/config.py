@@ -13,9 +13,10 @@ is ``PRO_SALES_OPEN``:
     product, so the payment backend comes *after* launch (roadmap Phase 3).
   - ``True`` (now) — the License page shows the real key-activation UI: paste a
     key, the app exchanges it for a signed token against ``LICENSE_API_URL``
-    (Worker ``/activate`` → verify → ``store_token``). Checkout still isn't in
-    the app, so "Get a license" keeps pointing at ``WAITLIST_URL`` until a store
-    exists.
+    (Worker ``/activate`` → verify → ``store_token``). Checkout lives on the
+    landing page (lava.top): "Get a license" and every Pro tag open
+    ``buy_url()`` — the landing in the UI language with the checkout dialog
+    already open.
 
 Testers/beta users do NOT need a key: ``OMNIVERTE_DEV_TIER=pro`` (see
 ``licensing/entitlement.py``) unlocks Pro locally. No in-app bypass is shipped.
@@ -32,6 +33,23 @@ PRO_SALES_OPEN = True
 # landing page (Phase 1C) — the app merely opens the browser here. Placeholder
 # until the domain/anchor are finalised.
 WAITLIST_URL = "https://omniverte.ai/#waitlist"
+
+# Landing languages (same 8 as the UI). English lives at "/", the rest at /<lang>/.
+_SITE = "https://omniverte.ai"
+_SITE_LANGS = ("ru", "es", "fr", "de", "it", "zh", "ja")
+
+
+def buy_url(locale: str | None = None) -> str:
+    """Store page for the current UI language; ``#buy`` opens the checkout dialog."""
+    if locale is None:
+        try:
+            from i18n import current_locale
+            locale = current_locale()
+        except Exception:
+            locale = "en"
+    lang = (locale or "en")[:2].lower()
+    path = f"/{lang}/" if lang in _SITE_LANGS else "/"
+    return f"{_SITE}{path}#buy"
 
 # Self-roll license backend (Cloudflare Worker). Set this to the deployed Worker
 # origin before flipping ``PRO_SALES_OPEN``. ``licensing.api_client`` POSTs

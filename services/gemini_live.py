@@ -159,7 +159,10 @@ def close_error(code: int | None, reason: str) -> GeminiApiError:
     low = reason.lower()
     if "api key" in low or "permission" in low or "unauthenticated" in low:
         status = 401
-    elif "quota" in low or "resource_exhausted" in low or "rate" in low:
+    # "rate" as a whole word: an unsupported-model 1008 reason ends with
+    # "bidiGenerateContent", and a substring match made that a rate limit.
+    elif ("quota" in low or "resource_exhausted" in low
+          or re.search(r"\brate\b", low)):
         status = 429
     else:
         status = None

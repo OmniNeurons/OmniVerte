@@ -19,6 +19,7 @@ from .transcription_page import TranscriptionPage
 from .languages_page import LanguagesPage
 from .custom_style_page import CustomStylePage
 from .glossary_page import GlossaryPage
+from .history_page import HistoryPage
 from .license_page import LicensePage
 from .about_page import AboutPage
 
@@ -29,6 +30,7 @@ __all__ = [
     "LanguagesPage",
     "CustomStylePage",
     "GlossaryPage",
+    "HistoryPage",
     "LicensePage",
     "AboutPage",
 ]

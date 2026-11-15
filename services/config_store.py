@@ -38,6 +38,11 @@ SECRET_KEYS = frozenset({
 LLM_MAX_TOKENS_MIN = 500
 LLM_MAX_TOKENS_MAX = 16000
 
+# Bounds for HISTORY_RETENTION_DAYS (see `Config.history_retention_days`):
+# how long the Pro encrypted history keeps an entry.
+HISTORY_RETENTION_MIN_DAYS = 1
+HISTORY_RETENTION_MAX_DAYS = 365
+
 # Fallback values for non-secret settings.
 DEFAULTS: dict[str, str] = {
     "ACTIVATION_MODE": "keyboard",
@@ -143,6 +148,8 @@ DEFAULTS: dict[str, str] = {
     "GLOSSARY_FUZZY_REPLACE": "true",
     "GLOSSARY_FUZZY_THRESHOLD": "88",
     "GLOSSARY_FUZZY_MAX_TERMS": "200",
+    # Pro persistent history: entries older than this many days are purged.
+    "HISTORY_RETENTION_DAYS": "30",
 }
 
 
@@ -368,6 +375,16 @@ class Config:
         except ValueError:
             value = int(DEFAULTS["LLM_MAX_TOKENS"])
         return max(LLM_MAX_TOKENS_MIN, min(value, LLM_MAX_TOKENS_MAX))
+
+    @property
+    def history_retention_days(self) -> int:
+        """HISTORY_RETENTION_DAYS as an int, clamped to 1..365 (garbage → default)."""
+        raw = (self.get("HISTORY_RETENTION_DAYS") or "").strip()
+        try:
+            value = int(raw)
+        except ValueError:
+            value = int(DEFAULTS["HISTORY_RETENTION_DAYS"])
+        return max(HISTORY_RETENTION_MIN_DAYS, min(value, HISTORY_RETENTION_MAX_DAYS))
 
     @property
     def backend_priority(self) -> list[str]:

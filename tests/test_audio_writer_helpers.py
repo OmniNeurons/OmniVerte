@@ -1131,3 +1131,40 @@ def test_gemini_live_setup_uses_languages_and_glossary():
     tr = w._gemini_live_setup()["inputAudioTranscription"]
     assert tr["languageCodes"] == ["ru-RU", "en-US"]
     assert tr["customVocabulary"] == ["OmniVerte"]
+
+
+# ---------- history kind of a hotkey action ----------
+
+def _writer_for_action(action, values, monkeypatch, result="out"):
+    import services.text_operations as ops
+
+    w = _bare_writer()
+    w.config = SimpleNamespace(get=lambda k, d=None: values.get(k, d), llm_max_tokens=4000)
+    w.glossary = SimpleNamespace(is_empty=True)
+    w._glossary_block = lambda flag: None
+    w.active_action = action
+    w.client = object()
+    monkeypatch.setattr(ops, "translate_to_language", lambda *a, **k: result)
+    monkeypatch.setattr(ops, "rewrite_text", lambda *a, **k: result)
+    return w
+
+
+def test_translate_hotkey_is_recorded_as_translation(monkeypatch):
+    w = _writer_for_action("translate", {"SECONDARY_LANGUAGE": "Russian"}, monkeypatch)
+    assert w._apply_action_transform("hello") == "out"
+    assert w._last_history == ("translation", {"direction": "→ RU"})
+
+
+@pytest.mark.parametrize("style", ["casual", "professional", "custom"])
+def test_custom_hotkey_is_recorded_by_style(monkeypatch, style):
+    w = _writer_for_action(
+        "custom", {"HOTKEY_CUSTOM_STYLE": style, "CUSTOM_STYLE_PROMPT": "Be brief"}, monkeypatch
+    )
+    w._apply_action_transform("hello")
+    assert w._last_history == (style, {})
+
+
+def test_failed_llm_step_stays_a_transcription(monkeypatch):
+    w = _writer_for_action("translate", {}, monkeypatch, result="")
+    assert w._apply_action_transform("hello") == "hello"
+    assert w._last_history == ("transcription", {})

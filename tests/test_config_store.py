@@ -230,3 +230,19 @@ def test_config_quick_engine_reads_saved_keys(appdata):
     assert c.quick_engine() == "elevenlabs"
     c.set_secret("GEMINI_API_KEY", "g")
     assert c.quick_engine() == "gemini"
+
+
+# ---------- HISTORY_RETENTION_DAYS ----------
+
+def test_history_retention_default_is_30(appdata):
+    assert Config().history_retention_days == 30
+
+
+def test_history_retention_clamps_to_a_year_and_survives_garbage(appdata):
+    c = Config()
+    c.set("HISTORY_RETENTION_DAYS", "0")
+    assert c.history_retention_days == 1
+    c.set("HISTORY_RETENTION_DAYS", "5000")
+    assert c.history_retention_days == 365
+    c.set("HISTORY_RETENTION_DAYS", "soon")
+    assert c.history_retention_days == 30

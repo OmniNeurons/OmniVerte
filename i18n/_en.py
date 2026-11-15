@@ -29,7 +29,7 @@ STRINGS: dict[str, str] = {
     "common.cancel": "Cancel",
     "common.save": "Save",
     "common.pro": "Pro",
-    "common.pro.tooltip": "Pro feature — join the waitlist",
+    "common.pro.tooltip": "Pro feature — get a license",
     "common.help.where_key": "Where do I get a key?",
 
     # ---------- tray menu ----------
@@ -369,7 +369,7 @@ STRINGS: dict[str, str] = {
 
     # ---------- settings: Glossary → term editors ----------
     "glossary.terms.title": "Terms",
-    "glossary.terms.hint": "Company-specific words, grouped. One entry per line.",
+    "glossary.terms.hint": "Words the recogniser cannot know: names of your company, products and clients, internal abbreviations, unusual spellings. Common professional vocabulary needs no entry — the recogniser already knows it, and an extra term can pull similar-sounding words toward itself. One entry per line.",
     "glossary.terms.tab.names": "Names & terms",
     "glossary.terms.tab.replacements": "Replacements",
     "glossary.terms.names": "Names",
@@ -379,7 +379,7 @@ STRINGS: dict[str, str] = {
     # entry).
     "glossary.terms.names.placeholder": "Acme Corp\nGlobex",
     "glossary.terms.services": "Services & terms",
-    "glossary.terms.services.hint": "Service names, plans, domain terms.",
+    "glossary.terms.services.hint": "Service and plan names, internal terms and abbreviations.",
     "glossary.terms.services.placeholder": "TurboDrive\nтариф Орбита",
     # `{sep}` is the `=>` separator (`_REPL_SEP`), passed in so the example can
     # never drift from the parser.
@@ -509,7 +509,7 @@ STRINGS: dict[str, str] = {
     "license.benefit.glossary": "Glossary — up to 200 terms (Free: 5) plus ready-made profession packs",
     "license.benefit.custom_styles": "Custom styles — create and edit your own rewrite styles (Free: templates only)",
     "license.benefit.presets": "Style presets — save as many as you like (Free: one slot)",
-    "license.benefit.history": "History — unlimited and searchable (Free: last 10)",
+    "license.benefit.history": "History — saved encrypted for up to a year, with search (Free: last 15, this session only)",
     "license.benefit.builds": "Signed, auto-updating builds and priority support",
 
     # Waitlist mode (PRO_SALES_OPEN = False).
@@ -691,4 +691,46 @@ STRINGS: dict[str, str] = {
         "Editing custom styles is a Pro feature. Pick a template "
         "in Settings → Custom style."
     ),
+
+    # ---------- history: settings page, search dialog ----------
+    "settingswindow.nav.history": "History",
+    "page.history.title": "History",
+    "page.history.hint": "How long your history is kept, and wiping it.",
+    "settings.history.storage.title": "Saved history",
+    "settings.history.storage.hint": "Pro keeps your history between sessions, encrypted on this computer. Nothing is sent anywhere.",
+    "settings.history.retention": "Keep history for",
+    "settings.history.retention.hint": "Older entries are deleted automatically.",
+    "settings.history.retention.days": "{days} days",
+    "settings.history.pro_hint": "Free keeps only the current session (last 15 entries). Saved, searchable history up to a year is part of Pro.",
+    "settings.history.clear.title": "Clear history",
+    "settings.history.clear.hint": "Deletes every entry — this session's and the saved ones — and the encryption key. This cannot be undone.",
+    "history.clear.button": "Clear history",
+    "history.clear.confirm.title": "Clear the history?",
+    "history.clear.confirm.text": "Every history entry will be deleted for good. This cannot be undone.",
+    "history.status.empty": "History is empty.",
+    "history.status.stored": "Entries: {count} · characters: {chars} · since {since}",
+    "history.status.session": "Entries this session: {count}",
+    "main.tooltip.history_search": "Search history",
+    "history_dialog.title": "History",
+    "history_dialog.pro_banner": "Search, filters and history for up to a year are part of Pro. Free shows this session only.",
+    "history_dialog.search.placeholder": "Search the text…",
+    "history_dialog.kind.all": "All types",
+    "history_dialog.period.today": "Today",
+    "history_dialog.period.week": "7 days",
+    "history_dialog.period.month": "30 days",
+    "history_dialog.period.all": "All time",
+    "history_dialog.period.custom": "Custom range…",
+    "history_dialog.range.from": "From",
+    "history_dialog.range.to": "To",
+    "history_dialog.volume.title": "Volume by day",
+    "history_dialog.volume.reset_day": "Show whole period",
+    "history_dialog.volume.tooltip": "{day}: {count} entries, {chars} characters",
+    "history_dialog.summary": "Period: {count} entries · {chars} characters",
+    "history_dialog.summary.filtered": "Period: {count} entries · {chars} characters · found: {shown}",
+    "history_dialog.empty": "Nothing found.",
+    "history_dialog.close": "Close",
+    "history_dialog.locked_tooltip": "Available in Pro",
+    "history_dialog.menu.open": "Open in the window",
+    "history_dialog.menu.copy": "Copy",
+    "history_dialog.menu.delete": "Delete",
 }
