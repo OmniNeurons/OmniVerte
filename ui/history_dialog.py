@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
 from PySide6.QtCore import QDate, QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtGui import QColor, QFontMetrics, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -61,55 +61,175 @@ PERIODS = (
     ("history_dialog.period.custom", "custom"),
 )
 _DEFAULT_PERIOD = 2  # last 30 days
+# Longest range drawn day by day (retention tops out at a year).
+_CALENDAR_MAX_DAYS = 400
 
 
 def _fmt_chars(n: int) -> str:
     return f"{n:,}".replace(",", " ")
 
 
+def _fmt_compact(n: int) -> str:
+    """Axis label: 950, 1.5k, 12k, 1.2M — short enough for a narrow gutter."""
+    if n < 1000:
+        return str(n)
+    if n < 1_000_000:
+        v, suffix = n / 1000, "k"
+    else:
+        v, suffix = n / 1_000_000, "M"
+    text = f"{v:.1f}".rstrip("0").rstrip(".") if v < 10 else f"{v:.0f}"
+    return text + suffix
+
+
+def nice_ticks(peak: int, max_ticks: int = 4) -> List[int]:
+    """Round axis ticks from 0 up to just above `peak` (1/2/2.5/5 × 10^k steps).
+
+    The top tick follows the busiest day, so the scale grows with the user's
+    record and shrinks back when a quieter period is shown.
+    """
+    if peak <= 0:
+        return [0, 1]
+    raw = peak / max_ticks
+    magnitude = 10 ** max(0, len(str(int(raw))) - 1)
+    step = magnitude
+    for mult in (1, 2, 2.5, 5, 10):
+        step = max(1, int(mult * magnitude))
+        if step >= raw:
+            break
+    top = -(-peak // step) * step  # ceil to a whole step
+    return list(range(0, top + 1, step))
+
+
+# Day-of-month marks on the date axis; the 1st wins when space is short.
+_DATE_MARKS = (1, 10, 20)
+
+
 class _VolumeBars(QWidget):
-    """Per-day bar chart (characters per day). Click a bar → `day_clicked`."""
+    """Per-day bar chart (characters per day) with a value axis on the left and
+    date marks (1st/10th/20th) below. Click a bar → `day_clicked`."""
 
     day_clicked = Signal(object)  # datetime.date
 
+    _AXIS_GAP = 6     # between the value labels and the plot
+    _LABEL_GAP = 8    # min horizontal space between two date labels
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMinimumHeight(64)
+        self.setMinimumHeight(120)
         self.setMouseTracking(True)
         self._days: List[Tuple[date, int, int]] = []
         self._selected: Optional[date] = None
+        font = self.font()
+        if font.pointSizeF() > 0:
+            font.setPointSizeF(max(7.0, font.pointSizeF() * 0.85))
+        elif font.pixelSize() > 0:
+            font.setPixelSize(max(9, int(font.pixelSize() * 0.85)))
+        self._axis_font = font
 
     def set_data(self, days: List[Tuple[date, int, int]], selected: Optional[date] = None):
         self._days = days
         self._selected = selected
         self.update()
 
+    def ticks(self) -> List[int]:
+        return nice_ticks(max((c for _, _, c in self._days), default=0))
+
+    def _plot_rect(self) -> QRect:
+        fm = QFontMetrics(self._axis_font)
+        gutter = max(fm.horizontalAdvance(_fmt_compact(v)) for v in self.ticks())
+        left = gutter + self._AXIS_GAP
+        top = fm.height() // 2 + 1  # room for the top label's upper half
+        bottom = fm.height() + 6    # room for the date row
+        return QRect(left, top, max(1, self.width() - left - 2),
+                     max(1, self.height() - top - bottom))
+
     def _layout(self) -> List[Tuple[QRect, Tuple[date, int, int]]]:
         if not self._days:
             return []
-        w, h = self.width(), self.height() - 4
+        plot = self._plot_rect()
         n = len(self._days)
-        slot = w / n
+        slot = plot.width() / n
         bar_w = max(1, min(18, int(slot * 0.7)))
-        top = max(c for _, _, c in self._days) or 1
+        top = self.ticks()[-1] or 1
         rects = []
         for i, day in enumerate(self._days):
-            bh = max(2, int(h * day[2] / top))
-            x = int(i * slot + (slot - bar_w) / 2)
-            rects.append((QRect(x, h - bh + 2, bar_w, bh), day))
+            bh = int(plot.height() * day[2] / top)
+            if day[2] > 0:
+                bh = max(2, bh)
+            x = int(plot.left() + i * slot + (slot - bar_w) / 2)
+            rects.append((QRect(x, plot.bottom() + 1 - bh, bar_w, bh), day))
         return rects
+
+    def date_labels(self) -> List[Tuple[int, str]]:
+        """(x centre, text) of the date marks that fit without overlapping:
+        every 1st of a month first, then the 10th/20th where there is room."""
+        if not self._days:
+            return []
+        fm = QFontMetrics(self._axis_font)
+        plot = self._plot_rect()
+        candidates = []
+        for rect, day in self._layout():
+            d = day[0]
+            if d.day in _DATE_MARKS:
+                text = d.strftime("%d.%m")
+                w = fm.horizontalAdvance(text)
+                cx = rect.center().x()
+                # Keep the label inside the widget at both ends.
+                cx = min(max(cx, plot.left() + w // 2), self.width() - w // 2 - 1)
+                candidates.append((0 if d.day == 1 else 1, cx, w, text))
+        placed: List[Tuple[int, int, str]] = []  # (left, right, text)
+        for priority in (0, 1):
+            for prio, cx, w, text in candidates:
+                if prio != priority:
+                    continue
+                left, right = cx - w // 2, cx + w // 2
+                if all(right + self._LABEL_GAP <= l or left - self._LABEL_GAP >= r
+                       for l, r, _ in placed):
+                    placed.append((left, right, text))
+        return sorted(((l + r) // 2, text) for l, r, text in placed)
 
     def paintEvent(self, _event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        accent = QColor(style.palette().ACCENT)
+        pal = style.palette()
+        enabled = self.isEnabled()
+        accent = QColor(pal.ACCENT)
         muted = QColor(accent)
-        muted.setAlpha(110 if self.isEnabled() else 40)
+        muted.setAlpha(110 if enabled else 40)
+        text_color = QColor(pal.TEXT_MUTED)
+        if not enabled:
+            text_color.setAlpha(120)
+        grid = QColor(pal.BORDER_SUBTLE)
+
+        p.setFont(self._axis_font)
+        fm = QFontMetrics(self._axis_font)
+        plot = self._plot_rect()
+        ticks = self.ticks()
+        top = ticks[-1] or 1
+
+        # Value axis: gridlines + right-aligned labels in the left gutter.
+        for v in ticks:
+            y = plot.bottom() + 1 - round(plot.height() * v / top)
+            p.setPen(grid)
+            p.drawLine(plot.left(), y, plot.right(), y)
+            p.setPen(text_color)
+            label_rect = QRect(0, y - fm.height() // 2, plot.left() - self._AXIS_GAP, fm.height())
+            p.drawText(label_rect, Qt.AlignRight | Qt.AlignVCenter, _fmt_compact(v))
+
         for rect, day in self._layout():
-            color = accent if (self._selected == day[0] and self.isEnabled()) else muted
+            color = accent if (self._selected == day[0] and enabled) else muted
             p.setPen(Qt.NoPen)
             p.setBrush(color)
             p.drawRoundedRect(rect, 2, 2)
+
+        # Date axis.
+        p.setPen(text_color)
+        base = plot.bottom() + 1
+        for cx, text in self.date_labels():
+            p.drawLine(cx, base, cx, base + 3)
+            w = fm.horizontalAdvance(text)
+            p.drawText(QRect(cx - w // 2 - 1, base + 4, w + 2, fm.height()),
+                       Qt.AlignCenter, text)
         p.end()
 
     def _day_at(self, pos: QPoint):
@@ -189,10 +309,6 @@ class HistoryDialog(FramelessDialog):
         title_bar_h = max(self.titleBar.height(), 32)
         root.setContentsMargins(20, title_bar_h + 6, 20, 18)
         root.setSpacing(10)
-
-        title = QLabel(t("history_dialog.title"))
-        title.setObjectName("sectionTitle")
-        root.addWidget(title)
 
         # Free banner — the pitch, with a way to act on it.
         self.pro_banner = QFrame()
@@ -344,18 +460,20 @@ class HistoryDialog(FramelessDialog):
 
     def _on_period_changed(self, index: int):
         self.range_row.setVisible(PERIODS[index][1] == "custom")
-        self._day_filter = None
-        self.day_reset_btn.hide()
-        self.reload()
+        self._set_day_filter(None)
 
     def _on_day_clicked(self, day: date):
-        self._day_filter = day
-        self.day_reset_btn.show()
-        self.reload()
+        self._set_day_filter(day)
 
     def _clear_day_filter(self):
-        self._day_filter = None
-        self.day_reset_btn.hide()
+        self._set_day_filter(None)
+
+    def _set_day_filter(self, day: Optional[date]):
+        """One day selected → the chart folds away and the list gets the room;
+        "Show whole period" brings it back."""
+        self._day_filter = day
+        self.day_reset_btn.setVisible(day is not None)
+        self.volume.setVisible(day is None)
         self.reload()
 
     # ---------- data ----------
@@ -377,7 +495,7 @@ class HistoryDialog(FramelessDialog):
             today = date.today()
             sample = (3, 5, 2, 6, 4, 7, 3, 8, 5, 4, 6, 9, 5, 3, 7, 6, 4, 8, 6, 5)
             self.volume.set_data([
-                (today - timedelta(days=len(sample) - 1 - i), 1, v)
+                (today - timedelta(days=len(sample) - 1 - i), 1, v * 150)
                 for i, v in enumerate(sample)
             ])
             self.summary_label.setText("")
@@ -407,8 +525,13 @@ class HistoryDialog(FramelessDialog):
         self._day_filter = saved
         days = self._history.daily_volume(lo, hi)
         chart = days
-        if lo is not None and hi is not None and (hi - lo).days <= 92:
-            # Short ranges show empty days too, so the chart reads as a calendar.
+        if lo is None and days:
+            lo = days[0][0]  # "whole history" starts at the oldest entry
+        if hi is None:
+            hi = date.today()
+        if lo is not None and (hi - lo).days <= _CALENDAR_MAX_DAYS:
+            # Empty days are drawn too, so the chart reads as a calendar and the
+            # date marks (1st/10th/20th) land where they belong.
             by_day = {d[0]: d for d in days}
             chart = [by_day.get(lo + timedelta(days=i), (lo + timedelta(days=i), 0, 0))
                      for i in range((hi - lo).days + 1)]
