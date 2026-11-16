@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.38] - 2026-11-16
+
+### Changed
+- History window: the per-day volume chart now has a scale on the left
+  that follows your busiest day, and dates along the bottom (the 1st, 10th
+  and 20th of each month).
+- Clicking a day in the chart folds the chart away and shows that day's
+  entries; "Show whole period" brings it back.
+- The history window no longer repeats its title inside the window.
+
 ## [1.1.37] - 2026-11-15
 
 ### Added
