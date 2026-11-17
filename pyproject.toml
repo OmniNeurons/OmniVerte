@@ -6,7 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "omni-verte"
 description = "Windows voice-to-text desktop assistant: hotkey dictation with local or cloud Whisper transcription and optional AI grammar correction, translation, and rewriting."
 readme = "README.md"
-requires-python = ">=3.10"
+# Upper bound = newest Python every pin in requirements.txt ships a wheel for
+# (scipy 1.15.2 has none for 3.14, so pip falls back to a source build that
+# needs a C compiler). Keep in sync with README.md and CLAUDE.md.
+requires-python = ">=3.10,<3.14"
 license = { text = "MIT" }
 authors = [{ name = "Arsenii Bandurin", email = "arsenybandurin@gmail.com" }]
 keywords = ["speech-to-text", "whisper", "dictation", "voice", "transcription", "windows", "openai", "groq"]

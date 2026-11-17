@@ -135,7 +135,8 @@ reviewing and re-processing what you dictated.
 
 ## Requirements
 
-- **Windows 10/11** and **Python 3.10+**.
+- **Windows 10/11** and **Python 3.10–3.13** (3.14 is not supported yet — see
+  [Install from source](#install-from-source)).
 - A microphone.
 - *(Optional)* An **OpenAI** API key — required for any AI text operation
   (grammar/translate/rewrite) and for the OpenAI transcription backend.
@@ -176,15 +177,28 @@ anywhere and run `OmniVerte.exe`.
 
 ## Install from source
 
-```bash
+Use **Python 3.10–3.13**. The pinned dependencies (e.g. `scipy`) have no
+prebuilt wheels for Python 3.14, so on 3.14 `pip` tries to compile them from
+source and fails with `Unknown compiler(s)`. Check what you have with `py -0`;
+if 3.14 is your only Python, add 3.13 with `py install 3.13` (or
+`winget install Python.Python.3.13`).
+
+```powershell
 git clone https://github.com/OmniNeurons/OmniVerte.git
 cd OmniVerte
 
-python -m venv env
-env\Scripts\activate        # Windows
+py -3.13 -m venv env        # any installed 3.10–3.13
+env\Scripts\activate
 
 pip install -r requirements.txt
 python OmniVerte.py
+```
+
+If PowerShell refuses to activate the environment with *"running scripts is
+disabled on this system"*, allow scripts for your user once and retry:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 **Contributing?** Install the dev tools and enable the git hooks — a
