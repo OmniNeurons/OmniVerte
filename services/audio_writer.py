@@ -34,6 +34,18 @@ SEGMENT_DURATION = 20  # Duration of segment in seconds
 OVERLAP_DURATION = 1   # Overlap between segments in seconds
 MAX_SEGMENTS = 50      # Max segments per transcription (protection against hallucinations)
 TRANSCRIPTION_THREAD_TIMEOUT = 60.0  # Timeout for waiting transcription thread (seconds)
+# How long _announce_recording waits for the first mic frame before showing
+# "recording" anyway (a dead mic then reads as flat bars, not as a hung start).
+FIRST_FRAME_TIMEOUT = 1.0
+# A held hotkey auto-repeats at most ~1s apart (Windows' longest repeat delay);
+# a key-down after a longer silence is a new press even if its key-up was missed.
+HOTKEY_REPEAT_GAP = 1.5
+# Keep the input stream OPENED BUT NOT STARTED between dictations. Opening the
+# device was ~80-100ms (300ms+ cold) of the hotkey→first-frame gap; starting an
+# already-open stream is ~1ms, which took that gap from ~125ms to ~40ms. An
+# unstarted stream captures no audio and does not light Windows' "microphone
+# in use" indicator (checked on Win11 / MME). False = old open-on-press.
+PREOPEN_INPUT_STREAM = True
 
 # Cloud request resilience. Without an explicit timeout the openai SDK waits up
 # to 600s per request — a single stalled request froze the whole app for minutes.
@@ -435,6 +447,12 @@ class AudioWriter:
     self.is_recording = False
     self.audio_queue = queue.Queue()
     self.stream = None
+    # Pre-opened, unstarted stream for the next dictation (PREOPEN_INPUT_STREAM)
+    # as (stream, INPUT_DEVICE value it was opened for). The lock also covers
+    # the open itself, so a press landing mid-open waits for that stream
+    # instead of opening a second one.
+    self._standby = None
+    self._standby_lock = threading.Lock()
     self.recording_timer = 10  # Auto-stop timer (e.g., 10 minutes)
     # HWND of the window that had focus when recording started — used to
     # restore focus before pasting so Ctrl+V lands in the user's editor and
@@ -499,6 +517,13 @@ class AudioWriter:
     self.active_action = "quick"
     # Set by the hotkey callback just before toggling, consumed on start.
     self._pending_action = "quick"
+    # Hotkeys fire on key-DOWN (see press_and_talk), so a held key auto-repeats
+    # into the callback. _hotkey_held swallows those repeats until the release
+    # watcher (_arm_release_watch) sees the key go up; _hotkey_last_down is the
+    # self-heal clock for a key-up we never got to see.
+    self._hotkey_held = False
+    self._hotkey_last_down = 0.0
+    self._release_watch = None
 
     self.last_toggle_time = 0
 
@@ -861,6 +886,8 @@ class AudioWriter:
         f"input_device={self._input_device_config!r}"
     )
     self._reinit_backend_async()
+    # INPUT_DEVICE may have changed — swap the pre-opened stream to match.
+    self._prepare_standby_stream()
 
   def toggle_use_device(self):
     """
@@ -1054,7 +1081,12 @@ class AudioWriter:
         self._prev_foreground_hwnd = 0
         self._foreground_was_own = False
 
-      self.ui_bridge.safe_emit_status("recording")
+      # NOT "recording" yet: opening the device takes 0.1–0.5s (more on slow
+      # laptops) and nothing said in that window is captured. The indicator is
+      # the user's "speak now" cue, so it flips only once the first frame has
+      # actually arrived — see _announce_recording below.
+      self._capture_announced = False
+      self._capture_live = threading.Event()
       self.ui_bridge.audio_level = 0.0  # start the equalizer flat until first frame
       # Re-read capture settings so a settings save mid-session applies on the
       # next press without requiring a full backend reinit.
@@ -1063,9 +1095,23 @@ class AudioWriter:
           self.config.get("AUDIO_ENHANCE", "light")
       )
       # Set up the audio input stream. device=None → PortAudio system default.
-      device_index = resolve_input_device(self._input_device_config)
-      self.stream = self._open_input_stream(device_index)
-      self.stream.start()
+      # Fast path: the stream pre-opened after the previous dictation. If it
+      # went stale (device unplugged since) start() raises and we fall through
+      # to a fresh open, exactly as before the pre-open existed.
+      stream = self._take_standby(self._input_device_config)
+      if stream is not None:
+        try:
+          stream.start()
+          logger.info("Started pre-opened input stream")
+        except Exception as e:
+          logger.warning(f"Pre-opened input stream failed to start ({e}); reopening")
+          self._close_quietly(stream)
+          stream = None
+      if stream is None:
+        device_index = resolve_input_device(self._input_device_config)
+        stream = self._open_input_stream(device_index)
+        stream.start()
+      self.stream = stream
       self.is_recording = True
 
       # Start streaming transcription. Bump the session gen first so this
@@ -1079,6 +1125,15 @@ class AudioWriter:
       )
       self.transcription_thread.start()
 
+      # Flip the indicator to "recording" once the mic really delivers audio.
+      # Off this thread: we may be inside the low-level keyboard hook, which
+      # must return promptly.
+      threading.Thread(
+          target=self._announce_recording,
+          args=(self._session_gen, self._capture_live),
+          daemon=True,
+      ).start()
+
       # Set a 10-minute (600 seconds) safety timer for auto-stop
       self.recording_timer = threading.Timer(600, self.stop_recording)
       self.recording_timer.start()
@@ -1086,6 +1141,36 @@ class AudioWriter:
       logger.info("Recording started. Press the activation key/button again to stop recording.")
     except Exception as e:
       logger.error(f"Error starting recording: {e}")
+
+  # Bare instances (tests drive streaming_transcribe without start_recording)
+  # behave as "already announced"; start_recording resets it per session.
+  _capture_announced = True
+  # Same for the hotkey release-watch state (set per instance in __init__).
+  _hotkey_held = False
+  _hotkey_last_down = 0.0
+  _release_watch = None
+
+  def _announce_recording(self, session_gen, live):
+    """Emit "recording" when the first audio frame of this session arrives.
+
+    ``live`` is the session's own Event, set by audio_callback. If no frame
+    shows up within the timeout the status flips anyway: the stream is open,
+    and the indicator's flat bars are how a dead/switched mic is surfaced.
+    """
+    started = time.monotonic()
+    if live.wait(timeout=FIRST_FRAME_TIMEOUT):
+      logger.info(
+          f"First audio frame {time.monotonic() - started:.3f}s after stream start"
+      )
+    else:
+      logger.warning(
+          f"No audio frame within {FIRST_FRAME_TIMEOUT}s of stream start"
+      )
+    # A stop (or a newer session) may have won the race while we waited.
+    if session_gen != self._session_gen or not self.is_recording:
+      return
+    self._capture_announced = True
+    self.ui_bridge.safe_emit_status("recording")
 
   def stop_recording(self):
     """
@@ -1115,6 +1200,9 @@ class AudioWriter:
       self.stream.close()
     except Exception as e:
       logger.error(f"Error stopping audio stream: {e}")
+    # Re-arm the pre-opened stream now, not after processing: the next press
+    # may come while this dictation is still being transcribed.
+    self._prepare_standby_stream()
 
     # Remove mouse handler to prevent duplicate calls
     if self.mouse_hook:
@@ -1218,6 +1306,69 @@ class AudioWriter:
         kwargs.pop("device", None)
     return sd.InputStream(**kwargs)
 
+  # Bare instances (tests build AudioWriter via __new__) share these defaults.
+  _standby = None
+  _standby_lock = threading.Lock()
+
+  @staticmethod
+  def _close_quietly(stream):
+    try:
+      stream.close()
+    except Exception as e:
+      logger.debug(f"input stream close failed: {e}")
+
+  def _prepare_standby_stream(self):
+    """Pre-open (never start) the input stream for the next dictation.
+
+    Runs on its own thread: opening the device blocks for ~100ms+ and callers
+    are the keyboard hook thread, the GUI thread or stop_recording. Idempotent:
+    a standby already open for the current INPUT_DEVICE is kept.
+    """
+    if not PREOPEN_INPUT_STREAM:
+      return
+    threading.Thread(target=self._open_standby, daemon=True).start()
+
+  def _open_standby(self):
+    try:
+      cfg = self.config.get("INPUT_DEVICE", "") or ""
+      with self._standby_lock:
+        # A session that started meanwhile opened its own stream; its stop
+        # will re-arm us. Don't hold a second handle on the device.
+        if self.is_recording:
+          return
+        if self._standby is not None:
+          if self._standby[1] == cfg:
+            return
+          self._close_quietly(self._standby[0])  # device changed in Settings
+          self._standby = None
+        started = time.monotonic()
+        stream = self._open_input_stream(resolve_input_device(cfg))
+        self._standby = (stream, cfg)
+        logger.info(
+            f"Input stream pre-opened in {time.monotonic() - started:.3f}s (not started)"
+        )
+    except Exception as e:
+      # Purely an optimisation: start_recording opens on demand without it.
+      logger.debug(f"pre-open of input stream failed: {e}")
+
+  def _take_standby(self, cfg):
+    """Hand over the pre-opened stream if it matches ``cfg``, else None."""
+    with self._standby_lock:
+      standby, self._standby = self._standby, None
+    if standby is None:
+      return None
+    stream, standby_cfg = standby
+    if standby_cfg != cfg:
+      self._close_quietly(stream)
+      return None
+    return stream
+
+  def _drop_standby(self):
+    with self._standby_lock:
+      standby, self._standby = self._standby, None
+    if standby is not None:
+      self._close_quietly(standby[0])
+
   def _write_transcription_wav(self, path, pcm):
     """Apply AUDIO_ENHANCE profile and write int16 mono WAV for the ASR backends.
 
@@ -1255,6 +1406,12 @@ class AudioWriter:
 
     if not self.is_recording:
       return
+
+    # First frame of the session → wake _announce_recording (the indicator's
+    # "speak now" flip). Checked first so the steady state is a lock-free read.
+    live = self._capture_live
+    if not live.is_set():
+      live.set()
 
     # Live level for the floating indicator's equalizer. int16 → normalized RMS
     # in [0, 1], stored in a plain field polled by the widget's animation timer.
@@ -1379,7 +1536,10 @@ class AudioWriter:
       # whoever owns the live session (and to stop_recording's finalize).
       if _current():
         if self.is_recording:
-          self.ui_bridge.safe_emit_status("recording")
+          # Until the first frame lands the indicator must not claim
+          # "recording" — _announce_recording owns that first flip.
+          if self._capture_announced:
+            self.ui_bridge.safe_emit_status("recording")
         else:
           self.ui_bridge.safe_emit_status("processing")
 
@@ -2136,9 +2296,61 @@ Text to process:
     Kept deliberately trivial: a low-level keyboard hook (suppress=True) must
     return quickly or Windows skips it past its ~300ms timeout and the key
     leaks through. All heavy work happens later off the hook thread.
+
+    Fires on key-DOWN, so a held key keeps calling us via auto-repeat. Only
+    the first down of a physical press may toggle; repeats are dropped until
+    the release watcher clears _hotkey_held. If the key-up was never seen
+    (lock screen / UAC desktop ate it) the flag would stick and kill the
+    hotkey — auto-repeat never pauses this long, so a down arriving after a
+    HOTKEY_REPEAT_GAP of silence is a fresh press.
     """
+    now = time.monotonic()
+    repeat = self._hotkey_held and now - self._hotkey_last_down < HOTKEY_REPEAT_GAP
+    self._hotkey_last_down = now
+    if repeat:
+      return
+    self._arm_release_watch(action_id)
     self._pending_action = action_id
     self.toggle_recording()
+
+  def _arm_release_watch(self, action_id):
+    """Mark the hotkey as held and watch for its release.
+
+    The watcher is a plain (non-suppressing) keyboard hook, so it runs on the
+    keyboard lib's queue thread, not inside the low-level hook. It only clears
+    the flag; the hook itself is removed here on the *next* press — unhooking
+    from inside the handler would mutate the lib's handler list mid-iteration.
+    """
+    self._disarm_release_watch()
+    key = self.hotkeys.get(action_id, "")
+    self._hotkey_held = True
+
+    def _watch(event):
+      if not self._hotkey_held or getattr(event, "event_type", None) != "up":
+        return
+      try:
+        still_down = keyboard.is_pressed(key)
+      except Exception:
+        still_down = False
+      if not still_down:
+        self._hotkey_held = False
+
+    try:
+      self._release_watch = keyboard.hook(_watch)
+    except Exception as e:
+      # No watcher → no way to see the release; fail open (repeats may toggle)
+      # rather than leave the hotkey dead.
+      logger.debug(f"release watch failed: {e}")
+      self._hotkey_held = False
+
+  def _disarm_release_watch(self):
+    """Remove the release watcher hook, if any."""
+    watch, self._release_watch = self._release_watch, None
+    if watch is not None:
+      try:
+        keyboard.unhook(watch)
+      except (KeyError, ValueError) as e:
+        logger.debug(f"release watch unhook failed (already gone?): {e}")
 
   def _unhook_all(self):
     """Remove every registered keyboard hotkey handle."""
@@ -2148,6 +2360,8 @@ Text to process:
       except (KeyError, ValueError) as e:
         logger.debug(f"remove_hotkey failed (already gone?): {e}")
     self.activation_hooks.clear()
+    self._disarm_release_watch()
+    self._hotkey_held = False
 
   def shutdown(self):
     """Tear down every input hook for a clean process exit.
@@ -2160,6 +2374,7 @@ Text to process:
     call more than once and from any thread (the ``keyboard``/``mouse`` libs
     guard their state with locks)."""
     logger.info("AudioWriter shutdown — removing input hooks")
+    self._drop_standby()
     try:
       self._unhook_all()
     except Exception as e:
@@ -2182,6 +2397,9 @@ Text to process:
   def press_and_talk(self):
     """Activate voice input mode and set up the activation hook(s)."""
     logger.info("Voice input activated")
+    # First arming at startup (later ones come from stop_recording); a no-op
+    # when a matching standby is already open.
+    self._prepare_standby_stream()
 
     if self.activation_mode == 'keyboard':
       # Already registered (we keep hooks alive across recordings) — nothing to do.
@@ -2194,13 +2412,15 @@ Text to process:
           continue
         try:
           # suppress=True swallows BOTH key edges so the focused app never sees
-          # it; trigger_on_release fires the callback once per tap (matching the
-          # previous on_release_key semantics, so the double-tap logic still works).
+          # it. The callback fires on key-DOWN: waiting for the release cost
+          # ~100ms of the user's first word on every dictation. _on_hotkey
+          # filters the auto-repeat of a held key, so it is still once per
+          # tap and the double-tap logic is unchanged.
           self.activation_hooks[aid] = keyboard.add_hotkey(
               key,
               (lambda a=aid: self._on_hotkey(a)),
               suppress=self.suppress_hotkeys,
-              trigger_on_release=True,
+              trigger_on_release=False,
           )
           logger.info(
               f"Hotkey [{key.upper()}] -> {aid}"

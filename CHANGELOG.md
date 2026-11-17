@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- Recording now starts the moment you press the hotkey, not when you
+  release it — the first word is less likely to be cut off on slower
+  computers.
+- The microphone is now prepared in advance (but not listening) between
+  dictations, so recording begins about three times sooner after the hotkey.
+  The Windows "microphone in use" indicator stays off until you actually
+  record.
+- The indicator switches to "recording" only once the microphone is really
+  capturing, so it is an honest "speak now" signal.
+
 ## [1.1.38] - 2026-11-16
 
 ### Changed
