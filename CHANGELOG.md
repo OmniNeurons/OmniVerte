@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.39] - 2026-11-18
+
 ### Added
 - Settings → Transcription: a "Check" button next to every API key. It tells
   you whether the key is accepted and whether the account still has balance,
