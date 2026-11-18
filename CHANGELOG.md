@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format is based on
 ### Fixed
 - A wrong Gemini key is now reported as "key rejected" instead of
   "unexpected error".
+- The Settings window opened shifted down and to the right of the main
+  window, and at its smallest size. It now opens centred over the main
+  window at full size, and never taller than the screen.
 
 ### Changed
 - Settings → Transcription: all four API keys (OpenAI, Groq, Gemini,

@@ -76,6 +76,10 @@ class SettingsWindow(FluentWindow):
     saved = Signal()
     cancelled = Signal()
 
+    # Opening footprint (logical px). Kept as a constant because it has to be
+    # re-applied at open time — see restore_default_size().
+    _DEFAULT_SIZE = (1040, 820)
+
     def __init__(
         self, config: Config, is_initial: bool = False, ui_bridge=None,
         history_manager=None,
@@ -100,7 +104,7 @@ class SettingsWindow(FluentWindow):
             t("settingswindow.title.setup") if is_initial
             else t("settingswindow.title.settings")
         )
-        self.resize(1040, 820)
+        self.resize(*self._DEFAULT_SIZE)
         self.setMinimumSize(860, 680)
 
         icon_path = self._find_icon_path()
@@ -151,7 +155,34 @@ class SettingsWindow(FluentWindow):
             return
         frame = self.frameGeometry()
         frame.moveCenter(ref.center())
+        # Keep the whole window inside the work area: this window is taller
+        # than the main one, so on a short screen (e.g. 1080p at 125% → 816px
+        # of work area) a pure concentric placement pushes the title bar off
+        # the top edge.
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            frame.moveLeft(max(avail.left(), min(frame.left(), avail.right() - frame.width() + 1)))
+            frame.moveTop(max(avail.top(), min(frame.top(), avail.bottom() - frame.height() + 1)))
         self.move(frame.topLeft())
+
+    def restore_default_size(self):
+        """Re-apply the opening size, capped to the screen's work area. Call
+        right BEFORE show().
+
+        The resize() in __init__ does not survive on a pre-built hidden window:
+        qframelesswindow creates the native window at 500x500 during
+        construction, and once the event loop runs, that native geometry is
+        reported back and overwrites ours. The spare then opened at 500x500,
+        got centred at that size by align_over(), and only afterwards grew to
+        the minimum size from its top-left corner — landing well down and to
+        the right of the main window (and at minimum size, not this one)."""
+        w, h = self._DEFAULT_SIZE
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            w, h = min(w, avail.width()), min(h, avail.height())
+        self.resize(w, h)
 
     def _find_icon_path(self) -> Optional[str]:
         here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

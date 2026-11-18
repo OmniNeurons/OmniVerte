@@ -478,6 +478,10 @@ def main():
       settings_holder["window"] = window
       window.destroyed.connect(lambda *_: _on_settings_closed())
       _refresh_settings_from_config(window)
+      # Must precede show(): a pre-built spare has lost its constructor size by
+      # now (see restore_default_size), and align_over below centres using the
+      # size the window has at that moment.
+      window.restore_default_size()
       window.show()
       window.raise_()
       window.activateWindow()
