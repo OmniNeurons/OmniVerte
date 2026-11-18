@@ -178,8 +178,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "Stockées dans le Gestionnaire d'identifiants Windows (protection DPAPI). "
         "Laissez vide pour ignorer un moteur."
+        " Les raccourcis de dictée, de traduction et de style personnalisé reconnaissent la parole en direct pendant que vous parlez si une clé Gemini ou ElevenLabs est renseignée (Gemini d’abord) ; sinon, ils utilisent les backends ci-dessus."
     ),
     "transcription.keys.get_link": "Obtenir une clé ↗",
+    "transcription.keys.check": "Vérifier",
+    "transcription.keys.check.tooltip": "Envoie au fournisseur une courte requête de test : vérifie la clé et le solde",
+    "transcription.keys.check.checking": "Vérification…",
+    "transcription.keys.check.result.empty": "Saisissez d'abord une clé",
+    "transcription.keys.check.result.ok": "Clé active, solde disponible",
+    "transcription.keys.check.result.ok_nobalance": "Clé active ; solde invérifiable — la clé n'a pas accès aux données du compte",
+    "transcription.keys.check.result.quota": "Clé active, mais solde épuisé",
+    "transcription.keys.check.result.auth": "Clé refusée par le fournisseur",
+    "transcription.keys.check.result.rate": "Clé active, mais limite de requêtes atteinte — réessayez dans une minute",
+    "transcription.keys.check.result.network": "Pas de connexion au fournisseur — vérification impossible",
+    "transcription.keys.check.result.busy": "Fournisseur temporairement surchargé — clé non vérifiée, réessayez plus tard",
+    "transcription.keys.check.result.unknown": "Vérification impossible — consultez le journal",
 
     # Les listes d'étapes gardent en latin, entre guillemets, les libellés des
     # consoles des fournisseurs : ces consoles n'ont pas d'UI française, donc un
@@ -210,8 +223,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. « Get API key » → « Create API key »",
     "transcription.keys.gemini.help.step3": "3. Copiez-la et collez-la ici",
     "transcription.keys.gemini.help.link": "Ouvrir Google AI Studio",
-    "transcription.quick.title": "Reconnaissance en direct (Gemini Live, ElevenLabs)",
-    "transcription.quick.hint": "Les raccourcis de dictée rapide, de traduction et de style personnalisé transcrivent la parole en direct pendant que vous parlez : le texte est prêt dès l’arrêt. Gemini 3.5 Transcribe Live est utilisé si la clé Gemini ci-dessus est renseignée, sinon ElevenLabs. Sans aucune des deux clés, ces raccourcis utilisent les backends ci-dessus.",
+    "transcription.keys.openai.role": "Transcrit l’enregistrement après l’arrêt · nécessaire pour la correction, la traduction et la réécriture par IA",
+    "transcription.keys.groq.role": "Transcrit l’enregistrement après l’arrêt",
+    "transcription.keys.gemini.role": "⚡ En direct (Gemini 3.5 Transcribe Live) · transcrit aussi l’enregistrement après l’arrêt",
+    "transcription.keys.elevenlabs.role": "⚡ En direct uniquement – utilisée quand il n’y a pas de clé Gemini",
     "transcription.quick.clean.label": "Supprimer les mots de remplissage",
     "transcription.quick.clean.hint": "Retire « euh » et les sons d’hésitation semblables du texte dicté. ElevenLabs retire aussi les faux départs coupés.",
     "transcription.dictation.title": "Texte dicté",
@@ -524,11 +539,12 @@ STRINGS: dict[str, str] = {
     # ne puissent jamais passer pour du texte dicté.
     "error.transcribe.title": "La parole n'a pas été transcrite",
     "error.postprocess.title": "Texte collé sans correction",
-    "error.realtime_fallback.title": "Dictée rapide transcrite par la voie habituelle",
+    "error.realtime_fallback.title": "Dictée rapide transcrite via {fallback}",
     "error.api.quota": "{provider} : crédits API épuisés — vérifiez le solde de votre compte",
     "error.api.auth": "{provider} : clé API refusée — vérifiez-la dans les paramètres",
     "error.api.rate": "{provider} : limite de requêtes atteinte — réessayez dans une minute",
     "error.api.network": "{provider} : pas de connexion — vérifiez votre internet",
+    "error.api.busy": "{provider} : service temporairement surchargé — réessayez plus tard",
     "error.api.unknown": "{provider} : erreur inattendue — consultez le journal",
 
     # Indicateur d'enregistrement flottant (ui/rec_indicator.py) — libellés courts.
@@ -536,6 +552,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "Transcription",
     "indicator.loading": "Chargement",
     "indicator.nosignal": "Pas de signal",
+    # Avis jaunes dans la pastille (panne du fournisseur / bascule sur le secours).
+    "indicator.attention": "Attention",
+    "indicator.alert.quota": "Crédits {provider} épuisés",
+    "indicator.alert.auth": "Clé {provider} refusée",
+    "indicator.alert.rate": "{provider} : limite de requêtes atteinte",
+    "indicator.alert.network": "{provider} : pas de connexion",
+    "indicator.alert.busy": "{provider} temporairement surchargé",
+    "indicator.alert.unknown": "{provider} : erreur",
+    "indicator.failover": "passage à {fallback}",
+    "indicator.degraded": "{provider} indisponible — {fallback} utilisé",
 
     "main.card.original.title": "Dernière transcription",
     "main.card.result.title": "Résultat IA",

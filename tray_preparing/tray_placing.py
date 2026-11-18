@@ -166,7 +166,14 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
         and framed (!!! ⚠ … ⚠ !!!) so it cannot be mistaken for dictated text.
         pystray's notify is a plain shell call — safe from the emitting worker
         thread, and a platform without balloon support just logs.
+
+        FALLBACK channel only: the floating indicator shows these alerts
+        itself (where the user is looking, and where the text cannot be
+        pasted by accident), so the toast fires just when the user has
+        switched the indicator off.
         """
+        if _floating_indicator_enabled():
+            return
         try:
             from services.api_errors import user_message
             icon.notify(user_message(context, kind, provider), t("app.title"))
@@ -174,6 +181,32 @@ def setup_tray(audio_writer: AudioWriter, ui_bridge: UIBridge, config):
             logger.warning(f"Tray API-error notification failed: {e}")
 
     ui_bridge.api_error.connect(_on_api_error)
+
+    def _on_provider_failover(failed: str, kind: str, fallback: str):
+        """Toast for "primary provider failed, switched to a fallback" — same
+        indicator-off fallback rule and threading as _on_api_error."""
+        if _floating_indicator_enabled():
+            return
+        try:
+            from services.api_errors import failover_message
+            icon.notify(failover_message(failed, kind, fallback), t("app.title"))
+        except Exception as e:
+            logger.warning(f"Tray failover notification failed: {e}")
+
+    ui_bridge.provider_failover.connect(_on_provider_failover)
+
+    def _on_quick_fallback(engine: str, kind: str, serving: str):
+        """Toast for "live session failed, text came via <serving>" — same
+        indicator-off fallback rule and threading as _on_api_error."""
+        if _floating_indicator_enabled():
+            return
+        try:
+            from services.api_errors import quick_fallback_message
+            icon.notify(quick_fallback_message(engine, kind, serving), t("app.title"))
+        except Exception as e:
+            logger.warning(f"Tray quick-fallback notification failed: {e}")
+
+    ui_bridge.quick_fallback.connect(_on_quick_fallback)
 
     def update_menu():
         """Updates the system tray menu with current settings.

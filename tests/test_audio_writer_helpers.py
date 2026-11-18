@@ -1024,6 +1024,7 @@ def _realtime_writer(monkeypatch, session):
     w._scrub_glossary_echo = lambda text: text
     w.notified = []
     w._notify_api_error = lambda ctx, exc, provider=None: w.notified.append((ctx, provider))
+    w._notify_quick_fallback = lambda exc, provider: w.notified.append(("realtime_fallback", provider))
     w.audio_queue = aw.queue.Queue()
     w.audio_queue.put(np.array([[1], [2]], dtype=np.int16))
     w.audio_queue.put(np.array([[3]], dtype=np.int16))

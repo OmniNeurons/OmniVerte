@@ -196,8 +196,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "Stored in the Windows Credential Manager (DPAPI-protected). "
         "Leave empty to skip a backend."
+        " The dictation, translate and custom-style hotkeys recognize speech live while you talk when a Gemini or ElevenLabs key is set (Gemini first); otherwise they use the backends above."
     ),
     "transcription.keys.get_link": "Get a key ↗",
+    "transcription.keys.check": "Check",
+    "transcription.keys.check.tooltip": "Sends the provider a short test request: checks the key and the balance",
+    "transcription.keys.check.checking": "Checking…",
+    "transcription.keys.check.result.empty": "Enter a key first",
+    "transcription.keys.check.result.ok": "Key is active, balance available",
+    "transcription.keys.check.result.ok_nobalance": "Key is active; the balance can't be checked — the key has no access to account data",
+    "transcription.keys.check.result.quota": "Key is active, but the balance is exhausted",
+    "transcription.keys.check.result.auth": "Key rejected by the provider",
+    "transcription.keys.check.result.rate": "Key is active, but the rate limit was hit — try again in a minute",
+    "transcription.keys.check.result.network": "No connection to the provider — could not check",
+    "transcription.keys.check.result.busy": "The provider is temporarily overloaded — could not check the key, try again later",
+    "transcription.keys.check.result.unknown": "Could not check — see the log",
 
     "transcription.keys.openai.label": "OpenAI key",
     "transcription.keys.openai.placeholder": "Enter OpenAI API key",
@@ -225,8 +238,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. Get API key → Create API key",
     "transcription.keys.gemini.help.step3": "3. Copy it and paste it here",
     "transcription.keys.gemini.help.link": "Open Google AI Studio",
-    "transcription.quick.title": "Live recognition (Gemini Live, ElevenLabs)",
-    "transcription.quick.hint": "The quick-dictation, translate and custom-style hotkeys transcribe speech live while you talk, so the text is ready right after you stop. Gemini 3.5 Transcribe Live is used when the Gemini key above is set, otherwise ElevenLabs. Without either key, these hotkeys use the backends above.",
+    "transcription.keys.openai.role": "Transcribes the recording after you stop · also needed for AI correction, translation and rewriting",
+    "transcription.keys.groq.role": "Transcribes the recording after you stop",
+    "transcription.keys.gemini.role": "⚡ Live recognition (Gemini 3.5 Transcribe Live) · also transcribes the recording after you stop",
+    "transcription.keys.elevenlabs.role": "⚡ Live recognition only — used when there is no Gemini key",
     "transcription.quick.clean.label": "Remove filler words",
     "transcription.quick.clean.hint": "Drops “um”, “uh” and similar hesitation sounds from dictated text. ElevenLabs also removes cut-off false starts.",
     "transcription.dictation.title": "Dictation text",
@@ -592,11 +607,12 @@ STRINGS: dict[str, str] = {
     # {provider} is the provider's display name ("OpenAI"/"Groq").
     "error.transcribe.title": "Speech was not transcribed",
     "error.postprocess.title": "Text pasted without correction",
-    "error.realtime_fallback.title": "Quick dictation transcribed the usual way",
+    "error.realtime_fallback.title": "Quick dictation transcribed via {fallback}",
     "error.api.quota": "{provider}: API credits exhausted — check your account balance",
     "error.api.auth": "{provider}: API key rejected — check it in Settings",
     "error.api.rate": "{provider}: rate limit reached — try again in a minute",
     "error.api.network": "{provider}: no connection — check your internet",
+    "error.api.busy": "{provider}: service temporarily overloaded — try again later",
     "error.api.unknown": "{provider}: unexpected error — see the log",
 
     # Floating recording indicator (ui/rec_indicator.py) — single-word pill
@@ -606,6 +622,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "Transcribing",
     "indicator.loading": "Loading",
     "indicator.nosignal": "No signal",
+    # Yellow notices in the pill (provider failure / switch to a fallback).
+    "indicator.attention": "Attention",
+    "indicator.alert.quota": "{provider} credits exhausted",
+    "indicator.alert.auth": "{provider} key rejected",
+    "indicator.alert.rate": "{provider}: rate limit hit",
+    "indicator.alert.network": "{provider}: no connection",
+    "indicator.alert.busy": "{provider} temporarily overloaded",
+    "indicator.alert.unknown": "{provider}: error",
+    "indicator.failover": "switched to {fallback}",
+    "indicator.degraded": "{provider} unavailable — using {fallback}",
 
     "main.card.original.title": "Latest transcription",
     # The Original card has no placeholder key: its empty state is the

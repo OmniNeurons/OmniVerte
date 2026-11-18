@@ -89,6 +89,29 @@ class UIBridge(QObject):
     # a bare shell call, thread-safe).
     api_error = Signal(str, str, str)
 
+    # The primary transcription provider failed and another one delivered the
+    # text (sticky failover, see AudioWriter._transcribe_audio_file). A one-shot
+    # EVENT: failed provider label, kind (classify_api_error result), fallback
+    # provider label. Codes/labels, not text, for the same locale reason as
+    # api_error. The floating indicator shows it as a short yellow notice; the
+    # tray toasts it only when the indicator is switched off.
+    provider_failover = Signal(str, str, str)
+
+    # The quick hotkey's live session failed and the recorded audio was
+    # replayed through the batch chain, which delivered the text. Event: live
+    # engine label, kind, label of the provider that actually transcribed.
+    # Its own signal (not an api_error context) because the alert must NAME
+    # who served instead — "transcribed the usual way" told the user nothing.
+    quick_fallback = Signal(str, str, str)
+
+    # STATE for the recording that is just starting: failed provider label,
+    # the provider serving instead. Both empty = everything healthy. Emitted
+    # once per start_recording, so the indicator can paint its expanded
+    # "primary unavailable" form without tracking sessions itself — and so a
+    # recovered provider (settings save, model switch) clears the banner on the
+    # very next recording.
+    provider_degraded = Signal(str, str)
+
     # Tray menu → "Exit" — app.quit() handler connects to this.
     quit_requested = Signal()
 

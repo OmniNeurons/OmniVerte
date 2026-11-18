@@ -470,6 +470,23 @@ QLabel#onboardingHint {{
 QLabel#getKeyLink {{
     font-size: 11px;
 }}
+/* --- Result of the "Check" button under an API-key field. The `tone`
+   dynamic property is set by TranscriptionPage._show_key_check (which
+   re-polishes the label so the selector re-evaluates). --- */
+QLabel#keyCheckStatus {{
+    color: {p.TEXT_MUTED};
+    font-size: 12px;
+    font-weight: 600;
+}}
+QLabel#keyCheckStatus[tone="ok"] {{
+    color: {p.SUCCESS};
+}}
+QLabel#keyCheckStatus[tone="warn"] {{
+    color: {p.WARNING};
+}}
+QLabel#keyCheckStatus[tone="bad"] {{
+    color: {p.DANGER};
+}}
 
 /* --- 'Pro' tag-link on locked (Pro) features → opens the waitlist (Phase 1A).
    A small accent pill, deliberately quiet; never a nag popup. */

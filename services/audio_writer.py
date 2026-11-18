@@ -56,6 +56,7 @@ CLOUD_MAX_RETRIES = 1         # SDK-level retries of the SAME provider (1 retry 
 # so the settings UI can pull just the constants without dragging in numpy/
 # openai/sounddevice/etc.
 from services.transcription_models import (
+    GROQ_BASE_URL,
     GEMINI_TRANSCRIPTION_MODELS,
     GROQ_TRANSCRIPTION_MODELS,
     LOCAL_WHISPER_MODELS,
@@ -70,7 +71,6 @@ from services.audio_prep import (
     prepare_for_transcription,
     resolve_input_device,
 )
-GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 # Backends in canonical order. UI / priority lists use these names.
 ALL_BACKENDS = ("groq", "openai", "gemini", "local")
@@ -79,6 +79,13 @@ ALL_BACKENDS = ("groq", "openai", "gemini", "local")
 CLOUD_BACKENDS = ("openai", "groq", "gemini")
 # Display labels for provider-facing log lines / error toasts.
 CLOUD_BACKEND_LABELS = {"openai": "OpenAI", "groq": "Groq", "gemini": "Gemini"}
+# Display labels for the quick hotkey's live engines (same role as above).
+QUICK_ENGINE_LABELS = {"gemini": "Gemini", "elevenlabs": "ElevenLabs"}
+# Failure kinds (services.api_errors.classify_api_error) a retry cannot cure:
+# the account is out of credits or the key is rejected. A live engine that
+# fails this way is skipped for the rest of the session instead of costing
+# every quick dictation a doomed session plus a batch replay.
+STICKY_FAILURE_KINDS = ("quota", "auth")
 
 # Global hotkey actions (keyboard mode). Each entry maps an internal action id
 # to its display label, the config key holding its key, and a default key.
@@ -386,6 +393,12 @@ class AudioWriter:
   _quick_engine = "elevenlabs"
   elevenlabs_api_key = None
   gemini_api_key = None
+  # Provider-health state (see _reset_provider_health). Class-level defaults
+  # for the same reason as above; the set is a frozenset so a partially-built
+  # instance can never mutate a shared one.
+  _degraded_batch = None
+  _degraded_quick = None
+  _quick_engine_down = frozenset()
 
   def __init__(self, config, ui_bridge, history_manager):
     """
@@ -569,6 +582,96 @@ class AudioWriter:
     # ElevenLabs serves only the quick hotkey's realtime session — it is not a
     # member of the backend chain (see realtime_transcribe).
     self.elevenlabs_api_key = self.config.get_secret("ELEVENLABS_API_KEY") or None
+    # Keys may have just changed (a topped-up account, a replaced key) — a
+    # provider written off earlier deserves a fresh chance.
+    self._reset_provider_health()
+
+  def _reset_provider_health(self):
+    """Forget every "this provider is down" verdict of the session.
+
+    Three pieces of state, all session-only (never persisted — the provider
+    may recover by next launch):
+      _degraded_batch    (failed label, fallback label) once the batch chain
+                         failed over (sticky, see _transcribe_audio_file)
+      _degraded_quick    same pair for the quick hotkey's live engine
+      _quick_engine_down live engines skipped after a STICKY_FAILURE_KINDS error
+    Called wherever the user re-decides the backend: settings save / key
+    rebuild (_build_cloud_clients) and a model pick from the tray. The
+    indicator's banner follows on the next recording via provider_degraded.
+    """
+    self._degraded_batch = None
+    self._degraded_quick = None
+    self._quick_engine_down = frozenset()
+
+  def _note_batch_failover(self, failed_label, exc, fallback_label):
+    """Record + announce a sticky batch failover. Never raises — this runs on
+    a transcription worker thread right before the text is returned."""
+    self._degraded_batch = (failed_label, fallback_label)
+    try:
+      self.ui_bridge.provider_failover.emit(
+          failed_label, classify_api_error(exc), fallback_label
+      )
+    except Exception as e:  # defensive: the notice is best-effort
+      logger.warning(f"Failed to emit provider_failover: {e}")
+
+  def _notify_quick_fallback(self, exc, engine_label):
+    """The live session failed but the batch replay delivered: say so, naming
+    the provider that actually transcribed (the active batch backend — the
+    replay has already made any failover of its own sticky by now).
+
+    Shares _notify_api_error's once-per-session gate, so it also replaces a
+    later "pasted without correction" for the same recording, as before.
+    Never raises — worker thread, mid-failure.
+    """
+    if self._api_error_notified:
+      return
+    self._api_error_notified = True
+    try:
+      serving = CLOUD_BACKEND_LABELS.get(
+          getattr(self, "transcription_backend", None), "Local Whisper")
+      self.ui_bridge.quick_fallback.emit(
+          engine_label, classify_api_error(exc), serving
+      )
+    except Exception as e:  # defensive: the notice is best-effort
+      logger.warning(f"Failed to emit quick_fallback: {e}")
+
+  def _note_quick_engine_failure(self, engine, label, exc):
+    """A live session failed: write the engine off for the session when a
+    retry cannot help (STICKY_FAILURE_KINDS), and remember what serves instead
+    so the next quick recording can say so. Transient failures (network, rate
+    limit) change nothing — the engine is tried again next time."""
+    if classify_api_error(exc) not in STICKY_FAILURE_KINDS:
+      return
+    self._quick_engine_down = self._quick_engine_down | {engine}
+    nxt = self._pick_quick_engine()
+    fallback = (QUICK_ENGINE_LABELS[nxt] if nxt else
+                CLOUD_BACKEND_LABELS.get(
+                    getattr(self, "transcription_backend", None), "Local Whisper"))
+    logger.warning(
+        f"Quick engine {label} written off for this session ({classify_api_error(exc)}); "
+        f"quick dictation now goes via {fallback}"
+    )
+    # Same provider on both sides (Gemini Live down, Gemini batch still
+    # answering) would read as nonsense in the banner — stay silent then.
+    self._degraded_quick = (label, fallback) if fallback != label else None
+
+  def _emit_provider_degraded(self):
+    """Tell the indicator which degradation, if any, applies to the recording
+    that is starting. Quick sessions care about the live engine; everything
+    that runs on the batch chain cares about the batch failover. A healthy
+    live session shows nothing even if the batch chain is degraded — it does
+    not touch that chain. Never raises (hook thread)."""
+    try:
+      if self.active_action in REALTIME_ACTIONS and self._degraded_quick:
+        state = self._degraded_quick
+      elif self._session_source == "batch":
+        state = self._degraded_batch
+      else:
+        state = None
+      failed, fallback = state or ("", "")
+      self.ui_bridge.provider_degraded.emit(failed, fallback)
+    except Exception as e:  # defensive: the banner is best-effort
+      logger.warning(f"Failed to emit provider_degraded: {e}")
 
   def _backend_has_creds(self, backend: str) -> bool:
     if backend == "local":
@@ -760,6 +863,8 @@ class AudioWriter:
 
     self.whisper_model_name = model_name
     self.transcription_backend = new_backend
+    # An explicit pick is a fresh start: drop the "primary is down" verdicts.
+    self._reset_provider_health()
     logger.info(f"Transcription model changed to: {model_name} (backend={new_backend})")
 
     # Save BOTH the per-backend preference and the currently-active model.
@@ -1064,6 +1169,9 @@ class AudioWriter:
     self._skip_next_paste = False
     # New session — the once-per-session API-error notification re-arms.
     self._api_error_notified = False
+    # New session — tell the indicator whether this recording runs on a
+    # fallback provider (also clears a banner/notice left by the previous one).
+    self._emit_provider_degraded()
     # Defensive: cancel any stale deferred-stop timer (e.g. if it fired racey
     # with this start). The guard in _deferred_stop is the primary defence.
     if self._pending_stop_timer is not None:
@@ -1564,6 +1672,9 @@ class AudioWriter:
     def _current():
       return session_gen is None or session_gen == self._session_gen
 
+    # Captured now: a newer recording may re-pick _quick_engine before this
+    # session's failure is handled below.
+    engine = self._quick_engine
     session, provider = self._open_quick_session()
     session.start()
     frames = []
@@ -1589,10 +1700,13 @@ class AudioWriter:
     except Exception as e:
       logger.warning(f"Realtime session failed, replaying audio via batch chain: {e}")
       text = self._transcribe_frames_batch(frames)
+      # After the replay, so the remembered fallback names the batch provider
+      # that actually answered (the replay itself may have failed over).
+      self._note_quick_engine_failure(engine, provider, e)
       # Told only once the replay worked: the text did arrive, just the slow
       # way. A failed replay reports itself ("not transcribed") instead.
       if text and _current():
-        self._notify_api_error("realtime_fallback", e, provider=provider)
+        self._notify_quick_fallback(e, provider)
 
     text = self._scrub_glossary_echo(text or "")
     if not text.strip():
@@ -1610,8 +1724,15 @@ class AudioWriter:
     keys this engine instance holds.
     """
     config = getattr(self, "config", None)    # absent on partially-built instances
-    return choose_quick_engine(config.get("QUICK_ENGINE") if config else None,
-                               bool(self.gemini_api_key), bool(self.elevenlabs_api_key))
+    # An engine written off this session (_note_quick_engine_failure) is
+    # treated as keyless, so the existing rule falls through to the other
+    # engine or, with none left, to the batch chain.
+    down = self._quick_engine_down
+    return choose_quick_engine(
+        config.get("QUICK_ENGINE") if config else None,
+        bool(self.gemini_api_key) and "gemini" not in down,
+        bool(self.elevenlabs_api_key) and "elevenlabs" not in down,
+    )
 
   def _open_quick_session(self):
     """(session, provider label) for _quick_engine."""
@@ -1696,6 +1817,9 @@ class AudioWriter:
 
     last_err = None
     last_label = None
+    # The chain starts with the active backend, so the first failure is the
+    # primary's — that is the reason the user needs to hear on a failover.
+    primary_err = None
     for backend in self._cloud_fallback_order():
       label = CLOUD_BACKEND_LABELS[backend]
       model = self.config.get(_model_key_for_backend(backend))
@@ -1713,12 +1837,19 @@ class AudioWriter:
               f"Transcription failover: {self.transcription_backend} -> {backend} "
               f"(sticky for this session)"
           )
+          # No longer silent: the indicator shows why the primary was dropped
+          # and keeps a banner up while recordings run on the fallback.
+          self._note_batch_failover(
+              CLOUD_BACKEND_LABELS[self.transcription_backend], primary_err, label
+          )
           self.transcription_backend = backend
           self.whisper_model_name = model
         return self._scrub_glossary_echo(text)
       except Exception as e:
         last_err = e
         last_label = label
+        if primary_err is None:
+          primary_err = e
         logger.error(f"Transcription via {label} failed: {e}")
         continue
 
@@ -2250,7 +2381,8 @@ Text to process:
         self._quick_engine = engine
       elif self.active_action in REALTIME_ACTIONS:
         logger.info(
-            f"'{self.active_action}' without GEMINI_API_KEY / ELEVENLABS_API_KEY: "
+            f"'{self.active_action}' has no usable live engine (no GEMINI_API_KEY / "
+            "ELEVENLABS_API_KEY, or it failed earlier this session): "
             "using the batch chain"
         )
       logger.debug(

@@ -285,11 +285,14 @@ def test_http_rejection_on_connect_is_not_retried():
 
 def test_user_message_for_realtime_fallback_says_text_still_arrived():
     from i18n import t
-    from services.api_errors import user_message
+    from services.api_errors import quick_fallback_message
 
-    msg = user_message("realtime_fallback", "network", "ElevenLabs")
-    assert t("error.realtime_fallback.title") in msg
-    assert "ElevenLabs" in msg
+    # Names both the engine that failed and the provider that served instead —
+    # "transcribed the usual way" left the user guessing which one that was.
+    msg = quick_fallback_message("ElevenLabs", "network", "OpenAI")
+    assert t("error.realtime_fallback.title", fallback="OpenAI") in msg
+    assert "ElevenLabs" in msg and "OpenAI" in msg
+    assert msg.startswith("!!! ⚠ ")
 
 
 def test_build_url_no_verbatim_can_be_switched_off():

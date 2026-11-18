@@ -45,15 +45,17 @@ _KIND_KEYS = {
     "auth":    "error.api.auth",
     "rate":    "error.api.rate",
     "network": "error.api.network",
+    "busy":    "error.api.busy",
     "unknown": "error.api.unknown",
 }
 
 _CONTEXT_KEYS = {
     "transcribe":  "error.transcribe.title",
     "postprocess": "error.postprocess.title",
-    # Quick dictation lost ElevenLabs but the batch chain still delivered.
-    "realtime_fallback": "error.realtime_fallback.title",
 }
+# Quick dictation lost its live engine but the batch chain still delivered:
+# not a context here — it has its own text (quick_fallback_text) because it
+# names the provider that served instead.
 
 # Body/error codes OpenAI (and Groq, same wire format) use for "no money left",
 # as opposed to a transient per-minute rate limit — both arrive as HTTP 429.
@@ -63,7 +65,8 @@ _QUOTA_CODES = ("insufficient_quota", "billing_hard_limit_reached", "billing_not
 def classify_api_error(exc: BaseException) -> str:
     """Map an exception from a cloud call to a user-actionable kind.
 
-    Returns one of ``"quota" | "auth" | "rate" | "network" | "unknown"``.
+    Returns one of ``"quota" | "auth" | "rate" | "network" | "busy" | "unknown"``
+    ("busy" = the provider answered 5xx: overloaded or down on its side).
     Never raises — an unrecognized exception is simply "unknown".
     """
     if isinstance(exc, CloudApiError):
@@ -83,6 +86,14 @@ def classify_api_error(exc: BaseException) -> str:
                 return "quota" if "quota" in exc.body.lower() else "rate"
             if exc.status == 402:
                 return "quota"
+            # Google answers a wrong/deleted key with 400 INVALID_ARGUMENT,
+            # not 401 — only the ErrorInfo reason tells it from a bad request.
+            if exc.status == 400 and "API_KEY_INVALID" in exc.body:
+                return "auth"
+            # 5xx is the provider's trouble ("experiencing high demand"), not
+            # the user's key or account — say so instead of "unexpected error".
+            if exc.status is not None and exc.status >= 500:
+                return "busy"
         return "unknown"
 
     # The quick-mode realtime client already classifies on the wire.
@@ -101,6 +112,8 @@ def classify_api_error(exc: BaseException) -> str:
             # 402 or a quota code on any other status is still a billing problem.
             if exc.status_code == 402 or _mentions_quota(exc):
                 return "quota"
+            if exc.status_code >= 500:
+                return "busy"
             return "unknown"
     # The text-ops watchdog raises a bare TimeoutError on a hung request.
     if isinstance(exc, (TimeoutError, ConnectionError, OSError)):
@@ -131,9 +144,8 @@ def frame_alert(text: str) -> str:
 def user_message(context: str, kind: str, provider: str) -> str:
     """Localized, framed alert for one API failure.
 
-    ``context`` — "transcribe" (no text was produced), "postprocess" (raw
-    text was pasted without correction) or "realtime_fallback" (quick
-    dictation fell back to the batch chain, text pasted); ``kind`` — a classify_api_error()
+    ``context`` — "transcribe" (no text was produced) or "postprocess" (raw
+    text was pasted without correction); ``kind`` — a classify_api_error()
     result; ``provider`` — display label ("OpenAI", "Groq"). Unknown values
     degrade to the "unknown"/"transcribe" strings rather than raising: this
     runs inside signal handlers where an exception is a crash.
@@ -143,3 +155,70 @@ def user_message(context: str, kind: str, provider: str) -> str:
     title = t(_CONTEXT_KEYS.get(context, _CONTEXT_KEYS["transcribe"]))
     reason = t(_KIND_KEYS.get(kind, _KIND_KEYS["unknown"]), provider=provider)
     return frame_alert(f"{title}: {reason}")
+
+
+# ---- short forms for the floating indicator ----
+#
+# The pill (ui/rec_indicator.py) is the primary surface for these alerts: it is
+# where the user is already looking while dictating, and being a click-through,
+# focus-less overlay its text can never end up in the document. It is narrow,
+# so it gets its own terse wording instead of the toast's full sentences. No
+# frame here — the pill's yellow styling does that job; frame_alert() is added
+# only by the toast fallbacks below.
+
+_SHORT_KIND_KEYS = {
+    "quota":   "indicator.alert.quota",
+    "auth":    "indicator.alert.auth",
+    "rate":    "indicator.alert.rate",
+    "network": "indicator.alert.network",
+    "busy":    "indicator.alert.busy",
+    "unknown": "indicator.alert.unknown",
+}
+
+
+def short_reason(kind: str, provider: str) -> str:
+    """Terse localized reason, e.g. "Gemini credits exhausted"."""
+    from i18n import t
+
+    return t(_SHORT_KIND_KEYS.get(kind, _SHORT_KIND_KEYS["unknown"]), provider=provider)
+
+
+def notice_text(context: str, kind: str, provider: str) -> str:
+    """Pill notice for one API failure: "<what happened>: <terse reason>"."""
+    from i18n import t
+
+    title = t(_CONTEXT_KEYS.get(context, _CONTEXT_KEYS["transcribe"]))
+    return f"{title}: {short_reason(kind, provider)}"
+
+
+def failover_text(failed: str, kind: str, fallback: str) -> str:
+    """Pill notice for a failover: "<terse reason> — switched to <fallback>"."""
+    from i18n import t
+
+    return f"{short_reason(kind, failed)} — {t('indicator.failover', fallback=fallback)}"
+
+
+def degraded_text(failed: str, fallback: str) -> str:
+    """Pill banner while the primary stays down: "<failed> unavailable — using <fallback>"."""
+    from i18n import t
+
+    return t("indicator.degraded", provider=failed, fallback=fallback)
+
+
+def quick_fallback_text(engine: str, kind: str, serving: str) -> str:
+    """Pill notice for a failed live session whose audio the batch chain
+    rescued: "Quick dictation transcribed via <serving>: <terse reason>"."""
+    from i18n import t
+
+    title = t("error.realtime_fallback.title", fallback=serving)
+    return f"{title}: {short_reason(kind, engine)}"
+
+
+def quick_fallback_message(engine: str, kind: str, serving: str) -> str:
+    """Framed quick-fallback text for the tray toast (indicator switched off)."""
+    return frame_alert(quick_fallback_text(engine, kind, serving))
+
+
+def failover_message(failed: str, kind: str, fallback: str) -> str:
+    """Framed failover text for the tray toast (indicator switched off)."""
+    return frame_alert(failover_text(failed, kind, fallback))

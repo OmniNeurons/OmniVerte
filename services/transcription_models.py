@@ -9,6 +9,11 @@ adds ~2.5s to settings-window startup.
 
 from __future__ import annotations
 
+# Groq speaks the OpenAI wire format on its own host. Lives here (not in
+# audio_writer) so the settings page's key check can reach it without that
+# module's heavy import chain.
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+
 LOCAL_WHISPER_MODELS: tuple[str, ...] = ("tiny", "base", "small", "medium", "large-v3")
 # gpt-transcribe replaces the gpt-4o-*-transcribe pair, which OpenAI shuts
 # down on 2027-02-26 (deprecations page); it also scored fewer errors on real

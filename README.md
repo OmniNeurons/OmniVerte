@@ -215,8 +215,11 @@ On **first launch** an onboarding window walks you through choosing a
 transcription backend, entering API keys (if any), and picking your hotkeys and
 language pair. It opens straight on the **Transcription** page with the API-key
 fields highlighted, and nudges you toward the **Languages** tab to confirm your
-language pair. Leaving the keys empty is fine — the app simply runs on the
-offline Local backend. After setup it starts straight into the tray.
+language pair. All four keys (OpenAI, Groq, Gemini, ElevenLabs) sit in one
+**API keys** card; each has a line saying what it is for, and the two that do
+live recognition (Gemini, ElevenLabs) are marked ⚡. Leaving the keys empty is
+fine — the app simply runs on the offline Local backend. After setup it starts
+straight into the tray.
 
 ---
 

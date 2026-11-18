@@ -173,8 +173,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "保存在 Windows Credential Manager（受 DPAPI 保护）。"
         "留空则跳过该引擎。"
+        "设置了 Gemini 或 ElevenLabs 密钥后，听写、翻译和自定义风格快捷键会在你说话时实时识别（优先使用 Gemini）；否则使用上方的后端。"
     ),
     "transcription.keys.get_link": "获取密钥 ↗",
+    "transcription.keys.check": "检查",
+    "transcription.keys.check.tooltip": "向服务商发送一个简短的测试请求：检查密钥和额度",
+    "transcription.keys.check.checking": "正在检查…",
+    "transcription.keys.check.result.empty": "请先输入密钥",
+    "transcription.keys.check.result.ok": "密钥有效，额度充足",
+    "transcription.keys.check.result.ok_nobalance": "密钥有效；无法检查额度 — 该密钥无权读取账户数据",
+    "transcription.keys.check.result.quota": "密钥有效，但额度已用完",
+    "transcription.keys.check.result.auth": "密钥被服务商拒绝",
+    "transcription.keys.check.result.rate": "密钥有效，但请求过于频繁 — 请一分钟后重试",
+    "transcription.keys.check.result.network": "无法连接服务商 — 未能检查",
+    "transcription.keys.check.result.busy": "服务商暂时繁忙 — 未能检查密钥，请稍后重试",
+    "transcription.keys.check.result.unknown": "未能检查 — 请查看日志",
 
     # Provider console labels kept verbatim in Latin and quoted with 「」 — those
     # consoles have no Chinese UI.
@@ -204,8 +217,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. 「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. 复制它并粘贴到这里",
     "transcription.keys.gemini.help.link": "打开 Google AI Studio",
-    "transcription.quick.title": "实时识别（Gemini Live、ElevenLabs）",
-    "transcription.quick.hint": "快速听写、翻译和自定义风格快捷键会在你说话时实时转写，停止后文本即可就绪。若已在上方设置 Gemini 密钥，则使用 Gemini 3.5 Transcribe Live，否则使用 ElevenLabs。两个密钥都未设置时，这些快捷键使用上方的后端。",
+    "transcription.keys.openai.role": "停止后转写录音 · AI 校正、翻译和改写也需要它",
+    "transcription.keys.groq.role": "停止后转写录音",
+    "transcription.keys.gemini.role": "⚡ 实时识别（Gemini 3.5 Transcribe Live） · 也可在停止后转写录音",
+    "transcription.keys.elevenlabs.role": "⚡ 仅实时识别：没有 Gemini 密钥时使用",
     "transcription.quick.clean.label": "去除口头禅",
     "transcription.quick.clean.hint": "从听写文本中去掉“um”等犹豫声。使用 ElevenLabs 时还会去掉“嗯”“呃”等填充词和说了一半的词。",
     "transcription.dictation.title": "听写文本",
@@ -508,11 +523,12 @@ STRINGS: dict[str, str] = {
     # 并带醒目的“!!! ⚠ … ⚠ !!!”边框，以免被误当作听写文本。
     "error.transcribe.title": "语音未能转写",
     "error.postprocess.title": "文本已粘贴，但未经校正",
-    "error.realtime_fallback.title": "快速听写已改用常规方式识别",
+    "error.realtime_fallback.title": "快速听写已改用 {fallback} 识别",
     "error.api.quota": "{provider}：API 额度已用完 — 请检查账户余额",
     "error.api.auth": "{provider}：API 密钥被拒绝 — 请在设置中检查",
     "error.api.rate": "{provider}：请求已达上限 — 请一分钟后重试",
     "error.api.network": "{provider}：无法连接 — 请检查网络",
+    "error.api.busy": "{provider}：服务暂时繁忙 — 请稍后重试",
     "error.api.unknown": "{provider}：发生意外错误 — 请查看日志",
 
     # 悬浮录音指示器 (ui/rec_indicator.py) — 简短的胶囊标签。
@@ -520,6 +536,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "转录中",
     "indicator.loading": "加载中",
     "indicator.nosignal": "无信号",
+    # 胶囊中的黄色提示（服务商故障 / 切换到备用）。
+    "indicator.attention": "注意",
+    "indicator.alert.quota": "{provider} 额度已用完",
+    "indicator.alert.auth": "{provider} 密钥被拒绝",
+    "indicator.alert.rate": "{provider}：请求过于频繁",
+    "indicator.alert.network": "{provider}：无法连接",
+    "indicator.alert.busy": "{provider} 暂时繁忙",
+    "indicator.alert.unknown": "{provider}：出错",
+    "indicator.failover": "已切换到 {fallback}",
+    "indicator.degraded": "{provider} 不可用 — 正在使用 {fallback}",
 
     "main.card.original.title": "最新转写",
     "main.card.result.title": "AI 结果",

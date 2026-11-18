@@ -128,6 +128,13 @@ def extract_transcript(response: dict) -> str:
                     parts.append(item["text"])
     if parts or found_shape:
         return "".join(parts)
+    # Silent audio: the API answers "completed" with usage but no output at
+    # all — neither output_text nor steps (seen live on a 1 s silent clip).
+    # That is an empty transcript, not a protocol error; raising here made the
+    # key check fail on a good key and would push a silent dictation down the
+    # failover chain.
+    if response.get("status") == "completed":
+        return ""
     raise GeminiApiError(
         f"Unexpected Gemini response shape: {str(response)[:200]}",
         kind="response",

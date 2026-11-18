@@ -175,8 +175,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "Salvate in Windows Credential Manager (protette da DPAPI). "
         "Lascia vuoto per saltare un motore."
+        " I tasti di dettatura, traduzione e stile personalizzato riconoscono il parlato in diretta mentre parli se è impostata una chiave Gemini o ElevenLabs (prima Gemini); altrimenti usano i backend qui sopra."
     ),
     "transcription.keys.get_link": "Ottieni una chiave ↗",
+    "transcription.keys.check": "Verifica",
+    "transcription.keys.check.tooltip": "Invia al provider una breve richiesta di prova: verifica chiave e credito",
+    "transcription.keys.check.checking": "Verifica in corso…",
+    "transcription.keys.check.result.empty": "Inserisci prima una chiave",
+    "transcription.keys.check.result.ok": "Chiave attiva, credito disponibile",
+    "transcription.keys.check.result.ok_nobalance": "Chiave attiva; credito non verificabile — la chiave non ha accesso ai dati dell'account",
+    "transcription.keys.check.result.quota": "Chiave attiva, ma credito esaurito",
+    "transcription.keys.check.result.auth": "Chiave rifiutata dal provider",
+    "transcription.keys.check.result.rate": "Chiave attiva, ma limite di richieste superato — riprova tra un minuto",
+    "transcription.keys.check.result.network": "Nessuna connessione al provider — verifica non riuscita",
+    "transcription.keys.check.result.busy": "Provider temporaneamente sovraccarico — chiave non verificata, riprova più tardi",
+    "transcription.keys.check.result.unknown": "Verifica non riuscita — vedi il log",
 
     # Le liste di passaggi mantengono in latino, tra virgolette, le etichette dei
     # pulsanti delle console dei provider — quelle console non hanno UI italiana,
@@ -207,8 +220,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Copiala e incollala qui",
     "transcription.keys.gemini.help.link": "Apri Google AI Studio",
-    "transcription.quick.title": "Riconoscimento in diretta (Gemini Live, ElevenLabs)",
-    "transcription.quick.hint": "I tasti di dettatura rapida, traduzione e stile personalizzato trascrivono il parlato in diretta mentre parli, così il testo è pronto subito dopo lo stop. Si usa Gemini 3.5 Transcribe Live se la chiave Gemini qui sopra è impostata, altrimenti ElevenLabs. Senza nessuna delle due chiavi, questi tasti usano i backend qui sopra.",
+    "transcription.keys.openai.role": "Trascrive la registrazione dopo lo stop · necessaria per correzione, traduzione e riscrittura con l’IA",
+    "transcription.keys.groq.role": "Trascrive la registrazione dopo lo stop",
+    "transcription.keys.gemini.role": "⚡ In diretta (Gemini 3.5 Transcribe Live) · trascrive anche la registrazione dopo lo stop",
+    "transcription.keys.elevenlabs.role": "⚡ Solo in diretta: usata quando non c’è una chiave Gemini",
     "transcription.quick.clean.label": "Rimuovi intercalari",
     "transcription.quick.clean.hint": "Elimina «ehm», «uh» e suoni di esitazione simili dal testo dettato. ElevenLabs toglie anche le parole troncate.",
     "transcription.dictation.title": "Testo della dettatura",
@@ -521,11 +536,12 @@ STRINGS: dict[str, str] = {
     # possano mai passare per testo dettato.
     "error.transcribe.title": "Il parlato non è stato trascritto",
     "error.postprocess.title": "Testo incollato senza correzione",
-    "error.realtime_fallback.title": "Dettatura rapida trascritta nel modo consueto",
+    "error.realtime_fallback.title": "Dettatura rapida trascritta tramite {fallback}",
     "error.api.quota": "{provider}: crediti API esauriti — controlla il saldo dell'account",
     "error.api.auth": "{provider}: chiave API rifiutata — controllala nelle impostazioni",
     "error.api.rate": "{provider}: limite di richieste raggiunto — riprova tra un minuto",
     "error.api.network": "{provider}: nessuna connessione — controlla la rete",
+    "error.api.busy": "{provider}: servizio temporaneamente sovraccarico — riprova più tardi",
     "error.api.unknown": "{provider}: errore imprevisto — vedi il log",
 
     # Indicatore di registrazione fluttuante (ui/rec_indicator.py) — etichette brevi.
@@ -533,6 +549,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "Trascrizione",
     "indicator.loading": "Caricamento",
     "indicator.nosignal": "Nessun segnale",
+    # Avvisi gialli nella pillola (errore del provider / passaggio alla riserva).
+    "indicator.attention": "Attenzione",
+    "indicator.alert.quota": "Credito {provider} esaurito",
+    "indicator.alert.auth": "Chiave {provider} rifiutata",
+    "indicator.alert.rate": "{provider}: limite di richieste superato",
+    "indicator.alert.network": "{provider}: nessuna connessione",
+    "indicator.alert.busy": "{provider} temporaneamente sovraccarico",
+    "indicator.alert.unknown": "{provider}: errore",
+    "indicator.failover": "passaggio a {fallback}",
+    "indicator.degraded": "{provider} non disponibile — in uso {fallback}",
 
     "main.card.original.title": "Ultima trascrizione",
     "main.card.result.title": "Risultato AI",

@@ -25,10 +25,16 @@ from i18n import DEFAULT_LOCALE, current_locale, set_locale
 from services.api_errors import (
     CloudApiError,
     classify_api_error,
+    degraded_text,
+    failover_message,
+    failover_text,
     frame_alert,
+    notice_text,
     user_message,
 )
+from services import audio_writer as aw
 from services.audio_writer import AudioWriter
+from services.gemini_transcribe import GeminiApiError
 
 
 @pytest.fixture(autouse=True)
@@ -129,6 +135,12 @@ class _Bridge:
         self.statuses: list[str] = []
         self.errors: list[tuple] = []
         self.api_error = SimpleNamespace(emit=lambda *a: self.errors.append(a))
+        self.failovers: list[tuple] = []
+        self.provider_failover = SimpleNamespace(emit=lambda *a: self.failovers.append(a))
+        self.quick: list[tuple] = []
+        self.quick_fallback = SimpleNamespace(emit=lambda *a: self.quick.append(a))
+        self.degraded: list[tuple] = []
+        self.provider_degraded = SimpleNamespace(emit=lambda *a: self.degraded.append(a))
 
     def safe_emit_status(self, status):
         self.statuses.append(status)
@@ -231,3 +243,119 @@ def test_postprocess_failure_pastes_raw_and_notifies():
 
     assert w._apply_action_transform("raw words") == "Raw words"
     assert w.ui_bridge.errors == [("postprocess", "network", "OpenAI")]
+
+
+# ---------- failover: no longer silent ----------
+
+def _gemini_out_of_quota():
+    return GeminiApiError("429", kind="http", status=429, body="Quota exceeded for ...")
+
+
+def _failover_writer():
+    """Gemini primary (dead), OpenAI as the credentialed fallback."""
+    w = _bare_writer()
+    w.transcription_backend = "gemini"
+    w.gemini_api_key = "g"
+    w.client = object()
+    w.groq_client = None
+    w.config = SimpleNamespace(get=lambda k, d=None: "some-model")
+    w._scrub_glossary_echo = lambda text: text
+
+    def _gemini(path, model):
+        raise _gemini_out_of_quota()
+    w._transcribe_via_gemini = _gemini
+    w._transcribe_via_cloud = lambda path, client, label, model: "hello"
+    return w
+
+
+def test_batch_failover_announces_the_primary_reason_once():
+    """The silent failover: text arrived via OpenAI and nothing told the user
+    Gemini was out of credits. Now one provider_failover carries the PRIMARY's
+    reason; the sticky switch means later segments do not repeat it."""
+    w = _failover_writer()
+    assert w._transcribe_audio_file("x.wav") == "hello"
+    assert w.ui_bridge.failovers == [("Gemini", "quota", "OpenAI")]
+    assert w.transcription_backend == "openai"
+    assert w._degraded_batch == ("Gemini", "OpenAI")
+    assert w.ui_bridge.errors == []          # text was delivered: not an error
+    w._transcribe_audio_file("x.wav")        # now served by OpenAI directly
+    assert len(w.ui_bridge.failovers) == 1
+
+
+def test_recording_start_reports_the_degradation_that_applies():
+    quick = next(iter(aw.REALTIME_ACTIONS))
+    w = _bare_writer()
+    w._degraded_batch = ("Gemini", "OpenAI")
+
+    # No live engine key: the hotkey runs on the batch chain, so its failover
+    # is this recording's news.
+    w.active_action, w._session_source = quick, "batch"
+    w._emit_provider_degraded()
+    # A healthy live session never touches the batch chain: no banner.
+    w.active_action, w._session_source = quick, "realtime"
+    w._emit_provider_degraded()
+    # A written-off live engine is what a quick session must hear about.
+    w._degraded_quick = ("ElevenLabs", "OpenAI")
+    w._emit_provider_degraded()
+    # Settings save / tray model pick: everything healthy again.
+    w._reset_provider_health()
+    w._emit_provider_degraded()
+
+    assert w.ui_bridge.degraded == [
+        ("Gemini", "OpenAI"), ("", ""), ("ElevenLabs", "OpenAI"), ("", ""),
+    ]
+
+
+def test_quick_engine_is_written_off_on_quota_but_not_on_network():
+    w = _bare_writer()
+    w.config = SimpleNamespace(get=lambda k, d=None: d)
+    w.gemini_api_key, w.elevenlabs_api_key = "g", "e"
+
+    w._note_quick_engine_failure("gemini", "Gemini", TimeoutError("blip"))
+    assert w._pick_quick_engine() == "gemini"       # transient: tried again
+    assert w._degraded_quick is None
+
+    w._note_quick_engine_failure("gemini", "Gemini", _gemini_out_of_quota())
+    assert w._pick_quick_engine() == "elevenlabs"   # retry cannot cure quota
+    assert w._degraded_quick == ("Gemini", "ElevenLabs")
+
+    w._reset_provider_health()                      # keys re-read on save
+    assert w._pick_quick_engine() == "gemini"
+
+
+def test_quick_engine_down_with_same_named_batch_provider_stays_silent():
+    """ "Gemini unavailable — using Gemini" would be nonsense in the banner."""
+    w = _bare_writer()
+    w.config = SimpleNamespace(get=lambda k, d=None: d)
+    w.gemini_api_key, w.elevenlabs_api_key = "g", None
+    w.transcription_backend = "gemini"
+    w._note_quick_engine_failure("gemini", "Gemini", _gemini_out_of_quota())
+    assert w._pick_quick_engine() is None
+    assert w._degraded_quick is None
+
+
+def test_quick_fallback_names_the_provider_that_served_once_per_session():
+    w = _bare_writer()
+    w.transcription_backend = "openai"       # what the batch replay ran on
+    w._notify_quick_fallback(_gemini_out_of_quota(), "Gemini")
+    w._notify_quick_fallback(_gemini_out_of_quota(), "Gemini")
+    assert w.ui_bridge.quick == [("Gemini", "quota", "OpenAI")]
+    # Shares the once-per-session gate with api_error.
+    w._notify_api_error("postprocess", TimeoutError(), provider="OpenAI")
+    assert w.ui_bridge.errors == []
+
+
+# ---------- indicator wording ----------
+
+def test_pill_texts_are_localized_and_name_both_providers():
+    set_locale("ru")
+    for text in (failover_text("Gemini", "quota", "OpenAI"),
+                 degraded_text("Gemini", "OpenAI")):
+        assert "Gemini" in text and "OpenAI" in text
+        assert any("\u0400" <= ch <= "\u04ff" for ch in text)
+    assert "Gemini" in notice_text("transcribe", "auth", "Gemini")
+    # The pill is not pasteable, so its text carries no frame...
+    assert "!!!" not in failover_text("Gemini", "quota", "OpenAI")
+    # ...the toast fallback (indicator switched off) still does.
+    framed = failover_message("Gemini", "quota", "OpenAI")
+    assert framed.startswith("!!! \u26a0 ") and framed.endswith(" \u26a0 !!!")

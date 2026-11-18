@@ -21,8 +21,12 @@ from PySide6.QtWidgets import QApplication
 
 from ui.rec_indicator import (
     BAR_COUNT,
+    HEIGHT,
+    NOTICE_SEC,
     PROP_FRAMES,
     SILENCE_SEC,
+    WIDTH,
+    WIDTH_WIDE,
     RecordingIndicator,
 )
 
@@ -172,3 +176,96 @@ def test_propeller_frames_differ_across_rotation(widget):
     # as a static cross, not a spinning propeller).
     as_sets = [frozenset(f) for f in widget._prop_frames]
     assert len(set(as_sets)) > 1
+
+
+# ---------- provider alerts: notice + degraded banner ----------
+
+def test_notice_shows_alone_then_expires(widget):
+    """With no session running the alert still has to be seen: the pill comes
+    up on its own as an expanded "Attention" card and leaves after NOTICE_SEC."""
+    widget.on_api_error("transcribe", "quota", "Gemini")
+    assert widget._active_mode() == "notice"
+    assert widget.width() == WIDTH_WIDE and widget.height() > HEIGHT
+    assert "Gemini" in widget._alert_text("notice")
+    widget._t += NOTICE_SEC + 0.1
+    widget._tick()
+    assert widget._active_mode() is None
+    assert widget._notice is None  # retired, cannot resurface next session
+
+
+def test_mid_session_notice_gets_its_full_time_after_the_session(widget):
+    """A provider that failed a minute before the end of a long dictation must
+    still be announced when the text lands — the 5 s count from session end."""
+    widget.on_status("processing")
+    widget.on_provider_failover("Gemini", "quota", "OpenAI")
+    widget._t += 60.0
+    assert widget._active_mode() == "processing"
+    text = widget._alert_text("processing")
+    assert "Gemini" in text and "OpenAI" in text
+    widget.on_status("idle")
+    assert widget._active_mode() == "notice"
+    widget._t += NOTICE_SEC - 0.5
+    assert widget._active_mode() == "notice"
+    widget._t += 1.0
+    widget._tick()
+    assert widget._active_mode() is None
+
+
+def test_quick_fallback_notice_names_engine_and_serving_provider(widget):
+    """The live-failure replay raises a failover notice first, then this one;
+    the survivor must still say who served."""
+    widget.on_status("processing")
+    widget.on_provider_failover("Gemini", "quota", "OpenAI")
+    widget.on_quick_fallback("Gemini", "quota", "OpenAI")
+    text = widget._alert_text("processing")
+    assert "Gemini" in text and "OpenAI" in text
+    assert not widget.grab().isNull()
+
+
+def test_new_session_retires_notice_and_shows_banner(widget):
+    widget.on_provider_failover("Gemini", "quota", "OpenAI")
+    widget.on_provider_degraded("Gemini", "OpenAI")   # start_recording's emit
+    widget.on_status("recording")
+    assert widget._notice is None
+    banner = widget._alert_text("recording")
+    assert "Gemini" in banner and "OpenAI" in banner
+    assert widget.width() == WIDTH_WIDE and widget.height() > HEIGHT
+
+
+def test_recovered_provider_returns_the_compact_pill(widget):
+    widget.on_provider_degraded("Gemini", "OpenAI")
+    widget.on_status("recording")
+    assert widget.width() == WIDTH_WIDE
+    widget.on_status("idle")
+    widget.on_provider_degraded("", "")               # healthy again
+    widget.on_status("recording")
+    assert (widget.width(), widget.height()) == (WIDTH, HEIGHT)
+    assert widget._alert_text("recording") == ""
+
+
+def test_banner_alone_does_not_keep_the_pill_up(widget):
+    widget.on_provider_degraded("Gemini", "OpenAI")
+    assert widget._active_mode() is None
+
+
+def test_disabled_indicator_shows_no_notice(widget):
+    widget.set_enabled(False)
+    widget.on_api_error("transcribe", "quota", "Gemini")
+    assert widget._active_mode() is None
+
+
+def test_model_loading_shows_no_alert_text(widget):
+    widget.on_provider_degraded("Gemini", "OpenAI")
+    widget.on_model_state("loading")
+    assert widget._alert_text(widget._active_mode()) == ""
+
+
+@pytest.mark.parametrize("status", ["recording", "processing", "idle"])
+def test_expanded_forms_paint(widget, status):
+    """paintEvent is hand-drawn — exercise every expanded branch once so a
+    geometry slip raises here rather than on a user's screen."""
+    widget.on_provider_degraded("Gemini", "OpenAI")
+    widget.on_status(status)
+    widget.on_api_error("postprocess", "auth", "OpenAI")
+    assert widget._active_mode() == ("notice" if status == "idle" else status)
+    assert not widget.grab().isNull()

@@ -177,8 +177,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "Хранятся в Windows Credential Manager (защита DPAPI). "
         "Оставьте поле пустым, чтобы пропустить движок."
+        " Клавиши диктовки, перевода и своего стиля распознают речь на лету, пока вы говорите, если задан ключ Gemini или ElevenLabs (Gemini в приоритете); иначе работают через бэкенды выше."
     ),
     "transcription.keys.get_link": "Создать ключ ↗",
+    "transcription.keys.check": "Проверить",
+    "transcription.keys.check.tooltip": "Отправляет провайдеру короткий тестовый запрос: проверяет ключ и баланс",
+    "transcription.keys.check.checking": "Проверяю…",
+    "transcription.keys.check.result.empty": "Сначала введите ключ",
+    "transcription.keys.check.result.ok": "Ключ активен, баланс есть",
+    "transcription.keys.check.result.ok_nobalance": "Ключ активен; баланс проверить нельзя — у ключа нет доступа к данным аккаунта",
+    "transcription.keys.check.result.quota": "Ключ активен, но баланс исчерпан",
+    "transcription.keys.check.result.auth": "Ключ отклонён провайдером",
+    "transcription.keys.check.result.rate": "Ключ активен, но превышен лимит запросов — повторите через минуту",
+    "transcription.keys.check.result.network": "Нет соединения с провайдером — проверить не удалось",
+    "transcription.keys.check.result.busy": "Провайдер временно перегружен — ключ проверить не удалось, повторите позже",
+    "transcription.keys.check.result.unknown": "Проверить не удалось — см. журнал",
 
     # The step lists keep the providers' own console labels in Latin and quote
     # them — those consoles have no Russian UI, so a translated "Create new
@@ -210,8 +223,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. Откройте «Get API key» → «Create API key»",
     "transcription.keys.gemini.help.step3": "3. Скопируйте его и вставьте сюда",
     "transcription.keys.gemini.help.link": "Открыть Google AI Studio",
-    "transcription.quick.title": "Распознавание на лету (Gemini Live, ElevenLabs)",
-    "transcription.quick.hint": "Клавиши быстрой диктовки, перевода и своего стиля распознают речь прямо во время разговора, поэтому текст готов сразу после остановки. Используется Gemini 3.5 Transcribe Live, если выше задан ключ Gemini, иначе ElevenLabs. Без обоих ключей эти клавиши работают через бэкенды выше.",
+    "transcription.keys.openai.role": "Распознаёт запись после остановки · нужен для правки, перевода и стиля через ИИ",
+    "transcription.keys.groq.role": "Распознаёт запись после остановки",
+    "transcription.keys.gemini.role": "⚡ На лету (Gemini 3.5 Transcribe Live) · также распознаёт запись после остановки",
+    "transcription.keys.elevenlabs.role": "⚡ Только на лету — используется, когда нет ключа Gemini",
     "transcription.quick.clean.label": "Убирать слова-паразиты",
     "transcription.quick.clean.hint": "Убирает «э-э», «эм» и похожие звуки-заминки из продиктованного текста. ElevenLabs также вырезает оборванные начала слов.",
     "transcription.dictation.title": "Текст диктовки",
@@ -536,11 +551,12 @@ STRINGS: dict[str, str] = {
     # принять за надиктованный текст и случайно отправить в чат.
     "error.transcribe.title": "Речь не расшифрована",
     "error.postprocess.title": "Текст вставлен без коррекции",
-    "error.realtime_fallback.title": "Быстрая диктовка распознана обычным способом",
+    "error.realtime_fallback.title": "Быстрая диктовка распознана через {fallback}",
     "error.api.quota": "{provider}: закончились кредиты API — проверьте баланс аккаунта",
     "error.api.auth": "{provider}: ключ API отклонён — проверьте его в настройках",
     "error.api.rate": "{provider}: превышен лимит запросов — попробуйте через минуту",
     "error.api.network": "{provider}: нет соединения — проверьте интернет",
+    "error.api.busy": "{provider}: сервис временно перегружен — попробуйте позже",
     "error.api.unknown": "{provider}: непредвиденная ошибка — см. журнал",
 
     # Плавающий индикатор записи (ui/rec_indicator.py) — короткие подписи пилюли.
@@ -548,6 +564,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "Расшифровка",
     "indicator.loading": "Загрузка",
     "indicator.nosignal": "Нет сигнала",
+    # Жёлтые уведомления в пилюле (сбой провайдера / переход на запасной).
+    "indicator.attention": "Внимание",
+    "indicator.alert.quota": "Баланс {provider} исчерпан",
+    "indicator.alert.auth": "Ключ {provider} отклонён",
+    "indicator.alert.rate": "{provider}: превышен лимит запросов",
+    "indicator.alert.network": "{provider}: нет соединения",
+    "indicator.alert.busy": "{provider} временно перегружен",
+    "indicator.alert.unknown": "{provider}: ошибка",
+    "indicator.failover": "переключено на {fallback}",
+    "indicator.degraded": "{provider} недоступен — используется {fallback}",
 
     "main.card.original.title": "Последняя транскрипция",
     "main.card.result.title": "Результат AI",

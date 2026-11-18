@@ -176,8 +176,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "Windows資格情報マネージャーに保存されます(DPAPIで保護)。"
         "空欄にするとそのエンジンをスキップします。"
+        "GeminiまたはElevenLabsのキーを設定すると、口述・翻訳・カスタムスタイルのショートカットは話している間にリアルタイムで認識します（Gemini優先）。どちらもない場合は上のバックエンドを使います。"
     ),
     "transcription.keys.get_link": "キーを取得 ↗",
+    "transcription.keys.check": "確認",
+    "transcription.keys.check.tooltip": "プロバイダーに短いテストリクエストを送り、キーと残高を確認します",
+    "transcription.keys.check.checking": "確認中…",
+    "transcription.keys.check.result.empty": "先にキーを入力してください",
+    "transcription.keys.check.result.ok": "キーは有効で、残高があります",
+    "transcription.keys.check.result.ok_nobalance": "キーは有効です。残高は確認できません — このキーにはアカウント情報へのアクセス権がありません",
+    "transcription.keys.check.result.quota": "キーは有効ですが、残高がありません",
+    "transcription.keys.check.result.auth": "キーがプロバイダーに拒否されました",
+    "transcription.keys.check.result.rate": "キーは有効ですが、リクエスト上限に達しました — 1 分後にもう一度お試しください",
+    "transcription.keys.check.result.network": "プロバイダーに接続できず、確認できませんでした",
+    "transcription.keys.check.result.busy": "プロバイダーが一時的に混雑しています — キーを確認できませんでした。後でもう一度お試しください",
+    "transcription.keys.check.result.unknown": "確認できませんでした — ログを確認してください",
 
     # The step lists keep the providers' own console labels in Latin and quote
     # them with 「」 — those consoles have no Japanese UI, so a translated label
@@ -208,8 +221,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2.「Get API key」→「Create API key」",
     "transcription.keys.gemini.help.step3": "3. コピーしてここに貼り付け",
     "transcription.keys.gemini.help.link": "Google AI Studioを開く",
-    "transcription.quick.title": "リアルタイム認識（Gemini Live、ElevenLabs）",
-    "transcription.quick.hint": "クイック口述・翻訳・カスタムスタイルのショートカットは話している間にリアルタイムで文字起こしするため、停止直後にテキストが用意できます。上でGeminiのキーを設定していればGemini 3.5 Transcribe Liveを、なければElevenLabsを使います。どちらのキーもない場合、これらのショートカットは上のバックエンドを使います。",
+    "transcription.keys.openai.role": "停止後に録音を文字起こし · AIによる校正・翻訳・書き換えに必要",
+    "transcription.keys.groq.role": "停止後に録音を文字起こし",
+    "transcription.keys.gemini.role": "⚡ リアルタイム認識（Gemini 3.5 Transcribe Live） · 停止後の録音の文字起こしにも対応",
+    "transcription.keys.elevenlabs.role": "⚡ リアルタイム認識のみ。Geminiのキーがないときに使われます",
     "transcription.quick.clean.label": "フィラーを除去",
     "transcription.quick.clean.hint": "口述したテキストから「um」などのためらいの音を取り除きます。ElevenLabsでは「えー」「あのー」などのフィラーや言いかけの語も取り除きます。",
     "transcription.dictation.title": "口述テキスト",
@@ -519,11 +534,12 @@ STRINGS: dict[str, str] = {
     # 目立つ「!!! ⚠ … ⚠ !!!」枠付きで表示され、口述テキストと混同されない。
     "error.transcribe.title": "音声を文字起こしできませんでした",
     "error.postprocess.title": "テキストは補正なしで貼り付けられました",
-    "error.realtime_fallback.title": "クイック口述は通常の方法で文字起こししました",
+    "error.realtime_fallback.title": "クイック口述は {fallback} で文字起こししました",
     "error.api.quota": "{provider}：APIクレジットを使い切りました — アカウント残高を確認してください",
     "error.api.auth": "{provider}：APIキーが拒否されました — 設定で確認してください",
     "error.api.rate": "{provider}：リクエスト上限に達しました — 1分後に再試行してください",
     "error.api.network": "{provider}：接続できません — ネット接続を確認してください",
+    "error.api.busy": "{provider}：サービスが一時的に混雑しています — 後でもう一度お試しください",
     "error.api.unknown": "{provider}：予期しないエラー — ログを確認してください",
 
     # フローティング録音インジケーター (ui/rec_indicator.py) — 短いピル表示。
@@ -531,6 +547,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "文字起こし",
     "indicator.loading": "読み込み中",
     "indicator.nosignal": "音声なし",
+    # ピル内の黄色い通知（プロバイダー障害 / 代替への切り替え）。
+    "indicator.attention": "注意",
+    "indicator.alert.quota": "{provider} のクレジット残高がありません",
+    "indicator.alert.auth": "{provider} のキーが拒否されました",
+    "indicator.alert.rate": "{provider}：リクエスト上限に達しました",
+    "indicator.alert.network": "{provider}：接続できません",
+    "indicator.alert.busy": "{provider} が一時的に混雑しています",
+    "indicator.alert.unknown": "{provider}：エラー",
+    "indicator.failover": "{fallback} に切り替えました",
+    "indicator.degraded": "{provider} は利用できません — {fallback} を使用中",
 
     "main.card.original.title": "最新の文字起こし",
     "main.card.result.title": "AI結果",

@@ -177,8 +177,21 @@ STRINGS: dict[str, str] = {
     "transcription.keys.hint": (
         "Gespeichert im Windows Credential Manager (DPAPI-geschützt). "
         "Leer lassen, um eine Engine zu überspringen."
+        " Die Tasten für Diktat, Übersetzen und eigenen Stil erkennen Sprache live beim Sprechen, wenn ein Gemini- oder ElevenLabs-Schlüssel gesetzt ist (Gemini zuerst); sonst nutzen sie die Backends oben."
     ),
     "transcription.keys.get_link": "Schlüssel holen ↗",
+    "transcription.keys.check": "Prüfen",
+    "transcription.keys.check.tooltip": "Sendet dem Anbieter eine kurze Testanfrage: prüft Schlüssel und Guthaben",
+    "transcription.keys.check.checking": "Prüfe…",
+    "transcription.keys.check.result.empty": "Zuerst einen Schlüssel eingeben",
+    "transcription.keys.check.result.ok": "Schlüssel aktiv, Guthaben vorhanden",
+    "transcription.keys.check.result.ok_nobalance": "Schlüssel aktiv; Guthaben nicht prüfbar — der Schlüssel hat keinen Zugriff auf Kontodaten",
+    "transcription.keys.check.result.quota": "Schlüssel aktiv, aber Guthaben aufgebraucht",
+    "transcription.keys.check.result.auth": "Schlüssel vom Anbieter abgelehnt",
+    "transcription.keys.check.result.rate": "Schlüssel aktiv, aber Anfragelimit erreicht — in einer Minute erneut versuchen",
+    "transcription.keys.check.result.network": "Keine Verbindung zum Anbieter — Prüfung nicht möglich",
+    "transcription.keys.check.result.busy": "Anbieter vorübergehend überlastet — Schlüssel nicht prüfbar, später erneut versuchen",
+    "transcription.keys.check.result.unknown": "Prüfung fehlgeschlagen — siehe Protokoll",
 
     "transcription.keys.openai.label": "OpenAI-Schlüssel",
     "transcription.keys.openai.placeholder": "OpenAI-API-Schlüssel eingeben",
@@ -206,8 +219,10 @@ STRINGS: dict[str, str] = {
     "transcription.keys.gemini.help.step2": "2. „Get API key“ → „Create API key“",
     "transcription.keys.gemini.help.step3": "3. Kopieren und hier einfügen",
     "transcription.keys.gemini.help.link": "Google AI Studio öffnen",
-    "transcription.quick.title": "Live-Erkennung (Gemini Live, ElevenLabs)",
-    "transcription.quick.hint": "Die Tasten für schnelles Diktat, Übersetzen und eigenen Stil transkribieren live beim Sprechen, sodass der Text direkt nach dem Stopp bereitsteht. Mit dem Gemini-Schlüssel oben wird Gemini 3.5 Transcribe Live genutzt, sonst ElevenLabs. Ohne beide Schlüssel nutzen diese Tasten die Backends oben.",
+    "transcription.keys.openai.role": "Transkribiert die Aufnahme nach dem Stopp · nötig für KI-Korrektur, Übersetzung und Umformulierung",
+    "transcription.keys.groq.role": "Transkribiert die Aufnahme nach dem Stopp",
+    "transcription.keys.gemini.role": "⚡ Live-Erkennung (Gemini 3.5 Transcribe Live) · transkribiert auch die Aufnahme nach dem Stopp",
+    "transcription.keys.elevenlabs.role": "⚡ Nur Live-Erkennung – wird genutzt, wenn kein Gemini-Schlüssel gesetzt ist",
     "transcription.quick.clean.label": "Füllwörter entfernen",
     "transcription.quick.clean.hint": "Entfernt „äh“, „ähm“ und ähnliche Verzögerungslaute aus dem diktierten Text. ElevenLabs entfernt zudem abgebrochene Wortanfänge.",
     "transcription.dictation.title": "Diktattext",
@@ -534,11 +549,12 @@ STRINGS: dict[str, str] = {
     # damit sie nie mit diktiertem Text verwechselt werden.
     "error.transcribe.title": "Sprache wurde nicht transkribiert",
     "error.postprocess.title": "Text ohne Korrektur eingefügt",
-    "error.realtime_fallback.title": "Schnelles Diktat auf dem üblichen Weg erkannt",
+    "error.realtime_fallback.title": "Schnelles Diktat über {fallback} erkannt",
     "error.api.quota": "{provider}: API-Guthaben aufgebraucht — Kontostand prüfen",
     "error.api.auth": "{provider}: API-Schlüssel abgelehnt — in den Einstellungen prüfen",
     "error.api.rate": "{provider}: Anfragelimit erreicht — in einer Minute erneut versuchen",
     "error.api.network": "{provider}: keine Verbindung — Internet prüfen",
+    "error.api.busy": "{provider}: Dienst vorübergehend überlastet — später erneut versuchen",
     "error.api.unknown": "{provider}: unerwarteter Fehler — siehe Protokoll",
 
     # Schwebende Aufnahmeanzeige (ui/rec_indicator.py) — kurze Pill-Beschriftungen.
@@ -546,6 +562,16 @@ STRINGS: dict[str, str] = {
     "indicator.processing": "Transkription",
     "indicator.loading": "Lädt",
     "indicator.nosignal": "Kein Signal",
+    # Gelbe Hinweise in der Pill (Anbieterausfall / Wechsel auf Ersatz).
+    "indicator.attention": "Achtung",
+    "indicator.alert.quota": "{provider}-Guthaben aufgebraucht",
+    "indicator.alert.auth": "{provider}-Schlüssel abgelehnt",
+    "indicator.alert.rate": "{provider}: Anfragelimit erreicht",
+    "indicator.alert.network": "{provider}: keine Verbindung",
+    "indicator.alert.busy": "{provider} vorübergehend überlastet",
+    "indicator.alert.unknown": "{provider}: Fehler",
+    "indicator.failover": "auf {fallback} umgeschaltet",
+    "indicator.degraded": "{provider} nicht verfügbar — {fallback} wird verwendet",
 
     "main.card.original.title": "Letzte Transkription",
     "main.card.result.title": "KI-Ergebnis",

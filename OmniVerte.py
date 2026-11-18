@@ -272,6 +272,14 @@ def main():
     ui_bridge.model_state_changed.connect(rec_indicator.on_model_state)
     ui_bridge.language_changed.connect(rec_indicator.on_language_changed)
     ui_bridge.floating_indicator_toggled.connect(rec_indicator.set_enabled)
+    # Provider trouble (quota, rejected key, failover to another provider) is
+    # shown in the pill itself — yellow, where the user is already looking.
+    # These are emitted from worker threads; the indicator is a QObject on the
+    # GUI thread, so Qt queues the slots onto it.
+    ui_bridge.api_error.connect(rec_indicator.on_api_error)
+    ui_bridge.provider_failover.connect(rec_indicator.on_provider_failover)
+    ui_bridge.quick_fallback.connect(rec_indicator.on_quick_fallback)
+    ui_bridge.provider_degraded.connect(rec_indicator.on_provider_degraded)
 
     # Main window — hidden by default; user opens it from the tray.
     icon_path = get_resource_path("favicon.ico")

@@ -6,7 +6,22 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- Settings → Transcription: a "Check" button next to every API key. It tells
+  you whether the key is accepted and whether the account still has balance,
+  before you find out in the middle of a dictation. It works on a key you
+  have just typed, before saving.
+
+### Fixed
+- A wrong Gemini key is now reported as "key rejected" instead of
+  "unexpected error".
+
 ### Changed
+- Settings → Transcription: all four API keys (OpenAI, Groq, Gemini,
+  ElevenLabs) now sit in one "API keys" card, each with a line saying what it
+  is for, and the two that do live recognition are marked ⚡. The separate
+  "Live recognition" card, which named two engines but held only the
+  ElevenLabs key, is gone.
 - Recording now starts the moment you press the hotkey, not when you
   release it — the first word is less likely to be cut off on slower
   computers.
@@ -16,6 +31,16 @@ All notable changes to this project are documented here. The format is based on
   record.
 - The indicator switches to "recording" only once the microphone is really
   capturing, so it is an honest "speak now" signal.
+- Provider problems (credits ran out, key rejected, no connection) are now
+  shown in yellow in the floating indicator for 5 seconds instead of a
+  Windows notification. The notification is still used when the indicator
+  is hidden.
+- When your main transcription provider fails and another one takes over,
+  the indicator now says so, and keeps an expanded yellow "unavailable —
+  using …" line while you record until the main provider is back.
+- Quick dictation no longer retries a live engine whose credits ran out or
+  whose key was rejected; it goes straight to the working one until you
+  restart or save settings.
 
 ## [1.1.38] - 2026-11-16
 

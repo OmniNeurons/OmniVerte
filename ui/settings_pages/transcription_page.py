@@ -8,9 +8,11 @@ device the local backend runs on.
 
 from __future__ import annotations
 
+import logging
+import threading
 from typing import Callable, Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -24,6 +26,7 @@ from PySide6.QtWidgets import (
 from qfluentwidgets import (
     ComboBox,
     PasswordLineEdit,
+    PushButton,
     SwitchButton,
 )
 
@@ -41,6 +44,7 @@ from services.transcription_models import (
 )
 from services.config_store import Config
 from .base import (
+    LABEL_COL_WIDTH,
     BasePage,
     make_form_row,
     make_help_button,
@@ -52,7 +56,8 @@ from .base import (
 
 # Single canonical order for every card on this page — Backend priority, API
 # keys, Model per backend. The eye reads "OpenAI → Groq → Gemini → Local" once
-# and that mental map stays valid across the whole page.
+# and that mental map stays valid across the whole page. (The keys card has no
+# Local row and ends with ElevenLabs, which is live-only and not a backend.)
 BACKEND_ORDER = ("openai", "groq", "gemini", "local")
 
 # Display name + one-line pitch per backend, as catalog KEYS rather than text.
@@ -107,6 +112,26 @@ OPENAI_KEYS_URL = "https://platform.openai.com/api-keys"
 GROQ_KEYS_URL = "https://console.groq.com/keys"
 GEMINI_KEYS_URL = "https://aistudio.google.com/apikey"
 ELEVENLABS_KEYS_URL = "https://elevenlabs.io/app/settings/api-keys"
+
+logger = logging.getLogger(__name__)
+
+# "Check" button results → (catalog key, tone). The states are
+# services.key_check.RESULTS plus two the page produces itself ("checking",
+# "empty"). Catalog KEYS, not text — same module-scope `t()` trap as above.
+# Tone picks the colour (ui/style.py, QLabel#keyCheckStatus[tone=…]): "bad" is
+# for answers the user must act on, "warn" for "could not tell / try later".
+KEY_CHECK_STATES = {
+    "checking":     ("transcription.keys.check.checking", "muted"),
+    "empty":        ("transcription.keys.check.result.empty", "warn"),
+    "ok":           ("transcription.keys.check.result.ok", "ok"),
+    "ok_nobalance": ("transcription.keys.check.result.ok_nobalance", "warn"),
+    "quota":        ("transcription.keys.check.result.quota", "bad"),
+    "auth":         ("transcription.keys.check.result.auth", "bad"),
+    "rate":         ("transcription.keys.check.result.rate", "warn"),
+    "network":      ("transcription.keys.check.result.network", "warn"),
+    "busy":         ("transcription.keys.check.result.busy", "warn"),
+    "unknown":      ("transcription.keys.check.result.unknown", "warn"),
+}
 
 
 def _backend_info(backend_id: str) -> tuple[str, str]:
@@ -181,6 +206,14 @@ class _RevealingPasswordEdit(PasswordLineEdit):
         """fetcher() returns the plaintext key, or '' if none stored."""
         self._fetch_real = fetcher
 
+    def keyToCheck(self) -> str:
+        """The key the "Check" button should probe: what the user typed, or —
+        while the field still shows the masked placeholder — the stored one."""
+        text = self.text().strip()
+        if text == MASKED_PLACEHOLDER:
+            return (self._fetch_real() or "") if self._fetch_real else ""
+        return text
+
     def setPasswordVisible(self, isVisible: bool) -> None:
         if isVisible:
             if self.text() == MASKED_PLACEHOLDER and self._fetch_real:
@@ -202,7 +235,20 @@ class TranscriptionPage(BasePage):
     PAGE_TITLE_KEY = "page.transcription.title"
     PAGE_HINT_KEY = "page.transcription.hint"
 
+    # Carries a key-check result from its worker thread back to the GUI
+    # thread: provider id, result state (KEY_CHECK_STATES key), and the
+    # generation the check was started with — see _on_check_key.
+    _key_check_finished = Signal(str, str, int)
+
     def build(self, content_layout: QVBoxLayout) -> None:
+        # Key-check plumbing, keyed by provider id. Set up first: BasePage
+        # calls build() from its __init__, and the rows below register here.
+        self._key_edits: dict[str, _RevealingPasswordEdit] = {}
+        self._check_buttons: dict[str, PushButton] = {}
+        self._check_status: dict[str, QLabel] = {}
+        self._check_gen: dict[str, int] = {}
+        self._key_check_finished.connect(self._on_key_check_finished)
+
         # --- Backend priority ---
         card, body = make_section_card(
             t("transcription.priority.title"),
@@ -225,68 +271,28 @@ class TranscriptionPage(BasePage):
             t("transcription.keys.title"),
             t("transcription.keys.hint"),
         )
-        self.openai_key_edit = self._build_password_edit(t("transcription.keys.openai.placeholder"))
-        self.openai_hint = self._build_key_hint(t("transcription.keys.openai.nudge"))
-        # `stretch_widget=True` so the key field fills the row — API keys are
-        # long, narrow inputs only show the tail. The "?" help icon sits next to
-        # the label; the onboarding nudge + a small "Get a key" link share the
-        # trailing slot on the row's right edge.
-        body.addWidget(
-            make_form_row(
-                t("transcription.keys.openai.label"),
-                self.openai_key_edit,
-                label_trailing=make_help_button(
-                    t("transcription.keys.openai.help.title"),
-                    _openai_help_steps(),
-                    t("transcription.keys.openai.help.link"),
-                    OPENAI_KEYS_URL,
-                ),
-                trailing=self._key_trailing(self.openai_hint, OPENAI_KEYS_URL),
-                stretch_widget=True,
-            )
+        # Every key the app can use sits in this one card, each with a line
+        # saying what it is for. Two of them do live recognition: Gemini (the
+        # same key also serves the Gemini batch backend) and ElevenLabs.
+        self.openai_key_edit, self.openai_hint = self._add_key_row(
+            body, "openai", OPENAI_KEYS_URL, _openai_help_steps(),
+            t("transcription.keys.openai.nudge"),
         )
-        self.openai_key_edit.textEdited.connect(
-            lambda _: self.openai_hint.setVisible(False)
+        self.groq_key_edit, self.groq_hint = self._add_key_row(
+            body, "groq", GROQ_KEYS_URL, _groq_help_steps(),
+            t("transcription.keys.groq.nudge"),
         )
-
-        self.groq_key_edit = self._build_password_edit(t("transcription.keys.groq.placeholder"))
-        self.groq_hint = self._build_key_hint(t("transcription.keys.groq.nudge"))
-        body.addWidget(
-            make_form_row(
-                t("transcription.keys.groq.label"),
-                self.groq_key_edit,
-                label_trailing=make_help_button(
-                    t("transcription.keys.groq.help.title"),
-                    _groq_help_steps(),
-                    t("transcription.keys.groq.help.link"),
-                    GROQ_KEYS_URL,
-                ),
-                trailing=self._key_trailing(self.groq_hint, GROQ_KEYS_URL),
-                stretch_widget=True,
-            )
+        self.gemini_key_edit, self.gemini_hint = self._add_key_row(
+            body, "gemini", GEMINI_KEYS_URL, _gemini_help_steps(),
+            t("transcription.keys.gemini.nudge"),
         )
-        self.groq_key_edit.textEdited.connect(
-            lambda _: self.groq_hint.setVisible(False)
-        )
-
-        self.gemini_key_edit = self._build_password_edit(t("transcription.keys.gemini.placeholder"))
-        self.gemini_hint = self._build_key_hint(t("transcription.keys.gemini.nudge"))
-        body.addWidget(
-            make_form_row(
-                t("transcription.keys.gemini.label"),
-                self.gemini_key_edit,
-                label_trailing=make_help_button(
-                    t("transcription.keys.gemini.help.title"),
-                    _gemini_help_steps(),
-                    t("transcription.keys.gemini.help.link"),
-                    GEMINI_KEYS_URL,
-                ),
-                trailing=self._key_trailing(self.gemini_hint, GEMINI_KEYS_URL),
-                stretch_widget=True,
-            )
-        )
-        self.gemini_key_edit.textEdited.connect(
-            lambda _: self.gemini_hint.setVisible(False)
+        # ElevenLabs goes last and gets no onboarding nudge: it is not a member
+        # of the priority chain above — it serves only the live keys (quick,
+        # translate, custom), and only when there is no Gemini key. It used to
+        # have a "live recognition" card of its own, which read as "two engines,
+        # one key field"; the per-row role line says the same thing better.
+        self.elevenlabs_key_edit, _ = self._add_key_row(
+            body, "elevenlabs", ELEVENLABS_KEYS_URL, _elevenlabs_help_steps(),
         )
         content_layout.addWidget(card)
         # We track which masked placeholders the user has touched so we know
@@ -294,40 +300,11 @@ class TranscriptionPage(BasePage):
         self._openai_loaded_mask: Optional[str] = None
         self._groq_loaded_mask: Optional[str] = None
         self._gemini_loaded_mask: Optional[str] = None
-
-        # --- Live recognition (Gemini Live / ElevenLabs realtime) ---
-        # Its own card, not a row in the keys card above: ElevenLabs is not a
-        # member of the priority chain — it serves only the live keys
-        # (quick, translate, custom). Gemini Live reuses the Gemini key above.
-        card, body = make_section_card(
-            t("transcription.quick.title"),
-            t("transcription.quick.hint"),
-        )
-        self.elevenlabs_key_edit = self._build_password_edit(
-            t("transcription.keys.elevenlabs.placeholder")
-        )
-        body.addWidget(
-            make_form_row(
-                t("transcription.keys.elevenlabs.label"),
-                self.elevenlabs_key_edit,
-                label_trailing=make_help_button(
-                    t("transcription.keys.elevenlabs.help.title"),
-                    _elevenlabs_help_steps(),
-                    t("transcription.keys.elevenlabs.help.link"),
-                    ELEVENLABS_KEYS_URL,
-                ),
-                trailing=self._key_trailing(
-                    self._build_key_hint(""), ELEVENLABS_KEYS_URL
-                ),
-                stretch_widget=True,
-            )
-        )
-        content_layout.addWidget(card)
         self._elevenlabs_loaded_mask: Optional[str] = None
 
         # --- Dictation text: what happens to the transcript before the paste.
         # Its own card: it applies whatever recognized the speech (live engine,
-        # cloud batch or local Whisper), not just the live engines above.
+        # cloud batch or local Whisper), not just the live engines.
         card, body = make_section_card(
             t("transcription.dictation.title"),
             t("transcription.dictation.hint"),
@@ -427,6 +404,48 @@ class TranscriptionPage(BasePage):
         lbl.setVisible(False)
         return lbl
 
+    def _add_key_row(
+        self,
+        body: QVBoxLayout,
+        provider: str,
+        keys_url: str,
+        help_steps: list[str],
+        nudge: str = "",
+    ) -> tuple[_RevealingPasswordEdit, QLabel]:
+        """Add one provider's row to the API-keys card; returns (field, nudge).
+
+        All four rows are built here so they cannot drift apart: "?" help
+        bubble by the label, "Check" button, the key field, the onboarding
+        nudge + "Get a key" link, then the role line ("what this key is for",
+        which is also where live recognition is flagged) and the hidden
+        key-check verdict under it.
+        """
+        prefix = f"transcription.keys.{provider}"
+        edit = self._build_password_edit(t(f"{prefix}.placeholder"))
+        hint = self._build_key_hint(nudge)
+        # `stretch_widget=True` so the key field fills the row — API keys are
+        # long, narrow inputs only show the tail. The "?" help icon sits next to
+        # the label; the onboarding nudge + a small "Get a key" link share the
+        # trailing slot on the row's right edge.
+        body.addWidget(self._with_check_status(
+            provider,
+            make_form_row(
+                t(f"{prefix}.label"),
+                self._key_field(provider, edit),
+                hint=t(f"{prefix}.role"),
+                label_trailing=make_help_button(
+                    t(f"{prefix}.help.title"),
+                    help_steps,
+                    t(f"{prefix}.help.link"),
+                    keys_url,
+                ),
+                trailing=self._key_trailing(hint, keys_url),
+                stretch_widget=True,
+            ),
+        ))
+        edit.textEdited.connect(lambda _: hint.setVisible(False))
+        return edit, hint
+
     def _key_trailing(self, hint: QLabel, url: str) -> QWidget:
         """Right-of-field cluster: the (hidden) onboarding nudge plus an
         always-visible "Get a key" link to the provider's key page."""
@@ -438,6 +457,94 @@ class TranscriptionPage(BasePage):
         link = make_link_label(url, t("transcription.keys.get_link"), object_name="getKeyLink")
         lay.addWidget(link, alignment=Qt.AlignVCenter)
         return box
+
+    # ---------- "Check" button beside each key ----------
+
+    def _key_field(self, provider: str, edit: _RevealingPasswordEdit) -> QWidget:
+        """The row's control: a "Check" button to the LEFT of the key field.
+
+        Left, not right, so it stays put next to the label while the field
+        stretches — and clear of the field's own eye button on the right."""
+        box = QWidget()
+        lay = QHBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        button = PushButton(t("transcription.keys.check"))
+        button.setToolTip(t("transcription.keys.check.tooltip"))
+        button.clicked.connect(lambda: self._on_check_key(provider))
+        lay.addWidget(button, alignment=Qt.AlignVCenter)
+        lay.addWidget(edit, stretch=1)
+        self._key_edits[provider] = edit
+        self._check_buttons[provider] = button
+        # A verdict describes the key that was probed; once the field changes
+        # it describes nothing, so it goes (and an in-flight probe is voided).
+        edit.textEdited.connect(lambda _=None: self._clear_key_check(provider))
+        return box
+
+    def _with_check_status(self, provider: str, row: QWidget) -> QWidget:
+        """Append the (hidden) verdict line under a key row, where a row hint
+        would sit, indented to start under the button rather than the label."""
+        status = QLabel("")
+        status.setObjectName("keyCheckStatus")
+        status.setWordWrap(True)
+        # 14 = make_form_row's gap between the label column and the control.
+        status.setContentsMargins(LABEL_COL_WIDTH + 14, 2, 0, 0)
+        status.setVisible(False)
+        row.layout().addWidget(status)
+        self._check_status[provider] = status
+        return row
+
+    def _show_key_check(self, provider: str, state: str) -> None:
+        key, tone = KEY_CHECK_STATES.get(state, KEY_CHECK_STATES["unknown"])
+        status = self._check_status[provider]
+        status.setText(t(key))
+        status.setProperty("tone", tone)
+        # A dynamic property only restyles after a re-polish.
+        status.style().unpolish(status)
+        status.style().polish(status)
+        status.setVisible(True)
+
+    def _clear_key_check(self, provider: str) -> None:
+        # Bumping the generation makes a probe still in flight report into the
+        # void instead of labelling the NEW text with the old key's verdict.
+        self._check_gen[provider] = self._check_gen.get(provider, 0) + 1
+        self._check_status[provider].setVisible(False)
+        self._check_buttons[provider].setEnabled(True)
+
+    def _on_check_key(self, provider: str) -> None:
+        key = self._key_edits[provider].keyToCheck()
+        if not key:
+            self._show_key_check(provider, "empty")
+            return
+        gen = self._check_gen[provider] = self._check_gen.get(provider, 0) + 1
+        # Probe with the model picked on this page (saved or not) — that is
+        # the one dictation will use. ElevenLabs has no model combo.
+        combo = self.model_combos.get(provider)
+        model = combo.currentText() if combo is not None else None
+        self._check_buttons[provider].setEnabled(False)
+        self._show_key_check(provider, "checking")
+
+        # The probe is a network call — off the UI thread, like the license
+        # activation, so a slow provider never freezes the settings window.
+        def _work() -> None:
+            # Imported here: services.key_check pulls in the provider SDKs,
+            # which this page deliberately keeps out of its import path.
+            from services.key_check import check_key
+
+            result = check_key(provider, key, model)
+            try:
+                self._key_check_finished.emit(provider, result, gen)
+            except RuntimeError:
+                # The settings window was closed (page deleted) meanwhile.
+                logger.debug("Key check finished after the page was destroyed")
+
+        threading.Thread(target=_work, name=f"key-check-{provider}", daemon=True).start()
+
+    def _on_key_check_finished(self, provider: str, result: str, gen: int) -> None:
+        if gen != self._check_gen.get(provider):
+            return  # field edited or re-checked since — stale verdict
+        self._check_buttons[provider].setEnabled(True)
+        self._show_key_check(provider, result)
 
     def enter_initial_setup(self) -> None:
         """First-run only: reveal the key hints and glow the fields once."""

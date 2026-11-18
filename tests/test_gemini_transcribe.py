@@ -77,6 +77,12 @@ def test_extract_empty_transcript_is_valid():
     assert extract_transcript({"output_text": ""}) == ""
 
 
+def test_extract_completed_without_output_is_empty_transcript():
+    # Seen live: a silent clip comes back "completed" with usage only.
+    response = {"id": "v1_x", "status": "completed", "usage": {"total_tokens": 26}}
+    assert extract_transcript(response) == ""
+
+
 def test_extract_raises_on_unknown_shape():
     with pytest.raises(GeminiApiError) as exc_info:
         extract_transcript({"weird": True})
@@ -155,7 +161,8 @@ def test_http_error_carries_status_and_classifies(monkeypatch, tmp_path):
         (401, b"{}", "auth"),
         (429, b'{"error": {"message": "quota exceeded for today"}}', "quota"),
         (429, b'{"error": {"message": "slow down"}}', "rate"),
-        (500, b"{}", "unknown"),
+        (500, b"{}", "busy"),       # provider-side trouble, not the user's key
+        (404, b"{}", "unknown"),
     ],
 )
 def test_gemini_error_classification(monkeypatch, tmp_path, code, body, expected):
